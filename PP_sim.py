@@ -18,13 +18,14 @@ def main():
 
     order_generator = OrderGenerator(model_information, hardware_information, mapping_information, isPipeLine)
     
-   
+    """
     i = 0
     for e in order_generator.Computation_order:
-        print(i, e)
-        print()
+        if e.nlayer == 1:
+            print(i, e)
+            print()
         i += 1
-    
+    """
 
     #controller = Controller(order_generator, trace)
     #controller.run()

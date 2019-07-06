@@ -1,6 +1,6 @@
 class EventMetaData:
     def __init__(self, event_type, position_idx, preceding_event_count, proceeding_event, nlayer, inputs, outputs):
-        self.event_type = event_type  # edram_rd_ir, ou_operation, cu_saa, pe_saa, activation, edram_wr
+        self.event_type = event_type  # edram_rd_ir, ou_operation, cu_saa, pe_saa, activation, edram_wr, edram_rd_pool
         
         self.preceding_event_count = preceding_event_count
         self.current_number_of_preceding_event = 0
