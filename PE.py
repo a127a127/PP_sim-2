@@ -29,7 +29,7 @@ class PE(object):
         ### event ready pool
         self.pe_saa_erp = []
         self.activation_erp = []
-        self.edram_rd_ir_erp = []
+        #self.edram_rd_ir_erp = []
         self.edram_rd_pool_erp = []
         self.pooling_erp = []
         self.edram_wr_erp = []

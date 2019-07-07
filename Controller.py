@@ -5,14 +5,19 @@ import numpy as np
 from math import ceil
 from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
+from HardwareMetaData import HardwareMetaData
+
+from NetworkTransfer import NetworkTransfer
+from TransferEvent import TransferEvent
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class Controller(object):
-    def __init__(self, ordergenerator, trace):
+    def __init__(self, ordergenerator, isPipeLine, trace):
         self.ordergenerator = ordergenerator
+        self.isPipeLine = isPipeLine
         self.trace = trace
         self.Computation_order = self.ordergenerator.Computation_order
         self.trace = trace
@@ -22,14 +27,33 @@ class Controller(object):
 
         self.input_bit = self.ordergenerator.model_information.input_bit
 
-        ### power
-        self.total_power = 0
-        self.power_ou = 0
-        self.power_cu_saa = 0
-        self.power_pe_saa = 0
-        self.power_act = 0
-        self.power_pool = 0
-        self.power_buffer = 0
+        self.hardware_information = HardwareMetaData()
+
+        # Leakage
+        self.eDRAM_buffer_leakage = self.hardware_information.eDRAM_buffer_leakage
+        self.Router_leakage = self.hardware_information.Router_leakage
+        self.SA_leakage = self.hardware_information.SA_leakage
+        self.Act_leakage = self.hardware_information.Act_leakage
+        self.PE_SAA_leakage = self.hardware_information.PE_SAA_leakage
+        self.Pool_leakage = self.hardware_information.Pool_leakage
+        self.DAC_leakage = self.hardware_information.DAC_leakage
+        self.MUX_leakage = self.hardware_information.MUX_leakage
+        self.SA_leakage = self.hardware_information.SA_leakage
+        self.Crossbar_leakage = self.hardware_information.Crossbar_leakage
+        self.CU_SAA_leakage = self.hardware_information.CU_SAA_leakage
+
+        # Dynamic Energy
+        self.eDRAM_rd_ir_energy = self.hardware_information.eDRAM_rd_ir_energy
+        self.edram_rd_pool_energy = self.hardware_information.edram_rd_pool_energy
+        self.ou_operation_energy = self.hardware_information.ou_operation_energy
+        self.pe_saa_energy = self.hardware_information.pe_saa_energy
+        self.cu_saa_energy = self.hardware_information.cu_saa_energy
+        self.activation_energy = self.hardware_information.activation_energy
+        self.pooling_energy = self.hardware_information.pooling_energy
+        self.edram_wr_energy = self.hardware_information.edram_wr_energy
+
+        ### Energy
+        self.total_energy = 0
 
         self.mem_acc_ctr = 0
 
@@ -72,6 +96,7 @@ class Controller(object):
         #print(self.PE_array[0].CU_array[0].XB_array[0])
 
         self.fetch_array = []
+        self.network_transfer = NetworkTransfer()
 
         #for i in range(len(self.pe_traverse_idx)):
         #    pass
@@ -114,8 +139,6 @@ class Controller(object):
     
         isDone = False
         while not isDone:
-            # if self.cycle_ctr == 100000:
-            #     break
             
             self.cycle_power = 0
             self.cycle_ctr += 1
@@ -130,7 +153,38 @@ class Controller(object):
             #                 pipeline_stage = self.Computation_order[index].nlayer
             #             self.CU_unfinished_event_index = index
             #             break
+            
+            ### Data transfer in Chip ###
+            arrived = self.network_transfer.step()
+            for TF_event in arrived:
+                if self.trace:
+                    print("\tData arrived ", TF_event.event.event_type, ",order index:", self.Computation_order.index(TF_event.event), "destination:", TF_event.event.position_idx[1])
 
+                ### add next event counter: pe_saa, edram_rd_ir, edram_rd_pool
+                for proceeding_index in TF_event.event.proceeding_event:
+                    pro_event = self.Computation_order[proceeding_index]
+                    pro_event.current_number_of_preceding_event += 1
+                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                        if self.trace:
+                            print("\t\tProceeding event is triggered.", pro_event.event_type)
+                        if pro_event.event_type == "pe_saa":
+                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
+                        elif pro_event.event_type == "edram_rd_ir":
+                            rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
+                            pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
+                            cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            cu_idx = cux + cuy * self.CU_num_x
+                            self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                        elif pro_event.event_type == "edram_rd_pool":
+                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
+                
             ### Fetch data from off-chip memory ###
             for FE in self.fetch_array.copy():
                 FE.cycles_counter += 1
@@ -204,7 +258,7 @@ class Controller(object):
                                     if self.trace:
                                         print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pos = pro_event.position_idx
-                                    cu_y, cu_x, xb_y, xb_x = pos[2], pos[3], pos[4], pos[5]
+                                    cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
                                     cu_idx = cu_x + cu_y * self.CU_num_x
                                     xb_idx = xb_x + xb_y * self.XB_num_x
                                     cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])                                
@@ -218,7 +272,7 @@ class Controller(object):
                                 #print(xb.state_ou_operation[idx], idx)
                                 if not xb.state_ou_operation[idx]:
                                     if self.trace:
-                                        print("\tdo ou_operation, xb_pos:", xb.position, ",order index:", self.Computation_order.index(event))
+                                        print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                                     xb.state_ou_operation[idx] = True
                                     xb.ou_operation_erp.remove(event)
 
@@ -231,7 +285,7 @@ class Controller(object):
                                             if self.trace:
                                                 print("\t\tProceeding event is triggered.", pro_event.event_type)
                                             pos = pro_event.position_idx
-                                            cu_y, cu_x = pos[2], pos[3]
+                                            cu_y, cu_x = pos[4], pos[5]
                                             cu_idx = cu_x + cu_y * self.CU_num_x
                                             xb.cu_saa_trigger.append([pro_event, [cu_idx]])
                                     break
@@ -243,11 +297,11 @@ class Controller(object):
                         for idx in range(len(cu.state_cu_saa)):
                             if not cu.state_cu_saa[idx]:
                                 if self.trace:
-                                    print("\tdo cu_saa, cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                    print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                                 cu.state_cu_saa[idx] = True
                                 cu.cu_saa_erp.remove(event)
 
-                                ### add next event counter: pe_saa
+                                ### add next event counter: pe_saa, data_transfer
                                 for proceeding_index in event.proceeding_event:
                                     pro_event = self.Computation_order[proceeding_index]
                                     pro_event.current_number_of_preceding_event += 1
@@ -255,7 +309,12 @@ class Controller(object):
                                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                         if self.trace:
                                             print("\t\tProceeding event is triggered.", pro_event.event_type)
-                                        cu.pe_saa_trigger.append([pro_event, []])
+                                        if pro_event.event_type == "pe_saa":
+                                            cu.pe_saa_trigger.append([pro_event, []])
+                                        else:
+                                            src = pro_event.position_idx[0]
+                                            des = pro_event.position_idx[1][0] # des:只會有一個PE的SAA
+                                            self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des, 0))
                                 break
 
             ### Event: pe_saa ###
@@ -264,7 +323,7 @@ class Controller(object):
                     for idx in range(len(pe.state_pe_saa)):
                         if not pe.state_pe_saa[idx]:
                             if self.trace:
-                                print("\tdo pe_saa, pe_pos:", pe.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                             pe.state_pe_saa[idx] = True
                             pe.pe_saa_erp.remove(event)
 
@@ -285,7 +344,7 @@ class Controller(object):
                     for idx in range(len(pe.state_activation)):
                         if not pe.state_activation[idx]:
                             if self.trace:
-                                print("\tdo activation, pe_pos:", pe.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
 
@@ -306,11 +365,11 @@ class Controller(object):
                     for idx in range(len(pe.state_edram_wr)):
                         if not pe.state_edram_wr[idx]:
                             if self.trace:
-                                print("\tdo edram_wr, pe_pos:", pe.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
-                            ### add next event counter: edram_rd_ir, edram_rd_pool
+                            ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
                             for proceeding_index in event.proceeding_event:
                                 pro_event = self.Computation_order[proceeding_index]
                                 pro_event.current_number_of_preceding_event += 1
@@ -320,11 +379,16 @@ class Controller(object):
                                         print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pos = pro_event.position_idx
                                     if pro_event.event_type == "edram_rd_ir":
-                                        cu_y, cu_x = pos[2], pos[3]
+                                        cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                                     elif pro_event.event_type == "edram_rd_pool":
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
+                                    elif pro_event.event_type == "data_transfer":
+                                        src = pro_event.position_idx[0]
+                                        des_list = pro_event.position_idx[1]
+                                        for des in des_list:
+                                            self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des[:-2], des))
                             break
             
             ### Event: edram_rd_pool ###
@@ -355,7 +419,7 @@ class Controller(object):
                     else:
                         ## Check how many event can be done in a cycle
                         if self.trace:
-                            print("\tdo edram_rd_pool, pe_pos:", pe.position, ",order index:", self.Computation_order.index(event))
+                            print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         pe.state_edram_rd_pool = True
                         pe.edram_rd_pool_erp.remove(event)
                         
@@ -369,7 +433,6 @@ class Controller(object):
                                     print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pos = pro_event.position_idx
                                 pe.pooling_trigger.append([pro_event, []])                                
-
                     
             ### Event: pooling ###
             for pe in self.PE_array:
@@ -377,7 +440,7 @@ class Controller(object):
                     for idx in range(len(pe.state_pooling)):
                         if not pe.state_pooling[idx]:
                             if self.trace:
-                                print("\tdo pooling, pe_pos:", pe.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo pooling, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                             pe.state_pooling[idx] = True
                             pe.pooling_erp.remove(event)
 
@@ -477,6 +540,8 @@ class Controller(object):
             
             if self.fetch_array:
                 isDone = False
+            if self.network_transfer.transfer_list:
+                isDone = False
             else:
                 for pe in self.PE_array:
                     if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
@@ -489,9 +554,12 @@ class Controller(object):
                     if not isDone:
                         break
             
+            if self.cycle_ctr == 50:
+                isDone = True
 
         print('total cycles:', self.cycle_ctr)
         print('Power:')
+        """
         print("\t total:", self.total_power)
         print("\t crossbar and sensing:", self.power_ou)
         print("\t Shift and add (CU):", self.power_cu_saa)
@@ -499,6 +567,7 @@ class Controller(object):
         print("\t Activation:", self.power_act)
         print("\t Pooling:", self.power_pool)
         print("\t eDRAM:", self.power_buffer)
+        """
         #print('memory accesss times:', self.mem_acc_ctr)
 
         # if self.ordergenerator.isPipeline:
