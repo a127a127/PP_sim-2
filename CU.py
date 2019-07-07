@@ -15,6 +15,10 @@ class CU(object):
         self.edram_rd_ir_erp = []
         self.cu_saa_erp = []
 
+        ### trigger event list
+        self.ou_operation_trigger = [] # [pro_event, [cu_idx, xb_idx]]
+        self.pe_saa_trigger = []
+        
         ### generate XB
         self.XB_array = []
         self.gen_xb()
@@ -25,9 +29,6 @@ class CU(object):
         # state
         self.state_edram_rd_ir = False
         self.state_cu_saa = [False] * self.cu_saa_epc
-        ### trigger event list
-        self.ou_operation_trigger = [] # [pro_event, [cu_idx, xb_idx]]
-        self.pe_saa_trigger = []
 
     def gen_xb(self):
         rty, rtx, pey, pex, cuy, cux = self.position[0], self.position[1], self.position[2], self.position[3] , self.position[4], self.position[5] 

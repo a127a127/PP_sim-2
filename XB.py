@@ -6,7 +6,11 @@ class XB(object):
 
         ### for mapping
         self.position = xb_pos
+        
 
+        ### trigger event list
+        self.cu_saa_trigger = [] # [pro_event, [cu_idx]]
+        
         ### event ready pool
         self.ou_operation_erp = []
         
@@ -15,8 +19,6 @@ class XB(object):
     def reset(self):
         ### state
         self.state_ou_operation = [False] * self.ou_operation_epc
-        ### trigger event list
-        self.cu_saa_trigger = [] # [pro_event, [cu_idx]]
 
 
     def __str__(self):

@@ -524,7 +524,7 @@ class OrderGenerator(object):
                                                 data_transfer_event_idx = len(self.Computation_order)
                                                 self.Computation_order[edram_wr_event_idx].proceeding_event.append(data_transfer_event_idx)
 
-                                                print(self.Computation_order[edram_wr_event_idx].proceeding_event)
+                                                #print(self.Computation_order[edram_wr_event_idx].proceeding_event)
 
                                                 event = EventMetaData("data_transfer", [data_transfer_source, []], data_transfer_preceding_count, [], nlayer, data_transfer_input_sequence, data_transfer_output_sequence)
                                                 self.Computation_order.append(event) 
@@ -822,7 +822,11 @@ class OrderGenerator(object):
                         event = EventMetaData("data_transfer", [data_transfer_source, []], data_transfer_preceding_count, [], nlayer, data_transfer_input_sequence, data_transfer_output_sequence)
                         self.Computation_order.append(event) 
                                 
-                        
+
+                        if self.feature_mat[nlayer][nfilter][0][0] == 0.0:
+                            self.feature_mat[nlayer][nfilter][0][0] = []
+                        self.feature_mat[nlayer][nfilter][0][0].append(data_transfer_event_idx)
+                        '''
                         if self.layer_list[nlayer+1].layer_type != "fully":
                             if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
                                 self.feature_mat[nlayer][window_h][window_w][nfilter] = []
@@ -831,7 +835,7 @@ class OrderGenerator(object):
                             if self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] == 0.0:
                                 self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] = []
                             self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0].append(data_transfer_event_idx)
-                    
+                        '''
 
         print('Order generated!')
     

@@ -24,11 +24,10 @@ class Controller(object):
 
         self.cycle_ctr = 0
         self.cycle_power = 0
+        self.total_energy = 0
 
-        self.input_bit = self.ordergenerator.model_information.input_bit
 
         self.hardware_information = HardwareMetaData()
-
         # Leakage
         self.eDRAM_buffer_leakage = self.hardware_information.eDRAM_buffer_leakage
         self.Router_leakage = self.hardware_information.Router_leakage
@@ -52,16 +51,19 @@ class Controller(object):
         self.pooling_energy = self.hardware_information.pooling_energy
         self.edram_wr_energy = self.hardware_information.edram_wr_energy
 
-        ### Energy
-        self.total_energy = 0
-
-        self.mem_acc_ctr = 0
-
-        self.pipeline_lock = 0
-        self.pipeline_stage_record = []
-        self.CU_unfinished_event_index = 0
+        self.RT_num_y = self.hardware_information.Router_num_y
+        self.RT_num_x = self.hardware_information.Router_num_x
+        self.PE_num_y = self.hardware_information.PE_num_y
+        self.PE_num_x = self.hardware_information.PE_num_x
+        self.PE_num = self.hardware_information.PE_num
+        self.CU_num_y = self.hardware_information.CU_num_y
+        self.CU_num_x = self.hardware_information.CU_num_x
+        self.XB_num_y = self.hardware_information.Xbar_num_y
+        self.XB_num_x = self.hardware_information.Xbar_num_x
+        
         
         ### for statistics
+        self.mem_acc_ctr = 0
         ### utilization
         self.power_utilization = []
         self.PE_utilization = []
@@ -73,18 +75,8 @@ class Controller(object):
         self.activation_utilization = []
         self.OU_usage_utilization = []
 
-
-        self.RT_num_y = self.ordergenerator.RT_num_y
-        self.RT_num_x = self.ordergenerator.RT_num_x
-        self.PE_num_y = self.ordergenerator.PE_num_y
-        self.PE_num_x = self.ordergenerator.PE_num_x
-        self.PE_num = self.ordergenerator.PE_num
-        self.CU_num_y = self.ordergenerator.CU_num_y
-        self.CU_num_x = self.ordergenerator.CU_num_x
-        self.XB_num_y = self.ordergenerator.XB_num_y
-        self.XB_num_x = self.ordergenerator.XB_num_x
         
-
+        self.input_bit = self.ordergenerator.model_information.input_bit
         self.PE_array = []
         for rty_idx in range(self.RT_num_y):
             for rtx_idx in range(self.RT_num_x):
@@ -97,6 +89,7 @@ class Controller(object):
 
         self.fetch_array = []
         self.network_transfer = NetworkTransfer()
+        self.transfer_trigger = []
 
         #for i in range(len(self.pe_traverse_idx)):
         #    pass
@@ -109,6 +102,22 @@ class Controller(object):
             # self.activation_utilization.append([])
             # self.xbar_utilization.append([])
         
+        ### Pipeline control ###
+        if not self.isPipeLine:
+            print("non-pipeline")
+            self.pipeline_layer_stage = 0
+            self.num_layer = len(self.ordergenerator.layer_list)
+            print("num_layer:", self.num_layer)
+            
+            self.events_each_layer = []
+            for layer in range(self.num_layer):
+                self.events_each_layer.append(0)
+            for e in self.Computation_order:
+                self.events_each_layer[e.nlayer] += 1
+            print(self.events_each_layer)
+
+            self.this_layer_event_ctr = 0
+
         print("total event:", len(self.Computation_order))
 
     def run(self): 
@@ -159,7 +168,7 @@ class Controller(object):
             for TF_event in arrived:
                 if self.trace:
                     print("\tData arrived ", TF_event.event.event_type, ",order index:", self.Computation_order.index(TF_event.event), "destination:", TF_event.event.position_idx[1])
-
+                self.this_layer_event_ctr += 1
                 ### add next event counter: pe_saa, edram_rd_ir, edram_rd_pool
                 for proceeding_index in TF_event.event.proceeding_event:
                     pro_event = self.Computation_order[proceeding_index]
@@ -167,23 +176,7 @@ class Controller(object):
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
                             print("\t\tProceeding event is triggered.", pro_event.event_type)
-                        if pro_event.event_type == "pe_saa":
-                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
-                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
-                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                            self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
-                        elif pro_event.event_type == "edram_rd_ir":
-                            rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
-                            pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
-                            cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
-                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                            cu_idx = cux + cuy * self.CU_num_x
-                            self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
-                        elif pro_event.event_type == "edram_rd_pool":
-                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
-                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
-                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                            self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
+                        self.transfer_trigger.append([TF_event, pro_event])
                 
             ### Fetch data from off-chip memory ###
             for FE in self.fetch_array.copy():
@@ -245,6 +238,7 @@ class Controller(object):
                             ## Check how many event can be done in a cycle
                             if self.trace:  
                                 print("\tdo edram_rd_ir, cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                            self.this_layer_event_ctr += 1
                             cu.state = True
                             cu.state_edram_rd_ir = True
                             cu.edram_rd_ir_erp.remove(event)
@@ -273,6 +267,7 @@ class Controller(object):
                                 if not xb.state_ou_operation[idx]:
                                     if self.trace:
                                         print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                    self.this_layer_event_ctr += 1
                                     xb.state_ou_operation[idx] = True
                                     xb.ou_operation_erp.remove(event)
 
@@ -298,6 +293,7 @@ class Controller(object):
                             if not cu.state_cu_saa[idx]:
                                 if self.trace:
                                     print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                self.this_layer_event_ctr += 1
                                 cu.state_cu_saa[idx] = True
                                 cu.cu_saa_erp.remove(event)
 
@@ -324,6 +320,7 @@ class Controller(object):
                         if not pe.state_pe_saa[idx]:
                             if self.trace:
                                 print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            self.this_layer_event_ctr += 1
                             pe.state_pe_saa[idx] = True
                             pe.pe_saa_erp.remove(event)
 
@@ -345,6 +342,7 @@ class Controller(object):
                         if not pe.state_activation[idx]:
                             if self.trace:
                                 print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            self.this_layer_event_ctr += 1
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
 
@@ -366,6 +364,7 @@ class Controller(object):
                         if not pe.state_edram_wr[idx]:
                             if self.trace:
                                 print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            self.this_layer_event_ctr += 1
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
@@ -420,6 +419,7 @@ class Controller(object):
                         ## Check how many event can be done in a cycle
                         if self.trace:
                             print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        self.this_layer_event_ctr += 1
                         pe.state_edram_rd_pool = True
                         pe.edram_rd_pool_erp.remove(event)
                         
@@ -441,6 +441,7 @@ class Controller(object):
                         if not pe.state_pooling[idx]:
                             if self.trace:
                                 print("\tdo pooling, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            self.this_layer_event_ctr += 1
                             pe.state_pooling[idx] = True
                             pe.pooling_erp.remove(event)
 
@@ -455,53 +456,145 @@ class Controller(object):
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
+
             ### Trigger events ###
+            for trigger in self.transfer_trigger.copy():
+                TF_event = trigger[0]
+                pro_event = trigger[1]
+                if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            if pro_event.event_type == "pe_saa":
+                                rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                                pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                                self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
+                            elif pro_event.event_type == "edram_rd_ir":
+                                rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
+                                pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
+                                cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
+                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                                cu_idx = cux + cuy * self.CU_num_x
+                                self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                            elif pro_event.event_type == "edram_rd_pool":
+                                rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                                pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                                self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
+                            self.transfer_trigger.remove(trigger)
+                else:
+                    if pro_event.event_type == "pe_saa":
+                        rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                        pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                        pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                        self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
+                    elif pro_event.event_type == "edram_rd_ir":
+                        rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
+                        pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
+                        cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
+                        pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                        cu_idx = cux + cuy * self.CU_num_x
+                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                    elif pro_event.event_type == "edram_rd_pool":
+                        rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                        pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                        pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                        self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
+                    self.transfer_trigger.remove(trigger)
+
             for pe in self.PE_array:
                 ## Trigger activation ###
-                for trigger in pe.activation_trigger:
+                for trigger in pe.activation_trigger.copy():
                     pro_event = trigger[0]
-                    pe.activation_erp.append(pro_event)
+                    if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            pe.activation_erp.append(pro_event)
+                            pe.activation_trigger.remove(trigger)
+                    else:
+                        pe.activation_erp.append(pro_event)
+                        pe.activation_trigger.remove(trigger)
 
                 ## Trigger edram_wr ###
-                for trigger in pe.edram_wr_trigger:
+                for trigger in pe.edram_wr_trigger.copy():
                     pro_event = trigger[0]
-                    pe.edram_wr_erp.append(pro_event)
+                    if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            pe.edram_wr_erp.append(pro_event)
+                            pe.edram_wr_trigger.remove(trigger)
+                    else:
+                        pe.edram_wr_erp.append(pro_event)
+                        pe.edram_wr_trigger.remove(trigger)
 
                 ## Trigger edram_rd_ir ###
-                for trigger in pe.edram_rd_ir_trigger:
+                for trigger in pe.edram_rd_ir_trigger.copy():
                     pro_event = trigger[0]
                     cu_idx = trigger[1][0]
-                    pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                    if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                            pe.edram_rd_ir_trigger.remove(trigger)
+                    else:
+                        pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                        pe.edram_rd_ir_trigger.remove(trigger)
                 
                 ## Trigger pooling ###
-                for trigger in pe.pooling_trigger:
+                for trigger in pe.pooling_trigger.copy():
                     pro_event = trigger[0]
-                    pe.pooling_erp.append(pro_event)
+                    if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            pe.pooling_erp.append(pro_event)
+                            pe.pooling_trigger.remove(trigger)
+                    else:
+                        pe.pooling_erp.append(pro_event)
+                        pe.pooling_trigger.remove(trigger)
 
                 ## Trigger edram_rd_ir_pool ###
-                for trigger in pe.edram_rd_pool_trigger:
+                for trigger in pe.edram_rd_pool_trigger.copy():
                     pro_event = trigger[0]
-                    pe.edram_rd_pool_erp.append(pro_event)
-                
+                    if not self.isPipeLine:
+                        if pro_event.nlayer == self.pipeline_layer_stage:
+                            pe.edram_rd_pool_erp.append(pro_event)
+                            pe.edram_rd_pool_trigger.remove(trigger)
+                    else:
+                        pe.edram_rd_pool_erp.append(pro_event)
+                        pe.edram_rd_pool_trigger.remove(trigger)
                 for cu in pe.CU_array:
                     ## Trigger ou operation ###
-                    for trigger in cu.ou_operation_trigger:
+                    for trigger in cu.ou_operation_trigger.copy():
                         pro_event = trigger[0]
                         xb_idx = trigger[1][1]
-                        cu.XB_array[xb_idx].ou_operation_erp.append(pro_event)
-
+                        if not self.isPipeLine:
+                            if pro_event.nlayer == self.pipeline_layer_stage:
+                                cu.XB_array[xb_idx].ou_operation_erp.append(pro_event)
+                                cu.ou_operation_trigger.remove(trigger)
+                        else:
+                            cu.XB_array[xb_idx].ou_operation_erp.append(pro_event)
+                            cu.ou_operation_trigger.remove(trigger)
                     ## Trigger pe saa ###
-                    for trigger in cu.pe_saa_trigger:
+                    for trigger in cu.pe_saa_trigger.copy():
                         pro_event = trigger[0]
-                        pe.pe_saa_erp.append(pro_event) 
-                        cu.pe_saa_trigger = []
+                        if not self.isPipeLine:
+                            if pro_event.nlayer == self.pipeline_layer_stage:
+                                pe.pe_saa_erp.append(pro_event) 
+                                #cu.pe_saa_trigger = []
+                                cu.pe_saa_trigger.remove(trigger)
+                        else:
+                            pe.pe_saa_erp.append(pro_event) 
+                            #cu.pe_saa_trigger = []
+                            cu.pe_saa_trigger.remove(trigger)
 
                     for xb in cu.XB_array:
                         ### Trigger cu_saa ###
-                        for trigger in xb.cu_saa_trigger:
+                        for trigger in xb.cu_saa_trigger.copy():
                             pro_event = trigger[0]
                             cu_idx = trigger[1][0]
-                            pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
+                            if not self.isPipeLine:
+                                if pro_event.nlayer == self.pipeline_layer_stage:
+                                    pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
+                                    xb.cu_saa_trigger.remove(trigger)
+                            else:
+                                pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
+                                xb.cu_saa_trigger.remove(trigger)
+
 
             ### Reset ###
             for pe in self.PE_array:
@@ -538,26 +631,43 @@ class Controller(object):
             ### Finish?
             isDone = True
             
-            if self.fetch_array:
-                isDone = False
-            if self.network_transfer.transfer_list:
+            if self.fetch_array or self.network_transfer.transfer_list or self.transfer_trigger:
                 isDone = False
             else:
                 for pe in self.PE_array:
                     if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
                         isDone = False
                         break
+                    elif pe.activation_trigger or pe.edram_wr_trigger or pe.edram_rd_pool_trigger \
+                        or pe.edram_rd_ir_trigger or pe.pooling_trigger:
+                        isDone = False
+                        break
                     for cu in pe.CU_array:
                         if cu.state or cu.edram_rd_ir_erp:
                             isDone = False
                             break
+                        elif cu.ou_operation_trigger or cu.pe_saa_trigger:
+                            isDone = False
+                            break
+                        for xb in cu.XB_array:
+                            if xb.cu_saa_trigger:
+                                isDone = False
+                                break
+                        if not isDone:
+                            break
                     if not isDone:
                         break
-            
+
             if self.cycle_ctr == 50:
                 isDone = True
 
+            if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
+                print("pipeline_layer_stage finished:", self.pipeline_layer_stage)
+                self.pipeline_layer_stage += 1
+                self.this_layer_event_ctr = 0
+            
         print('total cycles:', self.cycle_ctr)
+        print("this_layer_event_ctr:", self.this_layer_event_ctr)
         print('Power:')
         """
         print("\t total:", self.total_power)

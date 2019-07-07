@@ -8,7 +8,7 @@ from MnistConfig import MnistConfig
 
 def main():
     trace = True
-    isPipeLine = True
+    isPipeLine = False
 
     hardware_information = HardwareMetaData()
     model_information = TestModelConfig()
@@ -18,16 +18,16 @@ def main():
 
     order_generator = OrderGenerator(model_information, hardware_information, mapping_information)
     
-    
-    i = 0
-    for e in order_generator.Computation_order:
-        if e.event_type == "edram_wr" or e.event_type == "edram_rd_ir" or e.event_type == "edram_rd_pool" or e.event_type == "data_transfer":
-            pass
-        print(i, e)
-        print()
+    if False:
+        i = 0
+        for e in order_generator.Computation_order:
+            if e.event_type == "edram_wr" or e.event_type == "edram_rd_ir" or e.event_type == "edram_rd_pool" or e.event_type == "data_transfer":
+                pass
+            print(i, e)
+            print()
+            
+            i += 1
         
-        i += 1
-    
 
     controller = Controller(order_generator, isPipeLine, trace)
     controller.run()
