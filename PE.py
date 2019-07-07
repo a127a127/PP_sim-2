@@ -35,6 +35,12 @@ class PE(object):
         self.edram_wr_erp = []
         
 
+        ### trigger event list
+        self.activation_trigger = []
+        self.edram_wr_trigger = []
+        self.edram_rd_pool_trigger = []
+        self.edram_rd_ir_trigger = []
+        self.pooling_trigger = []
 
         ### generate CU
         self.CU_array = []
@@ -49,13 +55,6 @@ class PE(object):
         self.state_activation = [False] * self.activation_epc
         self.state_edram_wr = [False] * self.edram_wr_epc
         self.state_pooling = [False] * self.pooling_epc
-        
-        ### trigger event list
-        self.activation_trigger = []
-        self.edram_wr_trigger = []
-        self.edram_rd_pool_trigger = []
-        self.edram_rd_ir_trigger = []
-        self.pooling_trigger = []
 
     def gen_cu(self):
         rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 
