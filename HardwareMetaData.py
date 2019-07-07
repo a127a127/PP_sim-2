@@ -42,18 +42,29 @@ class HardwareMetaData(object):
         self.CU_Input_Reg_size = int(cfg['general']['CU_Input_Reg_size'])
         self.CU_Output_Reg_size = int(cfg['general']['CU_Output_Reg_size'])
 
-        # Power
-        self.eDRAM_buffer_read_energy = float(cfg['power']['eDRAM_buffer_read_energy'])
-        self.eDRAM_buffer_write_energy = float(cfg['power']['eDRAM_buffer_write_energy'])
-        self.eDRAM_to_CU_bus_power  = float(cfg['power']['eDRAM_to_CU_bus_power'])
-        self.Router_power = float(cfg['power']['Router_power'])
-        self.Activation_power = float(cfg['power']['Activation_power'])
-        self.Shift_and_add_power = float(cfg['power']['Shift_and_add_power'])
-        self.Pooling_power = float(cfg['power']['Pooling_power'])
-        self.Output_Reg_power = float(cfg['power']['Output_Reg_power'])
-        self.DAC_power = float(cfg['power']['DAC_power'])
-        self.SA_power = float(cfg['power']['SA_power'])
-        self.OU_power = float(cfg['power']['OU_power'])
+        # Leakage
+        self.eDRAM_buffer_leakage = float(cfg['leakage']['eDRAM_buffer_leakage'])
+        self.Router_leakage = float(cfg['leakage']['Router_leakage'])
+        self.SA_leakage = float(cfg['leakage']['SA_leakage'])
+        self.Act_leakage = float(cfg['leakage']['Act_leakage'])
+        self.PE_SAA_leakage = float(cfg['leakage']['PE_SAA_leakage'])
+        self.Pool_leakage = float(cfg['leakage']['Pool_leakage'])
+
+        self.DAC_leakage = float(cfg['leakage']['DAC_leakage'])
+        self.MUX_leakage = float(cfg['leakage']['MUX_leakage'])
+        self.SA_leakage = float(cfg['leakage']['SA_leakage'])
+        self.Crossbar_leakage = float(cfg['leakage']['Crossbar_leakage'])
+        self.CU_SAA_leakage = float(cfg['leakage']['CU_SAA_leakage'])
+
+        # Dynamic Energy
+        self.eDRAM_rd_ir_energy = float(cfg['dynamic_energy']['eDRAM_rd_ir_energy'])
+        self.edram_rd_pool_energy = float(cfg['dynamic_energy']['edram_rd_pool_energy'])
+        self.ou_operation_energy = float(cfg['dynamic_energy']['ou_operation_energy'])
+        self.pe_saa_energy = float(cfg['dynamic_energy']['pe_saa_energy'])
+        self.cu_saa_energy = float(cfg['dynamic_energy']['cu_saa_energy'])
+        self.activation_energy = float(cfg['dynamic_energy']['activation_energy'])
+        self.pooling_energy = float(cfg['dynamic_energy']['pooling_energy'])
+        self.edram_wr_energy = float(cfg['dynamic_energy']['edram_wr_energy'])
 
     def __str__(self):
         return str(self.__dict__)
