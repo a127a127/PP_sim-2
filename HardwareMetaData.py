@@ -57,7 +57,7 @@ class HardwareMetaData(object):
         self.CU_SAA_leakage = float(cfg['leakage']['CU_SAA_leakage'])
 
         # Dynamic Energy
-        self.eDRAM_rd_ir_energy = float(cfg['dynamic_energy']['eDRAM_rd_ir_energy'])
+        self.edram_rd_ir_energy = float(cfg['dynamic_energy']['edram_rd_ir_energy'])
         self.edram_rd_pool_energy = float(cfg['dynamic_energy']['edram_rd_pool_energy'])
         self.ou_operation_energy = float(cfg['dynamic_energy']['ou_operation_energy'])
         self.pe_saa_energy = float(cfg['dynamic_energy']['pe_saa_energy'])
@@ -65,7 +65,18 @@ class HardwareMetaData(object):
         self.activation_energy = float(cfg['dynamic_energy']['activation_energy'])
         self.pooling_energy = float(cfg['dynamic_energy']['pooling_energy'])
         self.edram_wr_energy = float(cfg['dynamic_energy']['edram_wr_energy'])
+        self.router_energy = float(cfg['dynamic_energy']['router_energy'])
 
+        self.pe_or_energy = float(cfg['dynamic_energy']['pe_or_energy'])
+        self.cu_ir_energy = float(cfg['dynamic_energy']['cu_ir_energy'])
+        self.cu_or_energy = float(cfg['dynamic_energy']['cu_or_energy'])
+        
+        self.dac_energy = float(cfg['dynamic_energy']['dac_energy'])
+        self.xb_energy = float(cfg['dynamic_energy']['xb_energy'])
+        self.mux_energy = float(cfg['dynamic_energy']['mux_energy'])
+        self.sa_energy = float(cfg['dynamic_energy']['sa_energy'])
+        self.sa_energy += self.mux_energy
+       
     def __str__(self):
         return str(self.__dict__)
 

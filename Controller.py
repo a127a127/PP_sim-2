@@ -23,9 +23,8 @@ class Controller(object):
         self.trace = trace
 
         self.cycle_ctr = 0
-        self.cycle_power = 0
-        self.total_energy = 0
-
+        self.cycle_energy = 0
+        self.cycle_time = 3.45888e-08
 
         self.hardware_information = HardwareMetaData()
         # Leakage
@@ -41,8 +40,11 @@ class Controller(object):
         self.Crossbar_leakage = self.hardware_information.Crossbar_leakage
         self.CU_SAA_leakage = self.hardware_information.CU_SAA_leakage
 
-        # Dynamic Energy
-        self.eDRAM_rd_ir_energy = self.hardware_information.eDRAM_rd_ir_energy
+        self.total_leakage = self.eDRAM_buffer_leakage + self.Router_leakage + self.SA_leakage + \
+                                self.Act_leakage + self.PE_SAA_leakage + self.Pool_leakage + self.DAC_leakage+ \
+                                self.MUX_leakage + self.SA_leakage + self.Crossbar_leakage + self.CU_SAA_leakage
+        # Energy
+        self.edram_rd_ir_energy = self.hardware_information.edram_rd_ir_energy
         self.edram_rd_pool_energy = self.hardware_information.edram_rd_pool_energy
         self.ou_operation_energy = self.hardware_information.ou_operation_energy
         self.pe_saa_energy = self.hardware_information.pe_saa_energy
@@ -50,6 +52,15 @@ class Controller(object):
         self.activation_energy = self.hardware_information.activation_energy
         self.pooling_energy = self.hardware_information.pooling_energy
         self.edram_wr_energy = self.hardware_information.edram_wr_energy
+        self.router_energy = self.hardware_information.router_energy
+
+        self.pe_or_energy = self.hardware_information.pe_or_energy
+        self.cu_ir_energy = self.hardware_information.cu_ir_energy
+        self.cu_or_energy = self.hardware_information.cu_or_energy
+
+        self.dac_energy = self.hardware_information.dac_energy
+        self.xb_energy = self.hardware_information.xb_energy
+        self.sa_energy = self.hardware_information.sa_energy
 
         self.RT_num_y = self.hardware_information.Router_num_y
         self.RT_num_x = self.hardware_information.Router_num_x
@@ -58,24 +69,41 @@ class Controller(object):
         self.PE_num = self.hardware_information.PE_num
         self.CU_num_y = self.hardware_information.CU_num_y
         self.CU_num_x = self.hardware_information.CU_num_x
+        self.CU_num = self.hardware_information.CU_num
         self.XB_num_y = self.hardware_information.Xbar_num_y
         self.XB_num_x = self.hardware_information.Xbar_num_x
+        self.XB_num = self.hardware_information.Xbar_num
         
         
-        ### for statistics
+        ### Statistics
+        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
         self.mem_acc_ctr = 0
-        ### utilization
-        self.power_utilization = []
-        self.PE_utilization = []
-        self.CU_utilization = []
-        self.xbar_utilization = []
-        self.pooling_utilization = []
-        self.cu_saa_utilization = []
-        self.pe_saa_utilization = []
-        self.activation_utilization = []
-        self.OU_usage_utilization = []
+        self.data_transfer_ctr = 0 
+        self.act_xb_ctr = 0
 
-        
+        ## utilization
+        self.energy_utilization = []
+        self.xbar_utilization = []
+
+        self.pe_state_for_plot = [[],[]]
+
+
+        ### energy consumption
+        self.edram_rd_ir_energy_total = 0
+        self.edram_rd_pool_energy_total = 0
+        self.ou_operation_energy_total = 0
+        self.pe_saa_energy_total = 0
+        self.cu_saa_energy_total = 0
+        self.activation_energy_total = 0
+        self.pooling_energy_total = 0
+        self.edram_wr_energy_total = 0
+        self.interconnect_total = 0
+
+        self.pe_or_energy_total = 0
+        self.cu_ir_energy_total = 0
+        self.cu_or_energy_total = 0
+
+
         self.input_bit = self.ordergenerator.model_information.input_bit
         self.PE_array = []
         for rty_idx in range(self.RT_num_y):
@@ -88,7 +116,7 @@ class Controller(object):
         #print(self.PE_array[0].CU_array[0].XB_array[0])
 
         self.fetch_array = []
-        self.network_transfer = NetworkTransfer()
+        self.network_transfer = NetworkTransfer(self.router_energy)
         self.transfer_trigger = []
 
         #for i in range(len(self.pe_traverse_idx)):
@@ -106,6 +134,7 @@ class Controller(object):
         if not self.isPipeLine:
             print("non-pipeline")
             self.pipeline_layer_stage = 0
+            self.pipeline_stage_record = []
             self.num_layer = len(self.ordergenerator.layer_list)
             print("num_layer:", self.num_layer)
             
@@ -120,12 +149,9 @@ class Controller(object):
 
         print("total event:", len(self.Computation_order))
 
-    def run(self): 
-        #fetch_array = list()
-        #color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+    def run(self):
         #cu_state_for_plot = [[],[]]
         #cu_transfer_ctr = 0
-
         for e in self.Computation_order:
             # traverse computation order
             # if current_number_of_preceding_event==preceding_event_count的event
@@ -142,33 +168,24 @@ class Controller(object):
                     print("Computation order error: event\"", e.event_type, "\".")
                     print("exit")
                     exit()
+        
         # for pe in self.PE_array:
         #     print(pe.position, pe.edram_rd_ir_erp)
 
-    
         isDone = False
         while not isDone:
-            
-            self.cycle_power = 0
+            self.cycle_energy = 0
             self.cycle_ctr += 1
+            self.act_xb_ctr = 0
+
             if self.trace:
                 print('cycle:', self.cycle_ctr)
-            
-            # pipeline_stage = 10000           
-            # if not self.ordergenerator.isPipeline:
-            #     for index in range(len(self.Computation_order)):
-            #         if not self.Computation_order[index].finished:
-            #             if self.Computation_order[index].nlayer < pipeline_stage:
-            #                 pipeline_stage = self.Computation_order[index].nlayer
-            #             self.CU_unfinished_event_index = index
-            #             break
             
             ### Data transfer in Chip ###
             arrived = self.network_transfer.step()
             for TF_event in arrived:
                 if self.trace:
                     print("\tData arrived ", TF_event.event.event_type, ",order index:", self.Computation_order.index(TF_event.event), "destination:", TF_event.event.position_idx[1])
-                self.this_layer_event_ctr += 1
                 ### add next event counter: pe_saa, edram_rd_ir, edram_rd_pool
                 for proceeding_index in TF_event.event.proceeding_event:
                     pro_event = self.Computation_order[proceeding_index]
@@ -177,7 +194,22 @@ class Controller(object):
                         if self.trace:
                             print("\t\tProceeding event is triggered.", pro_event.event_type)
                         self.transfer_trigger.append([TF_event, pro_event])
-                
+
+                    # put data into buffer
+                    if pro_event.event_type == "edram_rd_ir":
+                        rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
+                        pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
+                        cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
+                        pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                        #print(pro_event.nlayer, TF_event.event.outputs)                                                                                                                             
+                        self.PE_array[pe_idx].edram_buffer.put([pro_event.nlayer, TF_event.event.outputs[0]])
+                    elif pro_event.event_type == "edram_rd_pool":
+                        rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                        pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                        pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                        #print(pro_event.nlayer, TF_event.event.outputs)                                                
+                        self.PE_array[pe_idx].edram_buffer.put([pro_event.nlayer, TF_event.event.outputs[0]])
+
             ### Fetch data from off-chip memory ###
             for FE in self.fetch_array.copy():
                 FE.cycles_counter += 1
@@ -200,7 +232,7 @@ class Controller(object):
                         self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event)
 
                     self.fetch_array.remove(FE)
-                    self.mem_acc_ctr += 1
+                    #self.mem_acc_ctr += 1
                     #print(XB_array[0].OnchipBuffer.arr) 
 
             ### Event: edram_rd_ir ###
@@ -228,6 +260,7 @@ class Controller(object):
                                 break
                         
                         if not isData_ready:
+                            self.mem_acc_ctr += 1
                             pe_idx = self.PE_array.index(pe)
                             cu_idx = pe.CU_array.index(cu)
                             #print("PE_array index", pe_idx, "data not ready")
@@ -238,7 +271,12 @@ class Controller(object):
                             ## Check how many event can be done in a cycle
                             if self.trace:  
                                 print("\tdo edram_rd_ir, cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
-                            self.this_layer_event_ctr += 1
+                            if not self.isPipeLine:
+                                self.this_layer_event_ctr += 1
+                            
+                            self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
+                            self.cycle_energy += self.edram_rd_ir_energy
+
                             cu.state = True
                             cu.state_edram_rd_ir = True
                             cu.edram_rd_ir_erp.remove(event)
@@ -267,7 +305,18 @@ class Controller(object):
                                 if not xb.state_ou_operation[idx]:
                                     if self.trace:
                                         print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                                    self.this_layer_event_ctr += 1
+                                    self.ou_operation_energy_total += self.ou_operation_energy
+                                    self.cu_ir_energy_total += self.cu_ir_energy
+                                    self.cu_or_energy_total += self.cu_or_energy
+
+                                    self.cycle_energy += self.ou_operation_energy
+                                    self.cycle_energy += self.cu_ir_energy
+                                    self.cycle_energy += self.cu_or_energy
+
+                                    self.act_xb_ctr += 1
+
+                                    if not self.isPipeLine:
+                                        self.this_layer_event_ctr += 1
                                     xb.state_ou_operation[idx] = True
                                     xb.ou_operation_erp.remove(event)
 
@@ -293,7 +342,15 @@ class Controller(object):
                             if not cu.state_cu_saa[idx]:
                                 if self.trace:
                                     print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                                self.this_layer_event_ctr += 1
+                                
+                                self.cu_saa_energy_total += self.cu_saa_energy
+                                self.cu_or_energy_total += self.cu_or_energy
+
+                                self.cycle_energy += self.cu_saa_energy
+                                self.cycle_energy += self.cu_or_energy
+
+                                if not self.isPipeLine:
+                                    self.this_layer_event_ctr += 1
                                 cu.state_cu_saa[idx] = True
                                 cu.cu_saa_erp.remove(event)
 
@@ -320,7 +377,15 @@ class Controller(object):
                         if not pe.state_pe_saa[idx]:
                             if self.trace:
                                 print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            self.this_layer_event_ctr += 1
+                            
+                            self.pe_saa_energy_total += self.pe_saa_energy
+                            self.pe_or_energy_total += self.pe_or_energy
+
+                            self.cycle_energy += self.pe_saa_energy
+                            self.cycle_energy += self.pe_or_energy
+
+                            if not self.isPipeLine:
+                                self.this_layer_event_ctr += 1
                             pe.state_pe_saa[idx] = True
                             pe.pe_saa_erp.remove(event)
 
@@ -342,7 +407,11 @@ class Controller(object):
                         if not pe.state_activation[idx]:
                             if self.trace:
                                 print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            self.this_layer_event_ctr += 1
+                            
+                            self.activation_energy_total += self.activation_energy
+                            self.cycle_energy += self.activation_energy
+                            if not self.isPipeLine:
+                                self.this_layer_event_ctr += 1
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
 
@@ -364,7 +433,11 @@ class Controller(object):
                         if not pe.state_edram_wr[idx]:
                             if self.trace:
                                 print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            self.this_layer_event_ctr += 1
+                            
+                            self.edram_wr_energy_total += self.edram_wr_energy
+                            self.cycle_energy += self.edram_wr_energy
+                            if not self.isPipeLine:    
+                                self.this_layer_event_ctr += 1
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
@@ -378,18 +451,22 @@ class Controller(object):
                                         print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pos = pro_event.position_idx
                                     if pro_event.event_type == "edram_rd_ir":
+                                        # 目前生的order不會進到這
                                         cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                                     elif pro_event.event_type == "edram_rd_pool":
+                                        # 目前生的order不會進到這
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
+                                        if not self.isPipeLine:
+                                            self.this_layer_event_ctr += 1  ### 問題:還沒傳到下一層就開始了
                                         src = pro_event.position_idx[0]
                                         des_list = pro_event.position_idx[1]
                                         for des in des_list:
                                             self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des[:-2], des))
+                                            
                             break
-            
             ### Event: edram_rd_pool ###
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
@@ -419,7 +496,10 @@ class Controller(object):
                         ## Check how many event can be done in a cycle
                         if self.trace:
                             print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                        self.this_layer_event_ctr += 1
+                        self.edram_rd_pool_energy_total += self.edram_rd_pool_energy
+                        self.cycle_energy += self.edram_rd_pool_energy
+                        if not self.isPipeLine:
+                            self.this_layer_event_ctr += 1
                         pe.state_edram_rd_pool = True
                         pe.edram_rd_pool_erp.remove(event)
                         
@@ -441,7 +521,10 @@ class Controller(object):
                         if not pe.state_pooling[idx]:
                             if self.trace:
                                 print("\tdo pooling, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            self.this_layer_event_ctr += 1
+                            self.pooling_energy_total += self.pooling_energy
+                            self.cycle_energy += self.pooling_energy
+                            if not self.isPipeLine:
+                                self.this_layer_event_ctr += 1
                             pe.state_pooling[idx] = True
                             pe.pooling_erp.remove(event)
 
@@ -462,25 +545,25 @@ class Controller(object):
                 TF_event = trigger[0]
                 pro_event = trigger[1]
                 if not self.isPipeLine:
-                        if pro_event.nlayer == self.pipeline_layer_stage:
-                            if pro_event.event_type == "pe_saa":
-                                rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
-                                pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
-                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                                self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
-                            elif pro_event.event_type == "edram_rd_ir":
-                                rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
-                                pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
-                                cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
-                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                                cu_idx = cux + cuy * self.CU_num_x
-                                self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
-                            elif pro_event.event_type == "edram_rd_pool":
-                                rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
-                                pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
-                                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
-                                self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
-                            self.transfer_trigger.remove(trigger)
+                    if pro_event.nlayer == self.pipeline_layer_stage:
+                        if pro_event.event_type == "pe_saa":
+                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            self.PE_array[pe_idx].pe_saa_erp.append(pro_event)
+                        elif pro_event.event_type == "edram_rd_ir":
+                            rty, rtx = TF_event.destination_cu[0], TF_event.destination_cu[1]
+                            pey, pex = TF_event.destination_cu[2], TF_event.destination_cu[3]
+                            cuy, cyx = TF_event.destination_cu[4], TF_event.destination_cu[5]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            cu_idx = cux + cuy * self.CU_num_x
+                            self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                        elif pro_event.event_type == "edram_rd_pool":
+                            rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
+                            pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
+                            pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                            self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
+                        self.transfer_trigger.remove(trigger)
                 else:
                     if pro_event.event_type == "pe_saa":
                         rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
@@ -596,6 +679,12 @@ class Controller(object):
                                 xb.cu_saa_trigger.remove(trigger)
 
 
+            ### Record PE state ###
+            for pe in self.PE_array:
+                if pe.check_state():
+                    self.pe_state_for_plot[0].append(self.cycle_ctr)
+                    self.pe_state_for_plot[1].append(self.PE_array.index(pe))
+
             ### Reset ###
             for pe in self.PE_array:
                 pe.reset()
@@ -619,162 +708,175 @@ class Controller(object):
                             break
                         cu.state = False
                         
-            """
-            # self.power_utilization.append(self.cycle_power)
-
-            if not self.ordergenerator.isPipeline and pipeline_stage != 10000:
-                if self.pipeline_lock < pipeline_stage:
-                    self.pipeline_lock = pipeline_stage
-                self.pipeline_stage_record.append(pipeline_stage)
-            """
+            self.energy_utilization.append(self.cycle_energy*1e09)
+            self.xbar_utilization.append(self.act_xb_ctr)
+            #print(self.cycle_energy)
             
             ### Finish?
             isDone = True
             
             if self.fetch_array or self.network_transfer.transfer_list or self.transfer_trigger:
                 isDone = False
-            else:
-                for pe in self.PE_array:
-                    if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
+
+            for pe in self.PE_array:
+                if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
+                    isDone = False
+                    break
+                elif pe.activation_trigger or pe.edram_wr_trigger or pe.edram_rd_pool_trigger \
+                    or pe.edram_rd_ir_trigger or pe.pooling_trigger:
+                    isDone = False
+                    break
+                for cu in pe.CU_array:
+                    if cu.state or cu.edram_rd_ir_erp:
                         isDone = False
                         break
-                    elif pe.activation_trigger or pe.edram_wr_trigger or pe.edram_rd_pool_trigger \
-                        or pe.edram_rd_ir_trigger or pe.pooling_trigger:
+                    elif cu.ou_operation_trigger or cu.pe_saa_trigger:
                         isDone = False
                         break
-                    for cu in pe.CU_array:
-                        if cu.state or cu.edram_rd_ir_erp:
+                    for xb in cu.XB_array:
+                        if xb.cu_saa_trigger:
                             isDone = False
-                            break
-                        elif cu.ou_operation_trigger or cu.pe_saa_trigger:
-                            isDone = False
-                            break
-                        for xb in cu.XB_array:
-                            if xb.cu_saa_trigger:
-                                isDone = False
-                                break
-                        if not isDone:
                             break
                     if not isDone:
                         break
+                if not isDone:
+                    break
 
-            if self.cycle_ctr == 50:
-                isDone = True
+            # if self.cycle_ctr > 550:
+            #     self.trace = True
+                #print(self.cycle_ctr)
 
-            if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
-                print("pipeline_layer_stage finished:", self.pipeline_layer_stage)
-                self.pipeline_layer_stage += 1
-                self.this_layer_event_ctr = 0
-            
-        print('total cycles:', self.cycle_ctr)
-        print("this_layer_event_ctr:", self.this_layer_event_ctr)
-        print('Power:')
-        """
-        print("\t total:", self.total_power)
-        print("\t crossbar and sensing:", self.power_ou)
-        print("\t Shift and add (CU):", self.power_cu_saa)
-        print("\t Shift and add (PE):", self.power_pe_saa)
-        print("\t Activation:", self.power_act)
-        print("\t Pooling:", self.power_pool)
-        print("\t eDRAM:", self.power_buffer)
-        """
-        #print('memory accesss times:', self.mem_acc_ctr)
+            if not self.isPipeLine:
+                self.pipeline_stage_record.append(self.pipeline_layer_stage)
 
-        # if self.ordergenerator.isPipeline:
-        #     pipe_str = "pipeline"
-        # else:
-        #     pipe_str = "non_pipeline"
-
-        # ### Pipeline stage
-        # if not self.ordergenerator.isPipeline:
-        #     with open('./statistics/Pipeline_stage_'+pipe_str+'.csv', 'w', newline='') as csvfile:
-        #         # 建立 CSV 檔寫入器
-        #         writer = csv.writer(csvfile)
-        #         for row in range(self.cycle_ctr):
-        #             writer.writerow([row+1, self.pipeline_stage_record[row]])
-
-        # ### Power
-        # with open('./statistics/Power_'+pipe_str+'.csv', 'w', newline='') as csvfile:
-        #     # 建立 CSV 檔寫入器
-        #     writer = csv.writer(csvfile)
-        #     for row in range(self.cycle_ctr):
-        #         writer.writerow([row+1, self.power_utilization[row]])
-
+                #print("this_layer_event_ctr:", self.this_layer_event_ctr, self.events_each_layer, self.pipeline_layer_stage)
+                if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
+                    #print("pipeline_layer_stage finished:", self.pipeline_layer_stage)
+                    self.pipeline_layer_stage += 1
+                    self.this_layer_event_ctr = 0
+        #print("this_layer_event_ctr:", self.this_layer_event_ctr, self.events_each_layer)
         
-        # plt.plot(range(1, self.cycle_ctr+1), self.power_utilization)
-        # #plt.show()
-        # plt.ylabel('Power (mW)')
-        # plt.xlabel('Cycle')
-        # plt.ylim([0, 2.5])
-        # plt.savefig('./statistics/power_utilization_'+pipe_str+'.png')
-        # plt.clf()
+        ### Buffer size ###
+        self.max_buffer_size = 0 # num of data
+        for pe in self.PE_array:
+            self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
+
+
+        self.print_statistics_result()
+
+    def print_statistics_result(self):
+        print("Cycles time:", self.cycle_time)
+        print("Cycles:", self.cycle_ctr)
         
-        # ### CU usage
-        # with open('./statistics/CU_utilization_'+pipe_str+'.csv', 'w', newline='') as csvfile:
-        #     # 建立 CSV 檔寫入器
-        #     writer = csv.writer(csvfile)
-        #     for row in range(len(cu_state_for_plot[0])):
-        #         writer.writerow([cu_state_for_plot[0][row], cu_state_for_plot[1][row]])
-        #     """
-        #     for row in range(self.cycle_ctr):
-        #         c = [row+1]
-        #         for i in range(self.ordergenerator.CU_num):
-        #             c.append(self.CU_utilization[i][row])
-        #         writer.writerow(c)
-        #     """
+        print("Leakage:")
+        print("\tTotal:", self.total_leakage)
+        print("\teDRAM_buffer_leakage:", self.eDRAM_buffer_leakage)
+        print("\tRouter_leakage:", self.Router_leakage)
+        print("\tSA_leakage:", self.SA_leakage)
+        print("\tAct_leakage:", self.Act_leakage)
+        print("\tPE_SAA_leakage:", self.PE_SAA_leakage)
+        print("\tPool_leakage:", self.Pool_leakage)
+        print("\tDAC_leakage:", self.DAC_leakage)
+        print("\tMUX_leakage:", self.MUX_leakage)
+        print("\tSA_leakage:", self.SA_leakage)
+        print("\tCrossbar_leakage:", self.Crossbar_leakage)
+        print("\tCU_SAA_leakage:", self.CU_SAA_leakage)
 
-        # plt.scatter(cu_state_for_plot[0], cu_state_for_plot[1])
-        # #for i in range(self.ordergenerator.CU_num):
-        # #    plt.scatter(range(1, self.cycle_ctr), self.CU_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.xlabel('Cycle')
-        # plt.ylabel('CU number')
-        # plt.ylim([-1, self.ordergenerator.CU_num])
-        # plt.savefig('./statistics/CU_utilization_'+pipe_str+'.png')
-        # plt.clf()
+        self.edram_rd_energy_total = self.edram_rd_ir_energy_total + self.edram_rd_pool_energy_total
+        self.edram_energy_total = self.edram_rd_energy_total + self.edram_wr_energy_total
+        self.interconnect_energy_total = self.network_transfer.interconnect_energy_total
 
-        # ### Xbar
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.xbar_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Crossbar utilization')
-        # plt.savefig('./statistics/xbar_utilization_'+pipe_str+'.png')
-        # plt.clf()
+        self.dac_energy_total = self.dac_energy/self.ou_operation_energy * self.ou_operation_energy_total
+        self.xb_energy_total = self.xb_energy/self.ou_operation_energy * self.ou_operation_energy_total
+        self.sa_energy_total = self.sa_energy/self.ou_operation_energy * self.ou_operation_energy_total
 
-        # ### Pooling
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.pooling_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Pooling utilization')
-        # plt.savefig('./statistics/pooling_utilization_'+pipe_str+'.png')
-        # plt.clf()
+        self.cu_energy_total = self.ou_operation_energy_total + self.cu_ir_energy_total + self.cu_or_energy_total + self.cu_saa_energy_total
+        self.pe_energy_total = self.cu_energy_total + self.edram_energy_total +  + self.pe_saa_energy_total + \
+                               self.activation_energy_total+ self.pooling_energy_total + self.pe_or_energy_total
+        self.energy_total = self.pe_energy_total + self.interconnect_energy_total
 
-        # ### Shift and Add
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.shift_and_add_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Shift and add unit utilization')
-        # plt.savefig('./statistics/saa_utilization_'+pipe_str+'.png')
-        # plt.clf()
-        # """
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.saa_rate_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.savefig('./statistics/saa_rate_utilization_'+pipe_str+'.png')
-        # plt.clf()
-        # """
+        print("--Power breakdown--")
 
-        # ### Activation Unit
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.activation_utilization[i], c=color[i])
-        # #plt.show()
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Activation unit utilization')
-        # plt.savefig('./statistics/activation_utilization_'+pipe_str+'.png')
-        # plt.clf()
+        print("\tTotal:", self.energy_total, "J")
+        print("Chip level")
+        print("\tPE: %.4e (%.2f%%)" %(self.pe_energy_total, self.pe_energy_total/self.energy_total*100))
+        print("\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
+        print()
+        print("PE level")
+        print("\tCU: %.4e (%.2f%%)" %(self.cu_energy_total, self.cu_energy_total/self.pe_energy_total*100))
+        print("\tBuffer: %.4e (%.2f%%)" %(self.edram_energy_total, self.edram_energy_total/self.pe_energy_total*100))
+        print("\tShift Add: %.4e (%.2f%%)" %(self.pe_saa_energy_total, self.pe_saa_energy_total/self.pe_energy_total*100))
+        print("\tActivation: %.4e (%.2f%%)" %(self.activation_energy_total, self.activation_energy_total/self.pe_energy_total*100))
+        print("\tPooling: %.4e (%.2f%%)" %(self.pooling_energy_total, self.pooling_energy_total/self.pe_energy_total*100))
+        print("\tOR: %.4e (%.2f%%)" %(self.pe_or_energy_total, self.pe_or_energy_total/self.pe_energy_total*100))
+        print()
+        print("CU level")
+        print("\tDAC: %.4e (%.2f%%)" %(self.dac_energy_total, self.dac_energy_total/self.cu_energy_total*100))
+        print("\tCrossbar: %.4e (%.2f%%)" %(self.xb_energy_total, self.xb_energy_total/self.cu_energy_total*100))
+        print("\tSA: %.4e (%.2f%%)" %(self.sa_energy_total, self.sa_energy_total/self.cu_energy_total*100))
+        print("\tShift Add: %.4e (%.2f%%)" %(self.cu_saa_energy_total, self.cu_saa_energy_total/self.cu_energy_total*100))
+        print("\tIR: %.4e (%.2f%%)" %(self.cu_ir_energy_total, self.cu_ir_energy_total/self.cu_energy_total*100))
+        print("\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
+        print()
+
+        print('memory accesss times:', self.mem_acc_ctr)
+        print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
+
+
+        if self.isPipeLine:
+            pipe_str = "pipeline"
+        else:
+            pipe_str = "non_pipeline"
+
+        ### non-pipeline stage
+        if not self.isPipeLine:
+            with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for row in range(self.cycle_ctr):
+                    writer.writerow([row+1, self.pipeline_stage_record[row]])
+
+        fre = 100
+        ### Energy per 100 cycle
+        with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, fre):
+                writer.writerow([row+1, self.energy_utilization[row]])
+        
+        plt.plot(range(1, self.cycle_ctr+1), self.energy_utilization)
+        #plt.show()
+        plt.ylabel('Energy (nJ)')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 20])
+        plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
+        plt.clf()
+        
+        ### PE usage
+        with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.pe_state_for_plot[0]), fre):
+                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
+
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
+        plt.xlabel('Cycle')
+        plt.ylabel('PE number')
+        plt.ylim([-1, 10])
+        plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
+        plt.clf()
+
+        ### Xbar usage
+        with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, fre):
+                writer.writerow([row+1, self.xbar_utilization[row]])
+        
+        plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
+        #plt.show()
+        plt.ylabel('Xbar number')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 10]) #
+        plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
+        plt.clf()
+
 
         # ### OU usage
         # OU_usage = []
@@ -795,8 +897,7 @@ class Controller(object):
 
 
         # ### On chip Buffer
-        # with open('./statistics/OnchipBuffer_'+pipe_str+'.csv', 'w', newline='') as csvfile:
-        #     建立 CSV 檔寫入器
+        # with open('./statistics/'+pipe_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for row in range(self.cycle_ctr):
         #         c = [row+1]
@@ -809,13 +910,13 @@ class Controller(object):
         # plt.xlabel('Cycle')
         # plt.ylabel('Buffer size')
         # plt.ylim([0, self.ordergenerator.buffer_size+1])
-        # plt.savefig("./statistics/OnChipBuffer_size_utilization_"+pipe_str+".png")
+        # plt.savefig("./statistics/"+pipe_str+"/OnChipBuffer_size_utilization.png")
         # plt.clf()
         
         # plt.plot(range(1, self.cycle_ctr+1), self.buffer_size)
         # plt.xlabel("Cycle")
         # plt.ylabel("Number of data")
         # plt.ylim([0, self.ordergenerator.buffer_size+100])
-        # plt.savefig("./statistics/BufferSize_"+pipe_str+".png")
+        # plt.savefig("./statistics/"+pipe_str+"/BufferSize.png")
         # plt.clf()
         

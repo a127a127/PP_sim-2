@@ -6,7 +6,7 @@ class OnChipBuffer():
         self.eDRAM_buffer_bank_num = HardwareMetaData().eDRAM_buffer_bank_num
         self.eDRAM_buffer_bus_width = HardwareMetaData().eDRAM_buffer_bus_width # bit
         
-        self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit
+        self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit # KB
 
         self.buffer = []
 
