@@ -19,7 +19,7 @@ def main():
 
     ### Model ###
     model_type = 1
-    print("Model type:", end="")
+    print("Model type:  ", end="")
     if model_type == 0:
         model_information = TestModelConfig()
         print("TestModelConfig")
@@ -35,7 +35,7 @@ def main():
     
     ### Mapping ##
     mapping_type = 0
-    print("Mapping policy:", end="")
+    print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
         print("DefaultMapping")
@@ -103,8 +103,8 @@ def statistic_order(order_generator):
         elif t == "data_transfer":
             data_transfer_ctr += 1
         else:
-            print(t)
             print("???")
+
     print("edram_rd_ir_ctr", edram_rd_ir_ctr)
     print("ou_operation_ctr", ou_operation_ctr)
     print("cu_saa_ctr", cu_saa_ctr)
