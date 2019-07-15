@@ -758,9 +758,11 @@ class Controller(object):
         
         ### Buffer size ###
         self.max_buffer_size = 0 # num of data
+        self.total_buffer_size = 0 
         for pe in self.PE_array:
+            self.total_buffer_size += len(pe.edram_buffer.buffer)
             self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
-
+        self.avg_buffer_size = self.total_buffer_size / len(self.PE_array)
 
         self.print_statistics_result()
 
@@ -821,7 +823,9 @@ class Controller(object):
 
         print('memory accesss times:', self.mem_acc_ctr)
         print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
+        print("Avg buffer size:", self.avg_buffer_size)
 
+        print("Transfer count:", self.network_transfer.transfer_count)
 
         if self.isPipeLine:
             pipe_str = "pipeline"

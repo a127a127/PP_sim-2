@@ -16,7 +16,8 @@ class TransferEvent():
         distance = abs(src_rty - des_rty) + abs(src_rtx - des_rtx)
         # traval_time = distance * router_transfer_time
         # traval_cycle = math.ceil(traval_time/cycle_time)
-        traval_cycle = distance * 2 + 4 #  目前先假設router之間傳輸要2個cycle 4: pe_to_rt rt_to_pe
+        traval_cycle = distance * 1 + 2 #  目前先假設router之間傳輸要1個cycle 2: pe_to_rt rt_to_pe
+        #traval_cycle = 1
         return traval_cycle
 
     def __str__(self):

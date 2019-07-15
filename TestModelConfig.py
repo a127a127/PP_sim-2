@@ -6,7 +6,7 @@ class TestModelConfig(object):
         self.layer_list = [
             LayerMetaData("convolution", 6, 2, 2, 1, 0, 0, 0), # (type, conv_n, conv_h, conv_w, conv_c, pool_h, pool_w, fully_n)
             #LayerMetaData("pooling",     0, 0, 0, 0, 2, 2, 0),
-            LayerMetaData("convolution", 10, 2, 2, 6, 0, 0, 0),
+            LayerMetaData("convolution", 2, 2, 2, 6, 0, 0, 0),
             LayerMetaData("fully",      0, 0, 0, 0, 0, 0, 10),
             ]
 
@@ -18,4 +18,4 @@ class TestModelConfig(object):
         
         #bit decomposition
         self.input_bit = 2
-        self.filter_bit = 2
+        self.filter_bit = 16

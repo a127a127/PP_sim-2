@@ -22,9 +22,9 @@ class HardwareMetaData(object):
         self.OU_h = int(cfg['general']['OU_h'])
         self.OU_w = int(cfg['general']['SA_num'])
 
-        self.eDRAM_buffer_size = int(cfg['general']['eDRAM_buffer_size'])
-        self.eDRAM_buffer_bank_num = int(cfg['general']['eDRAM_buffer_bank_num'])
-        self.eDRAM_buffer_bus_width = int(cfg['general']['eDRAM_buffer_bus_width'])
+        self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
+        #self.eDRAM_buffer_bank_num = int(cfg['general']['eDRAM_buffer_bank_num'])
+        #self.eDRAM_buffer_bus_width = int(cfg['general']['eDRAM_buffer_bus_width'])
         
         self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
 
@@ -35,9 +35,9 @@ class HardwareMetaData(object):
         self.Activation_per_cycle = int(cfg['general']['Activation_per_cycle'])
         self.Pooling_per_cycle = int(cfg['general']['Pooling_per_cycle'])
 
-        self.bits_per_cell = int(cfg['general']['bits_per_cell'])
-        self.DAC_resolution = int(cfg['general']['DAC_resolution'])
-        self.SA_resolution = int(cfg['general']['SA_resolution'])
+        #self.bits_per_cell = int(cfg['general']['bits_per_cell'])
+        #self.DAC_resolution = int(cfg['general']['DAC_resolution'])
+        #self.SA_resolution = int(cfg['general']['SA_resolution'])
 
         self.CU_Input_Reg_size = int(cfg['general']['CU_Input_Reg_size'])
         self.CU_Output_Reg_size = int(cfg['general']['CU_Output_Reg_size'])

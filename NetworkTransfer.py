@@ -3,10 +3,12 @@ class NetworkTransfer(object):
         self.transfer_list = []
         self.one_step_energy = one_step_energy
         self.interconnect_energy_total = 0
+        self.transfer_count = 0
 
     def step(self):
         arrived = []
         for TE in self.transfer_list.copy():
+            self.transfer_count += 1
             TE_idx = self.transfer_list.index(TE)
             self.transfer_list[TE_idx].cycles_counter += 1
             self.interconnect_energy_total += self.one_step_energy
