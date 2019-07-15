@@ -17,17 +17,18 @@ class HardwareMetaData(object):
         self.Xbar_num_y = int(cfg['general']['Xbar_num_y'])
         self.Xbar_num_x = int(cfg['general']['Xbar_num_x'])
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = int(cfg['general']['Xbar_h'])
-        self.Xbar_w = int(cfg['general']['Xbar_w'])
-        self.OU_h = int(cfg['general']['OU_h'])
-        self.OU_w = int(cfg['general']['SA_num'])
 
         self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
         #self.eDRAM_buffer_bank_num = int(cfg['general']['eDRAM_buffer_bank_num'])
         #self.eDRAM_buffer_bus_width = int(cfg['general']['eDRAM_buffer_bus_width'])
         
         self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
+        
 
+        self.Xbar_h = int(cfg['general']['Xbar_h'])
+        self.Xbar_w = int(cfg['general']['Xbar_w'])
+        self.OU_h = int(cfg['general']['OU_h'])
+        self.OU_w = int(cfg['general']['SA_num'])
 
         self.eDRAM_buffer_rd_per_cycle = self.Xbar_h * self.Xbar_num
         self.CU_Shift_and_add_per_cycle = int(cfg['general']['CU_Shift_and_add_per_cycle'])
