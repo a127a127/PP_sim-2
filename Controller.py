@@ -182,6 +182,7 @@ class Controller(object):
             ### Data transfer on Chip ###
             arrived = self.network_transfer.step()
             for TF_event in arrived:
+                self.this_layer_event_ctr += 1
                 if self.trace:
                     print("\tData arrived ", TF_event.event.event_type, ",order index:", self.Computation_order.index(TF_event.event), "destination:", TF_event.event.position_idx[1])
                 ### add next event counter: pe_saa, edram_rd_ir, edram_rd_pool
@@ -461,12 +462,14 @@ class Controller(object):
                                         # 目前生的order不會進到這
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
-                                        if not self.isPipeLine:
-                                            self.this_layer_event_ctr += 1  ### 問題:還沒傳到下一層就開始了
+                                        # if not self.isPipeLine:
+                                        #     self.this_layer_event_ctr += 1  ### 問題:還沒傳到下一層就開始了
                                         src = pro_event.position_idx[0]
                                         des_list = pro_event.position_idx[1]
                                         #print(src, des_list)
+                                        self.events_each_layer[self.pipeline_layer_stage] -= 1
                                         for des in des_list:
+                                            self.events_each_layer[self.pipeline_layer_stage] += 1
                                             self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des[:-2], des))       
                             break
 
@@ -565,7 +568,7 @@ class Controller(object):
                             pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
                             pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
                             self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
-                    self.transfer_trigger.remove(trigger)  # 有問題！！
+                        self.transfer_trigger.remove(trigger)
                 else:
                     if pro_event.event_type == "pe_saa":
                         rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
