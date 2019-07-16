@@ -11,9 +11,11 @@ from LenetConfig import LenetConfig
 from Cifar10Config import Cifar10Config
 from CaffenetConfig import CaffenetConfig
 
-import time
+import time, sys
 
 def main():
+    mapping = int(sys.argv[1])
+
     ### Hardware configuration ###
     hardware_information = HardwareMetaData()
 
@@ -34,7 +36,7 @@ def main():
         print("CaffenetConfig")
     
     ### Mapping ##
-    mapping_type = 0
+    mapping_type = mapping
     print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
