@@ -121,14 +121,10 @@ def statistic_order(order_generator):
 
     # i = 0
     # for e in order_generator.Computation_order:
-    #     if e.nlayer == 1:
+    #     if e.nlayer == 0 and e.event_type == "edram_rd_ir":
     #         print(i, e)
-    #     # if e.event_type == "edram_wr" or e.event_type == "edram_rd_ir" or e.event_type == "edram_rd_pool" or e.event_type == "data_transfer":
-    #     #     pass
-    #     # 
-    #     # print()
+    #         print()
     #     i += 1
-    # print("data_transfer_ctr", data_transfer_ctr)
 
 
 if __name__ == '__main__':

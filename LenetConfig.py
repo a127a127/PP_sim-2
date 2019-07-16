@@ -20,3 +20,4 @@ class LenetConfig(object):
         #bit decomposition
         self.input_bit = 2
         self.filter_bit = 16
+        
