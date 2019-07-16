@@ -34,7 +34,7 @@ def main():
         print("CaffenetConfig")
     
     ### Mapping ##
-    mapping_type = 0
+    mapping_type = 2
     print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
@@ -64,11 +64,11 @@ def main():
         statistic_order(order_generator)
     
     ### Power and performance simulation ###
-    # start_simulation_time = time.time()
-    # controller = Controller(order_generator, isPipeLine, istrace)
-    # controller.run()
-    # end_simulation_time = time.time()
-    # print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+    start_simulation_time = time.time()
+    controller = Controller(order_generator, isPipeLine, istrace)
+    controller.run()
+    end_simulation_time = time.time()
+    print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 
     
 def statistic_order(order_generator):

@@ -10,6 +10,9 @@ from HardwareMetaData import HardwareMetaData
 from NetworkTransfer import NetworkTransfer
 from TransferEvent import TransferEvent
 
+# from Interconnect import Interconnect
+# from Packet import Packet
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -117,6 +120,7 @@ class Controller(object):
 
         self.fetch_array = []
         self.network_transfer = NetworkTransfer(self.router_energy)
+        #self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
         self.transfer_trigger = []
 
         #for i in range(len(self.pe_traverse_idx)):
@@ -181,7 +185,7 @@ class Controller(object):
             if self.trace:
                 print('cycle:', self.cycle_ctr)
             
-            ### Data transfer in Chip ###
+            ### Data transfer on Chip ###
             arrived = self.network_transfer.step()
             for TF_event in arrived:
                 if self.trace:
@@ -364,9 +368,11 @@ class Controller(object):
                                             print("\t\tProceeding event is triggered.", pro_event.event_type)
                                         if pro_event.event_type == "pe_saa":
                                             cu.pe_saa_trigger.append([pro_event, []])
-                                        else:
+                                        else: # data transfer
                                             src = pro_event.position_idx[0]
                                             des = pro_event.position_idx[1][0] # des:只會有一個PE的SAA
+                                            #print(src, des)
+
                                             self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des, 0))
                                 break
 
@@ -463,10 +469,11 @@ class Controller(object):
                                             self.this_layer_event_ctr += 1  ### 問題:還沒傳到下一層就開始了
                                         src = pro_event.position_idx[0]
                                         des_list = pro_event.position_idx[1]
+                                        #print(src, des_list)
                                         for des in des_list:
-                                            self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des[:-2], des))
-                                            
+                                            self.network_transfer.transfer_list.append(TransferEvent(pro_event, src, des[:-2], des))       
                             break
+
             ### Event: edram_rd_pool ###
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
@@ -538,7 +545,6 @@ class Controller(object):
                                         print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
-
 
             ### Trigger events ###
             for trigger in self.transfer_trigger.copy():
@@ -827,59 +833,62 @@ class Controller(object):
 
         print("Transfer count:", self.network_transfer.transfer_count)
 
-        if self.isPipeLine:
-            pipe_str = "pipeline"
-        else:
-            pipe_str = "non_pipeline"
+        # if self.isPipeLine:
+        #     pipe_str = "pipeline"
+        # else:
+        #     pipe_str = "non_pipeline"
 
-        ### non-pipeline stage
-        if not self.isPipeLine:
-            with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                for row in range(self.cycle_ctr):
-                    writer.writerow([row+1, self.pipeline_stage_record[row]])
+        # ### non-pipeline stage
+        # if not self.isPipeLine:
+        #     with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
+        #         writer = csv.writer(csvfile)
+        #         for row in range(self.cycle_ctr):
+        #             writer.writerow([row+1, self.pipeline_stage_record[row]])
 
-        fre = 100
-        ### Energy per 100 cycle
-        with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, fre):
-                writer.writerow([row+1, self.energy_utilization[row]])
+        # fre = 100
+        # ### Energy per 100 cycle
+        # with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for row in range(0, self.cycle_ctr, fre):
+        #         writer.writerow([row+1, self.energy_utilization[row]])
         
-        plt.plot(range(1, self.cycle_ctr+1), self.energy_utilization)
-        #plt.show()
-        plt.ylabel('Energy (nJ)')
-        plt.xlabel('Cycle')
-        plt.ylim([0, 20])
-        plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
-        plt.clf()
+        # plt.plot(range(1, self.cycle_ctr+1), self.energy_utilization)
+        # #plt.show()
+        # plt.ylabel('Energy (nJ)')
+        # plt.xlabel('Cycle')
+        # plt.ylim([0, 20])
+        # plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
+        # plt.clf()
         
-        ### PE usage
-        with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.pe_state_for_plot[0]), fre):
-                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
+        # ### PE usage
+        # with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for row in range(0, len(self.pe_state_for_plot[0]), fre):
+        #         writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
-        plt.xlabel('Cycle')
-        plt.ylabel('PE number')
-        plt.ylim([-1, 10])
-        plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
-        plt.clf()
+        # plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
+        # plt.xlabel('Cycle')
+        # plt.ylabel('PE number')
+        # plt.ylim([-1, 10])
+        # plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
+        # plt.clf()
 
-        ### Xbar usage
-        with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, fre):
-                writer.writerow([row+1, self.xbar_utilization[row]])
+        # ### Xbar usage
+        # with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for row in range(0, self.cycle_ctr, fre):
+        #         writer.writerow([row+1, self.xbar_utilization[row]])
         
-        plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
-        #plt.show()
-        plt.ylabel('Xbar number')
-        plt.xlabel('Cycle')
-        plt.ylim([0, 10]) #
-        plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
-        plt.clf()
+        # plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
+        # #plt.show()
+        # plt.ylabel('Xbar number')
+        # plt.xlabel('Cycle')
+        # plt.ylim([0, 10]) #
+        # plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
+        # plt.clf()
+
+
+
 
 
         # ### OU usage
