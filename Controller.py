@@ -18,7 +18,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class Controller(object):
-    def __init__(self, ordergenerator, isPipeLine, trace):
+    def __init__(self, ordergenerator, isPipeLine, trace, mapping_str):
+        self.mapping_str = mapping_str
         self.ordergenerator = ordergenerator
         self.isPipeLine = isPipeLine
         self.trace = trace
@@ -849,14 +850,14 @@ class Controller(object):
 
         ### non-pipeline stage
         if not self.isPipeLine:
-            with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
+            with open('./statistics/non_pipeline/'+self.mapping_str+'/stage.csv', 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in range(self.cycle_ctr):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
         fre = 100
         ### Energy per 100 cycle
-        with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/Energy.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, self.cycle_ctr, fre):
                 writer.writerow([row+1, self.energy_utilization[row]])
@@ -867,11 +868,11 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylim([0, 20])
         #plt.xlim([0,])
-        plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/energy_utilization.png')
         plt.clf()
         
         ### PE usage
-        with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
@@ -880,11 +881,11 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
         plt.ylim([-1, 10])
-        plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
         plt.clf()
 
         ### Xbar usage
-        with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, self.cycle_ctr, fre):
                 writer.writerow([row+1, self.xbar_utilization[row]])
@@ -894,14 +895,14 @@ class Controller(object):
         plt.ylabel('Xbar number')
         plt.xlabel('Cycle')
         plt.ylim([0, 10]) #
-        plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png') 
         plt.clf()
 
 
 
         ### On chip Buffer
 
-        with open('./statistics/'+pipe_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(self.cycle_ctr):
                 c = [row+1]
@@ -914,7 +915,7 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylabel('Buffer size (number of data)')
         plt.ylim([0, self.max_buffer_size+5])
-        plt.savefig("./statistics/"+pipe_str+"/OnChipBuffer_size_utilization.png")
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
 
         
