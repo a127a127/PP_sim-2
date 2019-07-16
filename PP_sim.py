@@ -40,12 +40,15 @@ def main():
     print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
+        mapping_str = "DefaultMapping"
         print("DefaultMapping")
     elif mapping_type == 1:
         mapping_information = ParallelismMapping(hardware_information, model_information)
+        mapping_str = "ParallelismMapping"
         print("ParallelismMapping")
     elif mapping_type == 2:
         mapping_information = TransferMapping(hardware_information, model_information)
+        mapping_str = "TransferMapping"
         print("TransferMapping")
     
 
@@ -67,7 +70,7 @@ def main():
     
     ### Power and performance simulation ###
     start_simulation_time = time.time()
-    controller = Controller(order_generator, isPipeLine, istrace)
+    controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
     controller.run()
     end_simulation_time = time.time()
     print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
