@@ -30,6 +30,7 @@ class Controller(object):
         self.cycle_time = 3.45888e-08
 
         self.hardware_information = HardwareMetaData()
+        self.eDRAM_buffer_size = self.hardware_information.eDRAM_buffer_size
         # Leakage
         self.eDRAM_buffer_leakage = self.hardware_information.eDRAM_buffer_leakage
         self.Router_leakage = self.hardware_information.Router_leakage
@@ -76,19 +77,6 @@ class Controller(object):
         self.XB_num_y = self.hardware_information.Xbar_num_y
         self.XB_num_x = self.hardware_information.Xbar_num_x
         self.XB_num = self.hardware_information.Xbar_num
-        
-        
-        ### Statistics
-        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        self.mem_acc_ctr = 0
-        self.data_transfer_ctr = 0 
-        self.act_xb_ctr = 0
-
-        ## utilization
-        self.energy_utilization = []
-        self.xbar_utilization = []
-
-        self.pe_state_for_plot = [[],[]]
 
 
         ### energy consumption
@@ -118,21 +106,27 @@ class Controller(object):
                         self.PE_array.append(pe)
         #print(self.PE_array[0].CU_array[0].XB_array[0])
 
+                
+        ### Statistics
+        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        self.mem_acc_ctr = 0
+        self.data_transfer_ctr = 0 
+        self.act_xb_ctr = 0
+        self.pe_saa_stall_cycle = 0
+        
+        ## utilization
+        self.energy_utilization = []
+        self.xbar_utilization = []
+        self.pe_state_for_plot = [[],[]]
+        self.buffer_size = []
+        for i in range(len(self.PE_array)):
+            self.buffer_size.append([])
+
         self.fetch_array = []
         self.network_transfer = NetworkTransfer(self.router_energy)
         #self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
         self.transfer_trigger = []
 
-        #for i in range(len(self.pe_traverse_idx)):
-        #    pass
-            # self.PE_utilization.append([])
-            # self.CU_utilization.append([])
-            # self.pooling_utilization.append([])
-            # self.OU_usage_utilization.append([])
-            # self.buffer_size.append([])
-            # self.shift_and_add_utilization.append([])
-            # self.activation_utilization.append([])
-            # self.xbar_utilization.append([])
         
         ### Pipeline control ###
         if not self.isPipeLine:
@@ -147,7 +141,7 @@ class Controller(object):
                 self.events_each_layer.append(0)
             for e in self.Computation_order:
                 self.events_each_layer[e.nlayer] += 1
-            print(self.events_each_layer)
+            print("events_each_layer: ", self.events_each_layer)
 
             self.this_layer_event_ctr = 0
 
@@ -213,6 +207,8 @@ class Controller(object):
                         pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
                         #print(pro_event.nlayer, TF_event.event.outputs)                                                
                         self.PE_array[pe_idx].edram_buffer.put([pro_event.nlayer, TF_event.event.outputs[0]])
+                    elif pro_event.event_type == "pe_saa":
+                        self.pe_saa_stall_cycle += TF_event.transfer_cycle
 
             ### Fetch data from off-chip memory ###
             for FE in self.fetch_array.copy():
@@ -569,7 +565,7 @@ class Controller(object):
                             pey, pex = TF_event.event.position_idx[1][0][2], TF_event.event.position_idx[1][0][3]
                             pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
                             self.PE_array[pe_idx].edram_rd_pool_erp.append(pro_event)
-                        self.transfer_trigger.remove(trigger)
+                    self.transfer_trigger.remove(trigger)  # 有問題！！
                 else:
                     if pro_event.event_type == "pe_saa":
                         rty, rtx = TF_event.event.position_idx[1][0][0], TF_event.event.position_idx[1][0][1]
@@ -721,7 +717,11 @@ class Controller(object):
             ### Finish?
             isDone = True
             
-            if self.fetch_array or self.network_transfer.transfer_list or self.transfer_trigger:
+            if self.fetch_array:
+                isDone = False
+            if self.network_transfer.transfer_list:
+                isDone = False
+            if self.transfer_trigger:
                 isDone = False
 
             for pe in self.PE_array:
@@ -760,6 +760,11 @@ class Controller(object):
                     #print("pipeline_layer_stage finished:", self.pipeline_layer_stage)
                     self.pipeline_layer_stage += 1
                     self.this_layer_event_ctr = 0
+
+            # Buffer size utilization #
+            for pe_idx in range(len(self.PE_array)):
+                self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
+            
         #print("this_layer_event_ctr:", self.this_layer_event_ctr, self.events_each_layer)
         
         ### Buffer size ###
@@ -832,104 +837,88 @@ class Controller(object):
         print("Avg buffer size:", self.avg_buffer_size)
 
         print("Transfer count:", self.network_transfer.transfer_count)
+        print("pe_saa_stall_cycle: ", self.pe_saa_stall_cycle)
 
-        # if self.isPipeLine:
-        #     pipe_str = "pipeline"
-        # else:
-        #     pipe_str = "non_pipeline"
+        if self.isPipeLine:
+            pipe_str = "pipeline"
+        else:
+            pipe_str = "non_pipeline"
 
-        # ### non-pipeline stage
-        # if not self.isPipeLine:
-        #     with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
-        #         writer = csv.writer(csvfile)
-        #         for row in range(self.cycle_ctr):
-        #             writer.writerow([row+1, self.pipeline_stage_record[row]])
+        ### non-pipeline stage
+        if not self.isPipeLine:
+            with open('./statistics/non_pipeline/stage.csv', 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                for row in range(self.cycle_ctr):
+                    writer.writerow([row+1, self.pipeline_stage_record[row]])
 
-        # fre = 100
-        # ### Energy per 100 cycle
-        # with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for row in range(0, self.cycle_ctr, fre):
-        #         writer.writerow([row+1, self.energy_utilization[row]])
+        fre = 100
+        ### Energy per 100 cycle
+        with open('./statistics/'+pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, fre):
+                writer.writerow([row+1, self.energy_utilization[row]])
         
-        # plt.plot(range(1, self.cycle_ctr+1), self.energy_utilization)
-        # #plt.show()
-        # plt.ylabel('Energy (nJ)')
-        # plt.xlabel('Cycle')
-        # plt.ylim([0, 20])
-        # plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
-        # plt.clf()
+        plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
+        #plt.show()
+        plt.ylabel('Energy (nJ)')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 20])
+        #plt.xlim([0,])
+        plt.savefig('./statistics/'+pipe_str+'/energy_utilization.png')
+        plt.clf()
         
-        # ### PE usage
-        # with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for row in range(0, len(self.pe_state_for_plot[0]), fre):
-        #         writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
+        ### PE usage
+        with open('./statistics/'+pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.pe_state_for_plot[0]), fre):
+                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
-        # plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
-        # plt.xlabel('Cycle')
-        # plt.ylabel('PE number')
-        # plt.ylim([-1, 10])
-        # plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
-        # plt.clf()
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
+        plt.xlabel('Cycle')
+        plt.ylabel('PE number')
+        plt.ylim([-1, 10])
+        plt.savefig('./statistics/'+pipe_str+'/PE_utilization.png')
+        plt.clf()
 
-        # ### Xbar usage
-        # with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for row in range(0, self.cycle_ctr, fre):
-        #         writer.writerow([row+1, self.xbar_utilization[row]])
+        ### Xbar usage
+        with open('./statistics/'+pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, fre):
+                writer.writerow([row+1, self.xbar_utilization[row]])
         
-        # plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
-        # #plt.show()
-        # plt.ylabel('Xbar number')
-        # plt.xlabel('Cycle')
-        # plt.ylim([0, 10]) #
-        # plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
-        # plt.clf()
+        plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
+        #plt.show()
+        plt.ylabel('Xbar number')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 10]) #
+        plt.savefig('./statistics/'+pipe_str+'/XB_utilization.png') 
+        plt.clf()
 
 
 
+        ### On chip Buffer
 
+        with open('./statistics/'+pipe_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr):
+                c = [row+1]
+                for i in range(len(self.PE_array)):
+                    c.append(self.buffer_size[i][row])
+                writer.writerow(c)
 
-        # ### OU usage
-        # OU_usage = []
-        # for i in range(self.ordergenerator.CU_num):
-        #     if len(self.OU_usage_utilization[i]) != 0:
-        #         OU_usage.append(sum(self.OU_usage_utilization[i])/len(self.OU_usage_utilization[i]))
-        #     else:
-        #         OU_usage.append(0)
+        for i in range(len(self.PE_array)):
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i]) #, c=self.color[i])
+        plt.xlabel('Cycle')
+        plt.ylabel('Buffer size (number of data)')
+        plt.ylim([0, self.max_buffer_size+5])
+        plt.savefig("./statistics/"+pipe_str+"/OnChipBuffer_size_utilization.png")
+        plt.clf()
 
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Average OU usage')
-        # plt.bar(range(self.ordergenerator.CU_num), OU_usage)
-        # #plt.plot(range(self.ordergenerator.CU_num), OU_usage)
-        # plt.savefig("./statistics/OU_usage_utilization_"+pipe_str+".png")
-        # plt.clf()
-
-        # print('cu_transfer_ctr:', cu_transfer_ctr)
-
-
-        # ### On chip Buffer
-        # with open('./statistics/'+pipe_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for row in range(self.cycle_ctr):
-        #         c = [row+1]
-        #         for i in range(self.ordergenerator.CU_num):
-        #             c.append(self.buffer_size[i][row])
-        #         writer.writerow(c)
-
-        # for i in range(self.ordergenerator.CU_num):
-        #     plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], c=color[i])
-        # plt.xlabel('Cycle')
-        # plt.ylabel('Buffer size')
-        # plt.ylim([0, self.ordergenerator.buffer_size+1])
-        # plt.savefig("./statistics/"+pipe_str+"/OnChipBuffer_size_utilization.png")
-        # plt.clf()
         
         # plt.plot(range(1, self.cycle_ctr+1), self.buffer_size)
         # plt.xlabel("Cycle")
         # plt.ylabel("Number of data")
-        # plt.ylim([0, self.ordergenerator.buffer_size+100])
+        # plt.ylim([0, len(self.PE_array)+100])
         # plt.savefig("./statistics/"+pipe_str+"/BufferSize.png")
         # plt.clf()
         

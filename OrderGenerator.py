@@ -116,7 +116,6 @@ class OrderGenerator(object):
         # mapping
         self.layer_mapping_to_xbar = self.mapping_information.layer_mapping_to_xbar
         self.layer_mapping_to_pe = self.mapping_information.layer_mapping_to_pe
-        self.CU_array = []
         self.XB_array = []
         idx = 0
         for rty_idx in range(self.RT_num_y):
@@ -275,13 +274,13 @@ class OrderGenerator(object):
         
                                                             output_sequence.append([(num_input, hinput, winput, cinput, input_bit, ), (filter_nfilter, filter_ngrid, filter_nbit, )])
                                                 
-                                                    ### for input requirement CU的level才對
-                                                    #for input_s in input_sequence:
+                                                    # ## for input requirement 
+                                                    # for input_s in input_sequence:
                                                     #    idx = input_s[2] * self.input_h[nlayer] * self.input_w[nlayer] + input_s[0] * self.input_w[nlayer] + input_s[1]
                                                     #    if self.XB_array[xbar_array_idx].input_require[nlayer][idx] == -1:
                                                     #        self.XB_array[xbar_array_idx].input_require[nlayer][idx] = 1
                                                     #    else:
-                                                    #        self.XB_array[nXxbar_array_idxB].input_require[nlayer][idx] += 1
+                                                    #        self.XB_array[xbar_array_idx].input_require[nlayer][idx] += 1
 
                 
                                                     ### add dependency
@@ -663,7 +662,14 @@ class OrderGenerator(object):
                                                             output_sequence.append([(num_input, hinput, winput, cinput, input_bit, ), (filter_nfilter, filter_ngrid, filter_nbit, )])
 
                                                     #print(output_sequence)
-                                                
+
+                                                    # ## for input requirement 
+                                                    # for input_s in input_sequence:
+                                                    #    idx = input_s[2] * self.input_h[nlayer] * self.input_w[nlayer] + input_s[0] * self.input_w[nlayer] + input_s[1]
+                                                    #    if self.XB_array[xbar_array_idx].input_require[nlayer][idx] == -1:
+                                                    #        self.XB_array[xbar_array_idx].input_require[nlayer][idx] = 1
+                                                    #    else:
+                                                    #        self.XB_array[xbar_array_idx].input_require[nlayer][idx] += 1
                                         
                 
                                                     ### add dependency

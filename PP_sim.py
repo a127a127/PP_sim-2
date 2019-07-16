@@ -18,7 +18,7 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 1
+    model_type = 0
     print("Model type:  ", end="")
     if model_type == 0:
         model_information = TestModelConfig()
@@ -34,7 +34,7 @@ def main():
         print("CaffenetConfig")
     
     ### Mapping ##
-    mapping_type = 2
+    mapping_type = 0
     print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)

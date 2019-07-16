@@ -4,7 +4,7 @@ from HardwareMetaData import HardwareMetaData
 class CU(object):
     def __init__(self, cu_pos):
         self.position = cu_pos
-        
+
         self.state = False # CU busy
 
         ### events per cycle
