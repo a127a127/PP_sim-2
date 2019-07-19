@@ -35,21 +35,21 @@ class Router(object):
         
         # X-Y routing
         if packet.destination[1] > self.pos[1]:
-            print(packet.data, "往東走")
+            print("\t", packet.data, "往東走")
             return packet, "east"
         elif packet.destination[1] < self.pos[1]:
-            print(packet.data, "往西走")
+            print("\t", packet.data, "往西走")
             return packet, "west"
         else:
             if packet.destination[0] > self.pos[0]:
-                print(packet.data, "往南走")
+                print("\t", packet.data, "往南走")
                 return packet, "south"
             elif packet.destination[0] < self.pos[0]:
-                print(packet.data, "往北走")
+                print("\t", packet.data, "往北走")
                 return packet, "north"
             else:
                 #抵達router
-                print(packet.data, "抵達router")
+                print("\t", packet.data, "抵達router", end="")
                 if packet.destination[2] == 0 and packet.destination[3] == 0:
                     print("西北")
                     return packet, "pe_north_west"
@@ -63,5 +63,6 @@ class Router(object):
                     print("東南")
                     return packet, "pe_south_east"
                 
-
+    def __str__(self):
+        return str(self.__dict__)
 

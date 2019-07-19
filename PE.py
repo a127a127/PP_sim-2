@@ -41,6 +41,8 @@ class PE(object):
         self.edram_rd_pool_trigger = []
         self.edram_rd_ir_trigger = []
         self.pooling_trigger = []
+        
+        self.pe_saa_trigger = [] # for data transfer
 
         ### generate CU
         self.CU_array = []

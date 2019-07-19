@@ -13,8 +13,10 @@ class Interconnect(object):
 
         self.arrived_list = []
 
+        self.packet_in_module_ctr = 0
 
     def input_packet(self, packet):
+        self.packet_in_module_ctr += 1
         source = packet.source
 
         rt_y, rt_x = source[0], source[1]
@@ -31,7 +33,6 @@ class Interconnect(object):
         else:
             print("type error")
             return
-        
         self.router_array[rt_y][rt_x].packet_in(packet, port_type)
 
     def step(self):
@@ -41,7 +42,6 @@ class Interconnect(object):
                 if not self.router_array[h][w].arrived_order:
                     continue
                 packet, port_type = self.router_array[h][w].step()
-
                 if port_type == "east":
                     packet_transfer.append((h, w+1, packet, port_type))
                 elif port_type == "west":
@@ -63,6 +63,16 @@ class Interconnect(object):
 
     def get_arrived_packet(self):
         A = self.arrived_list.copy()
+        self.packet_in_module_ctr -= len(A)
         self.arrived_list = []
         return A
+
+    def busy(self):
+        if self.packet_in_module_ctr == 0:
+            return False
+        else:
+            return True
+
+    def __str__(self):
+        return str(self.__dict__)
     
