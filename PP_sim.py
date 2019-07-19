@@ -7,6 +7,7 @@ from OrderGenerator import OrderGenerator
 from Controller import Controller
 
 from TestModelConfig import TestModelConfig
+from TestModelConfig2 import TestModelConfig2
 from LenetConfig import LenetConfig
 from Cifar10Config import Cifar10Config
 from CaffenetConfig import CaffenetConfig
@@ -20,7 +21,7 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 0
+    model_type = 4
     print("Model type:  ", end="")
     if model_type == 0:
         model_information = TestModelConfig()
@@ -34,6 +35,9 @@ def main():
     elif model_type == 3:
         model_information = CaffenetConfig()
         print("CaffenetConfig")
+    elif model_type == 4:
+        model_information = TestModelConfig2()
+        print("TestModelConfig")
     
     ### Mapping ##
     mapping_type = mapping
@@ -56,7 +60,7 @@ def main():
     isPipeLine = False
 
     ### Trace ###
-    istrace = False
+    istrace = True
     isStatistic_order = True
 
     ### Generate computation order graph ### 
@@ -129,5 +133,4 @@ def statistic_order(order_generator):
 
 if __name__ == '__main__':
     main()
-
 

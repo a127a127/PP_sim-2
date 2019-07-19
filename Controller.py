@@ -235,7 +235,7 @@ class Controller(object):
                 if len(des_list) != len(event.proceeding_event):
                     print("\t有地方出問題, 目前是以兩個長度相等來做")
                 
-                print(des_list)
+                #print(des_list)
                 for idx in range(len(des_list)): # len(des_list) == len(proceeding_event )  
                     pro_event_idx = event.proceeding_event[idx]
                     if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
@@ -243,7 +243,7 @@ class Controller(object):
                     else:
                         packet = Packet(src, des_list[idx], [], pro_event_idx)
                     self.interconnect.input_packet(packet)
-            print(self.interconnect.packet_in_module_ctr)
+            #print(self.interconnect.packet_in_module_ctr)
 
 
             ### Fetch data from off-chip memory ###
