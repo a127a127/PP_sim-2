@@ -746,9 +746,9 @@ class OrderGenerator(object):
                                 data_transfer_event_idx += 1
                                 preceding_count += 1
                                 source_pe_idx = self.Computation_order[pre_event_idx].position_idx[:-2]
-                                ################################
-                                ##### Event: data_transfer ##### 
-                                ################################                                         
+                                ####################################
+                                ##### Event: data_transfer ######### 
+                                ####################################                                       
                                 data_transfer_input_sequence = []
                                 data_transfer_output_sequence = []
                                 event = EventMetaData("data_transfer", [source_pe_idx, [pe_saa_position_idx]], 1, [], nlayer, data_transfer_input_sequence, data_transfer_output_sequence)
