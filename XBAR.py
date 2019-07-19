@@ -6,6 +6,8 @@ class XBAR(object):
         self.Convolution = []
         self.Fully = []
         self.Computation_order = []
+        
+        self.input_require = []
 
         ### event ready pool
         self.xb_erp = []

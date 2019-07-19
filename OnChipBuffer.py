@@ -41,6 +41,9 @@ class OnChipBuffer():
             return True
         else:
             return False
+    
+    def count(self):
+        return len(self.buffer)
 
     def __str__(self):
         return str(self.__dict__)

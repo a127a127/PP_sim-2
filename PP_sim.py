@@ -11,14 +11,16 @@ from LenetConfig import LenetConfig
 from Cifar10Config import Cifar10Config
 from CaffenetConfig import CaffenetConfig
 
-import time
+import time, sys
 
 def main():
+    mapping = int(sys.argv[1])
+
     ### Hardware configuration ###
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 1
+    model_type = 0
     print("Model type:  ", end="")
     if model_type == 0:
         model_information = TestModelConfig()
@@ -34,16 +36,19 @@ def main():
         print("CaffenetConfig")
     
     ### Mapping ##
-    mapping_type = 0
+    mapping_type = mapping
     print("Mapping policy:  ", end="")
     if mapping_type == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
+        mapping_str = "DefaultMapping"
         print("DefaultMapping")
     elif mapping_type == 1:
         mapping_information = ParallelismMapping(hardware_information, model_information)
+        mapping_str = "ParallelismMapping"
         print("ParallelismMapping")
     elif mapping_type == 2:
         mapping_information = TransferMapping(hardware_information, model_information)
+        mapping_str = "TransferMapping"
         print("TransferMapping")
     
 
@@ -64,11 +69,11 @@ def main():
         statistic_order(order_generator)
     
     ### Power and performance simulation ###
-    # start_simulation_time = time.time()
-    # controller = Controller(order_generator, isPipeLine, istrace)
-    # controller.run()
-    # end_simulation_time = time.time()
-    # print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+    start_simulation_time = time.time()
+    controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
+    controller.run()
+    end_simulation_time = time.time()
+    print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 
     
 def statistic_order(order_generator):
@@ -116,14 +121,10 @@ def statistic_order(order_generator):
 
     # i = 0
     # for e in order_generator.Computation_order:
-    #     if e.nlayer == 1:
+    #     if e.nlayer == 0 and e.event_type == "edram_rd_ir":
     #         print(i, e)
-    #     # if e.event_type == "edram_wr" or e.event_type == "edram_rd_ir" or e.event_type == "edram_rd_pool" or e.event_type == "data_transfer":
-    #     #     pass
-    #     # 
-    #     # print()
+    #         print()
     #     i += 1
-    # print("data_transfer_ctr", data_transfer_ctr)
 
 
 if __name__ == '__main__':

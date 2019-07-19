@@ -566,7 +566,7 @@ class ParallelismMapping(object):
 
                 inputs = np.array(inputs)
                 
-                print(OU_col_num)
+                #print(OU_col_num)
                 for OU_col_idx in range(OU_col_num):
                     # 這裡就是一個OU_col的block了
                     for h in range(matrix_height):
@@ -907,7 +907,7 @@ class TransferMapping(object):
                         ## Prepare inputs
                         xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + self.hd_info.Xbar_h].tolist()
                         xbar_column = [i for i in range(width)]
-                        print(xbar_column)
+                        #print(xbar_column)
                         self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_column, xbar_inputs))
 
                         xbar_mapping_idx += 1

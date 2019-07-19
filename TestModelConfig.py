@@ -8,6 +8,7 @@ class TestModelConfig(object):
             #LayerMetaData("pooling",     0, 0, 0, 0, 2, 2, 0),
             #LayerMetaData("convolution", 2, 2, 2, 6, 0, 0, 0),
             LayerMetaData("fully",      0, 0, 0, 0, 0, 0, 2),
+
             ]
 
         #model data

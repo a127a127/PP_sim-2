@@ -9,6 +9,7 @@ class TransferEvent():
         self.transfer_cycle = self.compute_cycle() 
         self.cycles_counter = 0
     
+
     def compute_cycle(self):
         ## Todo: auto compute cycle
         src_rty,  src_rtx = self.source_pe[0], self.source_pe[1]

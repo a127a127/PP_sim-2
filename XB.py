@@ -20,6 +20,10 @@ class XB(object):
         ### state
         self.state_ou_operation = [False] * self.ou_operation_epc
 
+    def check_state(self):
+        if True in self.state_ou_operation:
+            return True
+        return False
 
     def __str__(self):
         return str(self.__dict__)

@@ -5,7 +5,7 @@ class LenetConfig(object):
         self.layer_list = [
             LayerMetaData("convolution", 6, 5, 5, 1, 0, 0, 0),
             LayerMetaData("pooling",     0, 0, 0, 0, 2, 2, 0),
-            LayerMetaData("convolution", 16, 5, 5, 4, 0, 0, 0),
+            LayerMetaData("convolution", 16, 5, 5, 6, 0, 0, 0),
             LayerMetaData("fully", 0, 0, 0, 0, 0, 0, 120),
             LayerMetaData("fully", 0, 0, 0, 0, 0, 0, 84),
             LayerMetaData("fully", 0, 0, 0, 0, 0, 0, 10)
@@ -20,3 +20,4 @@ class LenetConfig(object):
         #bit decomposition
         self.input_bit = 2
         self.filter_bit = 16
+        

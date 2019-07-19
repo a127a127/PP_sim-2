@@ -72,6 +72,9 @@ class PE(object):
             return True
         elif True in self.state_edram_wr or True in self.state_pooling:
             return True
+        for cu in self.CU_array:
+            if cu.check_state():
+                return True
         return False
 
     def __str__(self):
