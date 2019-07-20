@@ -13,6 +13,8 @@ from Cifar10Config import Cifar10Config
 from CaffenetConfig import CaffenetConfig
 
 import time, sys
+import numpy as np
+from MappingMetaData import MappingMetaData
 
 def main():
     mapping = int(sys.argv[1])
@@ -53,7 +55,7 @@ def main():
     elif mapping_type == 2:
         mapping_information = TransferMapping(hardware_information, model_information)
         mapping_str = "TransferMapping"
-        print("TransferMapping")
+        print("TransferMapping") 
     
 
     ### Scheduling ###
@@ -66,16 +68,20 @@ def main():
     ### Generate computation order graph ### 
     start_order_time = time.time()
     print("Generate computation order graph...")
+
     order_generator = OrderGenerator(model_information, hardware_information, mapping_information)
+
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---" % (end_order_time - start_order_time))
     if isStatistic_order:
         statistic_order(order_generator)
     
-    ### Power and performance simulation ###
+    # ## Power and performance simulation ###
     # start_simulation_time = time.time()
+
     # controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
     # controller.run()
+
     # end_simulation_time = time.time()
     # print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 

@@ -9,16 +9,9 @@ class OrderGenerator(object):
         self.hardware_information = hardware_information
         self.mapping_information = mapping_information
 
-        self.Computation_order = []
         # model
         self.input_n = model_information.input_n
-
         self.layer_list = model_information.layer_list  # conv, pool, conv, ...
-        self.layer_length = len(model_information.layer_list)  # how many layer
-        self.input_h = [model_information.input_h] # input feature map height (each layer)
-        self.input_w = [model_information.input_w] # input feature map width (each layer)
-        self.input_c = [model_information.input_c] # input feature map channel (each layer)
-        self.input_number = [] # input windows number
         self.filter_n = [] 
         self.filter_h = []
         self.filter_w = []
@@ -26,14 +19,13 @@ class OrderGenerator(object):
         self.filter_length = [] # Straighten kernel length
         self.pooling_h = []
         self.pooling_w = []
-        
-        self.pe_saa_mat = []
-        self.feature_mat = []
-
+        self.input_h = [model_information.input_h] # input feature map height (each layer)
+        self.input_w = [model_information.input_w] # input feature map width (each layer)
+        self.input_c = [model_information.input_c] # input feature map channel (each layer)
+        self.input_number = [] # input windows number
         self.input_bit = model_information.input_bit 
         self.filter_bit = model_information.filter_bit
 
-        self.cu_traverse_idx = []
         
         for i in range(len(self.layer_list)):
             if self.layer_list[i].layer_type == "convolution":
@@ -48,16 +40,6 @@ class OrderGenerator(object):
                 self.input_w.append(self.input_w[i] - self.layer_list[i].filter_w + 1)
                 self.input_c.append(self.layer_list[i].filter_n)
                 self.input_number.append((self.input_h[i] - self.layer_list[i].filter_h + 1) * (self.input_w[i] - self.layer_list[i].filter_w + 1))
-                
-                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.layer_list[i].filter_n)).tolist())
-                
-                if i+1 < len(self.layer_list):
-                    if self.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
-                    else:
-                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
-                        #print(self.input_h[i+1], self.input_w[i+1])
-
             elif self.layer_list[i].layer_type == "pooling":
                 self.filter_n.append(0)
                 self.filter_h.append(0)
@@ -70,14 +52,6 @@ class OrderGenerator(object):
                 self.input_w.append(self.input_w[i] // self.layer_list[i].pooling_w)
                 self.input_c.append(self.input_c[i])
                 self.input_number.append((self.input_h[i] // self.layer_list[i].pooling_h) * (self.input_w[i] // self.layer_list[i].pooling_w) * (self.input_c[i]))
-                
-                self.pe_saa_mat.append([])
-                if i+1 < len(self.layer_list):
-                    if self.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
-                    else:
-                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
-
             elif self.layer_list[i].layer_type == "fully":
                 self.filter_n.append(self.layer_list[i].neuron_n)
                 self.filter_h.append(0)
@@ -90,11 +64,7 @@ class OrderGenerator(object):
                 self.input_w.append(1)
                 self.input_c.append(1)
                 self.input_number.append(self.layer_list[i].neuron_n)
-
-                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.filter_n[i])).tolist())
-                if i+1 < len(self.layer_list):
-                    self.feature_mat.append(np.zeros((self.filter_n[i], 1, 1)).tolist())
-
+        
         # hardware
         self.Xbar_h = self.hardware_information.Xbar_h
         self.Xbar_w = self.hardware_information.Xbar_w
@@ -114,35 +84,72 @@ class OrderGenerator(object):
         self.XB_num = self.hardware_information.Xbar_num
 
         # mapping
+        self.crossbar_array = self.mapping_information.crossbar_array # 
         self.layer_mapping_to_xbar = self.mapping_information.layer_mapping_to_xbar
         self.layer_mapping_to_pe = self.mapping_information.layer_mapping_to_pe
+
         self.XB_array = []
-        idx = 0
+        self.pe_traverse_idx = [] # TODO: 可能無用
+        self.cu_traverse_idx = []
+
         for rty_idx in range(self.RT_num_y):
             for rtx_idx in range(self.RT_num_x):
                 for pey_idx in range(self.PE_num_y):
                     for pex_idx in range(self.PE_num_x):
+                        pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
+                        self.pe_traverse_idx.append(pe_pos)
 
                         for cuy_idx in range(self.CU_num_y):
                             for cux_idx in range(self.CU_num_x):
                                 cu_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx)
                                 self.cu_traverse_idx.append(cu_pos)
+
                                 for xby_idx in range(self.XB_num_y):
                                     for xbx_idx in range(self.XB_num_x):
                                         xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
-                                        self.XB_array.append(XBAR(self.Xbar_h, self.Xbar_w, xb_pos))
-                                        self.XB_array[idx].crossbar_array = \
-                                            mapping_information.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                        xb = XBAR(xb_pos) # TODO: 跟XB合併或改比較好辨認的名字
+
+                                        # weights
+                                        xb.crossbar_array = self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                        
+                                        # inputs
                                         for mapping_data in self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]:
                                             if mapping_data.eventtype == "convolution":
-    
-                                                self.XB_array[idx].Convolution.append(mapping_data)
+                                                xb.Convolution.append(mapping_data)
                                             if mapping_data.eventtype == "fully":
-                                                self.XB_array[idx].Fully.append(mapping_data)
-                                        idx += 1   
+                                                xb.Fully.append(mapping_data)
+                                        self.XB_array.append(xb) 
 
         
+        ## Dependency Matrix
+        self.pe_saa_mat = []
+        self.feature_mat = [] # TODO: 改名為output_feature_map_mat
 
+        for i in range(len(self.layer_list)):
+            if self.layer_list[i].layer_type == "convolution":  
+                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.layer_list[i].filter_n)).tolist())
+                if i+1 < len(self.layer_list):
+                    if self.layer_list[i+1].layer_type == "fully":
+                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
+                    else:
+                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
+                        #print(self.input_h[i+1], self.input_w[i+1])
+            elif self.layer_list[i].layer_type == "pooling":      
+                self.pe_saa_mat.append([])
+                if i+1 < len(self.layer_list):
+                    if self.layer_list[i+1].layer_type == "fully":
+                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
+                    else:
+                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
+            elif self.layer_list[i].layer_type == "fully":
+                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.filter_n[i])).tolist())
+                if i+1 < len(self.layer_list):
+                    self.feature_mat.append(np.zeros((self.filter_n[i], 1, 1)).tolist())
+        
+        self.Computation_order = []
+        # self.generate_order()
+
+    def generate_order(self):
         for nlayer in range(len(self.layer_list)):
             print("layer", nlayer, self.layer_list[nlayer].layer_type)
             if self.layer_list[nlayer].layer_type == "convolution":
@@ -537,8 +544,7 @@ class OrderGenerator(object):
                                                 event = EventMetaData("data_transfer", [data_transfer_source, []], data_transfer_preceding_count, [], nlayer, data_transfer_input_sequence, data_transfer_output_sequence)
                                                 self.Computation_order.append(event) 
                                                         
-                                                
-            
+                                                            
             elif self.layer_list[nlayer].layer_type == "fully":
                 for nCU in range(len(self.cu_traverse_idx)):
                       ##############################

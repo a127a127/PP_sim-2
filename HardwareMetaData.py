@@ -3,8 +3,8 @@ from configparser import ConfigParser
 class HardwareMetaData(object):
     def __init__(self):
         cfg = ConfigParser()
-        cfg.read('./configs/default_hw.ini')
-        #cfg.read('./configs/hardware.ini')
+        #cfg.read('./configs/default_hw.ini')
+        cfg.read('./configs/hardware.ini')
         
         self.Router_num_y = int(cfg['general']['Router_num_y'])
         self.Router_num_x = int(cfg['general']['Router_num_x'])
