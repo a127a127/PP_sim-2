@@ -10,7 +10,7 @@ class DefaultMapping(object):
         self.hd_info = hd_info
 
         self.layer_list = model_info.layer_list  # conv, pool, conv, ...
-        self.layer_length = len(model_info.layer_list)  # how many layer
+        self.layer_length = len(self.layer_list)  # how many layer
         self.input_h = [model_info.input_h] # input feature map height (each layer)
         self.input_w = [model_info.input_w] # input feature map width (each layer)
         self.input_c = [model_info.input_c] # input feature map channel (each layer)
@@ -22,50 +22,44 @@ class DefaultMapping(object):
         self.pooling_h = []
         self.pooling_w = []
 
-        for i in range(self.layer_length):
-            if self.layer_list[i].layer_type == "convolution":
-                self.filter_n.append(self.layer_list[i].filter_n)
-                self.filter_h.append(self.layer_list[i].filter_h)
-                self.filter_w.append(self.layer_list[i].filter_w)
-                self.filter_c.append(self.layer_list[i].filter_c)
-                self.filter_length.append(self.layer_list[i].filter_h * self.layer_list[i].filter_w * self.layer_list[i].filter_c)
+        for nlayer in range(self.layer_length):
+            if self.layer_list[nlayer].layer_type == "convolution":
+                self.filter_n.append(self.layer_list[nlayer].filter_n)
+                self.filter_h.append(self.layer_list[nlayer].filter_h)
+                self.filter_w.append(self.layer_list[nlayer].filter_w)
+                self.filter_c.append(self.layer_list[nlayer].filter_c)
+                self.filter_length.append(self.layer_list[nlayer].filter_h * self.layer_list[nlayer].filter_w * self.layer_list[nlayer].filter_c)
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
-                self.input_h.append(self.input_h[i] - self.layer_list[i].filter_h + 1)
-                self.input_w.append(self.input_w[i] - self.layer_list[i].filter_w + 1)
-                self.input_c.append(self.layer_list[i].filter_n)
-            elif self.layer_list[i].layer_type == "pooling":
+                self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1
+                self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1
+                self.input_c.append(self.layer_list[nlayer].filter_n)
+            elif self.layer_list[nlayer].layer_type == "pooling":
                 self.filter_n.append(0)
                 self.filter_h.append(0)
                 self.filter_w.append(0)
                 self.filter_c.append(0)
                 self.filter_length.append(0)
-                self.pooling_h.append(self.layer_list[i].pooling_h)
-                self.pooling_w.append(self.layer_list[i].pooling_w)
-                self.input_h.append(self.input_h[i] // self.layer_list[i].pooling_h)
-                self.input_w.append(self.input_w[i] // self.layer_list[i].pooling_w)
-                self.input_c.append(self.input_c[i])
-            elif self.layer_list[i].layer_type == "fully":
-                self.filter_n.append(self.layer_list[i].neuron_n)
+                self.pooling_h.append(self.layer_list[nlayer].pooling_h)
+                self.pooling_w.append(self.layer_list[nlayer].pooling_w)
+                self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h)
+                self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w)
+                self.input_c.append(self.input_c[nlayer])
+            elif self.layer_list[nlayer].layer_type == "fully":
+                self.filter_n.append(self.layer_list[nlayer].neuron_n)
                 self.filter_h.append(0)
                 self.filter_w.append(0)
                 self.filter_c.append(0)
-                self.filter_length.append(self.input_h[i] * self.input_w[i] * self.input_c[i])
+                self.filter_length.append(self.input_h[nlayer] * self.input_w[nlayer] * self.input_c[nlayer])
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
-                self.input_h.append(self.filter_n[i])
+                self.input_h.append(self.layer_list[nlayer].neuron_n)
                 self.input_w.append(1)
                 self.input_c.append(1)
-        
-        # print('self.filter_n, self.filter_h, self.filter_w, self.filter_c, self.filter_length, self.input_h, self.input_w, self.input_c')
-        # for i in range(self.layer_length):
-        #    print(self.layer_list[i].layer_type)
-        #    print(self.filter_n[i], self.filter_h[i], self.filter_w[i], self.filter_c[i], self.filter_length[i], self.input_h[i], self.input_w[i], self.input_c[i])
 
-        ## initialize Xbar cell to 0
-        ## crossbar_array shape = (PE_idx, CU_idx, Xbar_idx, Xbar_h_idx, Xbar_w_idx)
+        
         self.crossbar_array = []   # weights
-        self.layer_mapping_to_xbar = [] # inputs
+        self.layer_mapping_to_xbar = [] # xbar inputs
         self.layer_mapping_to_pe = []  # pooling's input
 
         for rty_idx in range(self.hd_info.Router_num_y):
@@ -156,7 +150,7 @@ class DefaultMapping(object):
                 ## Prepare input for each xbar
                 o_height = self.input_h[nlayer] - self.filter_h[nlayer] + 1  # output feature map height
                 o_width = self.input_w[nlayer] - self.filter_w[nlayer] + 1   # output feature map width
-                
+
                 inputs = []
                 for oh in range(o_height):
                     for ow in range(o_width):
@@ -189,9 +183,9 @@ class DefaultMapping(object):
                         
                         xbar_inputs = inputs[:, h*self.hd_info.Xbar_h : (h+1)*self.hd_info.Xbar_h].tolist()
 
-                        if (w+1) * self.hd_info.Xbar_w <= matrix_width:
+                        if (w+1) * self.hd_info.Xbar_w <= matrix_width: 
                             xbar_column = [i for i in range(self.hd_info.Xbar_w)]
-                        else:
+                        else: # most right
                             empt = (w+1) * self.hd_info.Xbar_w - matrix_width
                             full = self.hd_info.Xbar_w - empt
                             xbar_column = [i for i in range(full)]
@@ -208,7 +202,6 @@ class DefaultMapping(object):
                 pe_idx -= pe_total_num
                 o_height = self.input_h[nlayer] // self.pooling_h[nlayer]
                 o_width = self.input_w[nlayer] // self.pooling_w[nlayer]
-                #print(nlayer, o_height, o_width)
                 inputs = []
                 for i in range(o_height):
                     for j in range(o_width):
@@ -219,23 +212,24 @@ class DefaultMapping(object):
                                     nn.append([i*self.pooling_h[nlayer] + k, j*self.pooling_w[nlayer] + l, c])
                             inputs.append(nn)
                 inputs = np.array(inputs)
-                #print(nlayer, inputs)
-                l = len(inputs) // pe_total_num
-                for pe_n in range(pe_total_num):
-                    rt_h = self.pe_mapping_dict[pe_n][0]
-                    rt_w = self.pe_mapping_dict[pe_n][1]
-                    pe_h = self.pe_mapping_dict[pe_n][2]
-                    pe_w = self.pe_mapping_dict[pe_n][3]
+                
+                l = len(inputs) // pe_total_num # split into multiple pe
 
-                    if pe_n == pe_total_num-1: # last pe deal with the last
+                for pe_n in range(pe_total_num):
+                    rt_h = self.pe_mapping_dict[pe_idx + pe_n][0]
+                    rt_w = self.pe_mapping_dict[pe_idx + pe_n][1]
+                    pe_h = self.pe_mapping_dict[pe_idx + pe_n][2]
+                    pe_w = self.pe_mapping_dict[pe_idx + pe_n][3]
+
+                    if pe_n == pe_idx+pe_total_num - 1:
                         this_input = inputs[pe_n * l :].tolist()
                     else:
                         this_input = inputs[pe_n * l : (pe_n+1) * l].tolist()
+                    
                     xbar_column = [-1]
                     self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w].append(MappingMetaData("pooling", nlayer, xbar_column, this_input))
                 pe_idx += pe_total_num
                 
-
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 ## Prepare weights
                 matrix_height = self.filter_length[nlayer]
@@ -305,7 +299,7 @@ class DefaultMapping(object):
                             full = self.hd_info.Xbar_w - empt
                             xbar_column = [i for i in range(full)]
                         self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_column, xbar_inputs))
-                pe_idx += pe_total_num
+                pe_idx += pe_total_num        
         return
     
 
@@ -525,6 +519,8 @@ class ParallelismMapping(object):
                         #print(xbar_col_idx)
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                #### Default pooling 有錯已修正 這邊沒檢查
+
                 o_height = self.input_h[nlayer] // self.pooling_h[nlayer]
                 o_width = self.input_w[nlayer] // self.pooling_w[nlayer]
                 #print(nlayer, o_height, o_width)
@@ -831,6 +827,7 @@ class TransferMapping(object):
                         #print(xbar_mapping_idx)
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                #### Default pooling 有錯已修正 這邊沒檢查
                 o_height = self.input_h[nlayer] // self.pooling_h[nlayer]
                 o_width = self.input_w[nlayer] // self.pooling_w[nlayer]
                 #print(nlayer, o_height, o_width)
@@ -920,4 +917,5 @@ class TransferMapping(object):
                  
     def __str__(self):
         return str(self.__dict__)
+
 
