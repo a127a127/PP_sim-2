@@ -7,6 +7,7 @@ from OrderGenerator import OrderGenerator
 from Controller import Controller
 
 from TestModelConfig import TestModelConfig
+from TestModelConfig2 import TestModelConfig2
 from LenetConfig import LenetConfig
 from Cifar10Config import Cifar10Config
 from CaffenetConfig import CaffenetConfig
@@ -20,7 +21,7 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 0
+    model_type = 4
     print("Model type:  ", end="")
     if model_type == 0:
         model_information = TestModelConfig()
@@ -34,6 +35,9 @@ def main():
     elif model_type == 3:
         model_information = CaffenetConfig()
         print("CaffenetConfig")
+    elif model_type == 4:
+        model_information = TestModelConfig2()
+        print("TestModelConfig2")
     
     ### Mapping ##
     mapping_type = mapping
@@ -53,10 +57,10 @@ def main():
     
 
     ### Scheduling ###
-    isPipeLine = False
+    isPipeLine = True
 
     ### Trace ###
-    istrace = False
+    istrace = True
     isStatistic_order = True
 
     ### Generate computation order graph ### 
@@ -69,11 +73,11 @@ def main():
         statistic_order(order_generator)
     
     ### Power and performance simulation ###
-    start_simulation_time = time.time()
-    controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
-    controller.run()
-    end_simulation_time = time.time()
-    print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+    # start_simulation_time = time.time()
+    # controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
+    # controller.run()
+    # end_simulation_time = time.time()
+    # print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 
     
 def statistic_order(order_generator):
@@ -119,15 +123,14 @@ def statistic_order(order_generator):
     print("edram_rd_pool_ctr", edram_rd_pool_ctr)
     print("data_transfer_ctr", data_transfer_ctr)
 
-    # i = 0
-    # for e in order_generator.Computation_order:
-    #     if e.nlayer == 0 and e.event_type == "edram_rd_ir":
-    #         print(i, e)
-    #         print()
-    #     i += 1
+    i = 0
+    for e in order_generator.Computation_order:
+        if e.event_type == "data_transfer":
+            print(i, e)
+            print()
+        i += 1
 
 
 if __name__ == '__main__':
     main()
-
 

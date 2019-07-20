@@ -235,7 +235,7 @@ class Controller(object):
                 if len(des_list) != len(event.proceeding_event):
                     print("\t有地方出問題, 目前是以兩個長度相等來做")
                 
-                print(des_list)
+                #print(des_list)
                 for idx in range(len(des_list)): # len(des_list) == len(proceeding_event )  
                     pro_event_idx = event.proceeding_event[idx]
                     if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
@@ -243,7 +243,7 @@ class Controller(object):
                     else:
                         packet = Packet(src, des_list[idx], [], pro_event_idx)
                     self.interconnect.input_packet(packet)
-            print(self.interconnect.packet_in_module_ctr)
+            #print(self.interconnect.packet_in_module_ctr)
 
 
             ### Fetch data from off-chip memory ###
@@ -724,13 +724,11 @@ class Controller(object):
             
             ### Finish?
             isDone = True
-            
-
             if self.fetch_array or self.data_transfer_erp or self.data_transfer_trigger:
                 isDone = False
             if self.interconnect.busy():
-
                 isDone = False
+
             for pe in self.PE_array:
                 if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
                     isDone = False
@@ -755,8 +753,8 @@ class Controller(object):
                 if not isDone:
                     break
 
-            if self.cycle_ctr > 50:
-                isDone = True
+            # if self.cycle_ctr > 50:
+            #     isDone = True
 
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
