@@ -724,13 +724,11 @@ class Controller(object):
             
             ### Finish?
             isDone = True
-            
-
             if self.fetch_array or self.data_transfer_erp or self.data_transfer_trigger:
                 isDone = False
             if self.interconnect.busy():
-
                 isDone = False
+
             for pe in self.PE_array:
                 if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
                     isDone = False
@@ -755,8 +753,8 @@ class Controller(object):
                 if not isDone:
                     break
 
-            if self.cycle_ctr > 50:
-                isDone = True
+            # if self.cycle_ctr > 50:
+            #     isDone = True
 
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)

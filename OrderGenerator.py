@@ -474,8 +474,11 @@ class OrderGenerator(object):
                                             for input_data in input_sequence:
                                                 #print(input_data)
                                                 preceding_list = self.feature_mat[nlayer-1][input_data[0]][input_data[1]][input_data[2]]
+                                                print("AA", preceding_list)
+                                                
                                                 if preceding_list != 0:
                                                     for pre_event in preceding_list:
+
                                                         if pre_event not in edram_rd_pool_preceding_event_list:
                                                             self.Computation_order[pre_event].proceeding_event.append(edram_rd_pool_event_index)
                                                             self.Computation_order[pre_event].position_idx[1].append(des_pe_idx)

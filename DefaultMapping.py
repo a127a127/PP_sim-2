@@ -64,9 +64,9 @@ class DefaultMapping(object):
 
         ## initialize Xbar cell to 0
         ## crossbar_array shape = (PE_idx, CU_idx, Xbar_idx, Xbar_h_idx, Xbar_w_idx)
-        self.crossbar_array = []   # 放weights
+        self.crossbar_array = []   # weights
         self.layer_mapping_to_xbar = [] # inputs
-        self.layer_mapping_to_pe = []  # pooling的input
+        self.layer_mapping_to_pe = []  # pooling's input
 
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
