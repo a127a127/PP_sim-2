@@ -1,4 +1,11 @@
 from HardwareMetaData import HardwareMetaData
+
+from TestModelConfig import TestModelConfig
+from TestModelConfig2 import TestModelConfig2
+from LenetConfig import LenetConfig
+from Cifar10Config import Cifar10Config
+
+from CaffenetConfig import CaffenetConfig
 from DefaultMapping import DefaultMapping
 from DefaultMapping import ParallelismMapping
 from DefaultMapping import TransferMapping
@@ -6,15 +13,7 @@ from DefaultMapping import TransferMapping
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 
-from TestModelConfig import TestModelConfig
-from TestModelConfig2 import TestModelConfig2
-from LenetConfig import LenetConfig
-from Cifar10Config import Cifar10Config
-from CaffenetConfig import CaffenetConfig
-
 import time, sys
-import numpy as np
-from MappingMetaData import MappingMetaData
 
 def main():
     mapping = int(sys.argv[1])
@@ -76,14 +75,16 @@ def main():
     if isStatistic_order:
         statistic_order(order_generator)
     
-    # ## Power and performance simulation ###
-    # start_simulation_time = time.time()
+    ## Power and performance simulation ###
+    start_simulation_time = time.time()
 
-    # controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
-    # controller.run()
+    controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
+    controller.run()
 
-    # end_simulation_time = time.time()
-    # print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+    end_simulation_time = time.time()
+    print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+
+    #controller.print_statistics_result()
 
     
 def statistic_order(order_generator):
