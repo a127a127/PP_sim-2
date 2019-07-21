@@ -17,6 +17,7 @@ import time, sys
 
 def main():
     mapping = int(sys.argv[1])
+    scheduling = int(sys.argv[2])
 
     ### Hardware configuration ###
     hardware_information = HardwareMetaData()
@@ -41,24 +42,26 @@ def main():
         print("TestModelConfig2")
     
     ### Mapping ##
-    mapping_type = mapping
     print("Mapping policy:  ", end="")
-    if mapping_type == 0:
+    if mapping == 0:
         mapping_information = DefaultMapping(hardware_information, model_information)
         mapping_str = "DefaultMapping"
         print("DefaultMapping")
-    elif mapping_type == 1:
+    elif mapping == 1:
         mapping_information = ParallelismMapping(hardware_information, model_information)
         mapping_str = "ParallelismMapping"
         print("ParallelismMapping")
-    elif mapping_type == 2:
+    elif mapping == 2:
         mapping_information = TransferMapping(hardware_information, model_information)
         mapping_str = "TransferMapping"
         print("TransferMapping") 
     
 
     ### Scheduling ###
-    isPipeLine = True
+    if scheduling == 0:
+        isPipeLine = True
+    elif scheduling == 1:
+        isPipeLine = False
 
     ### Trace ###
     istrace = True
@@ -84,7 +87,7 @@ def main():
     end_simulation_time = time.time()
     print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 
-    #controller.print_statistics_result()
+    controller.print_statistics_result()
 
     
 def statistic_order(order_generator):
@@ -130,12 +133,11 @@ def statistic_order(order_generator):
     print("edram_rd_pool_ctr", edram_rd_pool_ctr)
     print("data_transfer_ctr", data_transfer_ctr)
 
-    i = 0
+
     for e in order_generator.Computation_order:
-        if e.event_type == "data_transfer":
-            print(i, e)
+        if e.nlayer == 1 or e.nlayer == 0:
+            print(order_generator.Computation_order.index(e), e)
             print()
-        i += 1
 
 
 if __name__ == '__main__':

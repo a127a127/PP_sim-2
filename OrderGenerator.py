@@ -144,9 +144,9 @@ class OrderGenerator(object):
         self.Computation_order = []
         self.generate_order()
         
-        for e in self.Computation_order:
-            print(self.Computation_order.index(e), e)
-            print()
+        # for e in self.Computation_order:
+        #     print(self.Computation_order.index(e), e)
+        #     print()
 
     def generate_order(self):
         for nlayer in range(len(self.layer_list)):
@@ -499,7 +499,7 @@ class OrderGenerator(object):
                                             data_transfer_preceding_count = 1
                                             data_transfer_inputs  = edram_wr_event.outputs
                                             data_transfer_outputs = edram_wr_event.outputs
-                                            event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer, data_transfer_inputs, data_transfer_outputs)
+                                            event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                             self.Computation_order.append(event)
 
                                     # dependency
@@ -647,7 +647,8 @@ class OrderGenerator(object):
                         edram_wr_pe_pos  = pe_idx
                         edram_wr_inputs  = [[0, 0, nfilter]]
                         edram_wr_outputs = [[0, 0, nfilter]]
-                        event = EventMetaData("edram_wr", edram_wr_pe_pos, 1, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
+                        edram_wr_preceding_count = len(preceding_pe[pe_idx])
+                        event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                         self.Computation_order.append(event)
 
                         source_pe_idx = pe_idx
@@ -656,7 +657,7 @@ class OrderGenerator(object):
                         event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_ouputs)
                         self.Computation_order.append(event)
                             
-                        pe_saa_preceding_count += 2
+                        pe_saa_preceding_count += 1
         
                 ### Event: pe_saa
                     pe_saa_event_idx = len(self.Computation_order)
@@ -671,7 +672,7 @@ class OrderGenerator(object):
                     
                     pe_saa_inputs  = [[0, 0, nfilter]]
                     pe_saa_outputs = [[0, 0, nfilter]]
-                    event = EventMetaData("pe_saa", do_pe_saa_pos, preceding_count, [], nlayer, pe_saa_inputs, pe_saa_outputs)
+                    event = EventMetaData("pe_saa", do_pe_saa_pos, pe_saa_preceding_count, [], nlayer, pe_saa_inputs, pe_saa_outputs)
                     self.Computation_order.append(event)
                     
                 ### Event: activation
