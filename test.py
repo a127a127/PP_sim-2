@@ -4,9 +4,9 @@ from Packet import Packet
 interconnect = Interconnect(2, 2)
 
 PA = []
-PA.append(Packet((0,0,0,0), (1,0,0,1), "A"))
-PA.append(Packet((0,0,0,0), (1,1,0,0), "B"))
-PA.append(Packet((1,0,0,0), (1,1,0,0), "C"))
+PA.append(Packet((0,0,0,0), (1,0,0,1), "A", 1))
+PA.append(Packet((0,0,0,0), (1,1,0,0), "B", 1))
+PA.append(Packet((1,0,0,0), (1,1,0,0), "C", 1))
 
 for i in range(len(PA)):
     interconnect.input_packet(PA[i])
