@@ -657,7 +657,7 @@ class OrderGenerator(object):
                         event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_ouputs)
                         self.Computation_order.append(event)
                             
-                        pe_saa_preceding_count += 2
+                        pe_saa_preceding_count += 1
         
                 ### Event: pe_saa
                     pe_saa_event_idx = len(self.Computation_order)
