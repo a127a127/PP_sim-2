@@ -84,6 +84,8 @@ def main():
     end_simulation_time = time.time()
     print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
 
+    #controller.print_statistics_result()
+
     
 def statistic_order(order_generator):
     edram_rd_ir_ctr = 0

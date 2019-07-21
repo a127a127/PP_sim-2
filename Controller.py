@@ -7,12 +7,8 @@ from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
 from HardwareMetaData import HardwareMetaData
 
-from NetworkTransfer import NetworkTransfer
-from TransferEvent import TransferEvent
-
 from Interconnect import Interconnect
 from Packet import Packet
-
 
 import matplotlib
 matplotlib.use('Agg')
@@ -186,7 +182,7 @@ class Controller(object):
             if self.trace:
                 print('cycle:', self.cycle_ctr)
 
-            ### Interconnect ###
+            ### Interconnect 
             for s in range(self.interconnect_step):
                 self.interconnect.step()
 
@@ -206,7 +202,8 @@ class Controller(object):
                     print("\twrite data into buffer:", pk.data)
                     pe.edram_buffer.put(pk.data)
                     # 2. trigger event
-                    cuy, cux = pk.destination[4], pk.destination[5]
+                    cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
+
                     cu_idx = cux + cuy * self.CU_num_x
                     cu = pe.CU_array[cu_idx]
                     pro_event.current_number_of_preceding_event += 1
@@ -231,22 +228,19 @@ class Controller(object):
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]
-                des_list = event.position_idx[1]
-                if len(des_list) != len(event.proceeding_event):
-                    print("\t有地方出問題, 目前是以兩個長度相等來做")
+                des = event.position_idx[1]
                 
                 #print(des_list)
-                for idx in range(len(des_list)): # len(des_list) == len(proceeding_event )  
-                    pro_event_idx = event.proceeding_event[idx]
-                    if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
-                        packet = Packet(src, des_list[idx], [event.nlayer+1, event.outputs[0]], pro_event_idx)
-                    else:
-                        packet = Packet(src, des_list[idx], [], pro_event_idx)
-                    self.interconnect.input_packet(packet)
+                pro_event_idx = event.proceeding_event[idx]
+                if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
+                    packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
+                else:
+                    packet = Packet(src, des, [], pro_event_idx)
+                self.interconnect.input_packet(packet)
             #print(self.interconnect.packet_in_module_ctr)
 
 
-            ### Fetch data from off-chip memory ###
+            ### Fetch data from off-chip memory
             for FE in self.fetch_array.copy():
                 FE.cycles_counter += 1
                 #print(FE.cycles_counter, end=' ')
@@ -271,7 +265,7 @@ class Controller(object):
                     #self.mem_acc_ctr += 1
                     #print(XB_array[0].OnchipBuffer.arr) 
 
-            ### Event: edram_rd_ir ###
+            ### Event: edram_rd_ir
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if cu.edram_rd_ir_erp:
@@ -332,7 +326,7 @@ class Controller(object):
                                     xb_idx = xb_x + xb_y * self.XB_num_x
                                     cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])                                
 
-            ### Event: ou_operation ###
+            ### Event: ou_operation 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for xb in cu.XB_array:
@@ -371,7 +365,7 @@ class Controller(object):
                                             xb.cu_saa_trigger.append([pro_event, [cu_idx]])
                                     break
 
-            ### Event: cu_saa ###
+            ### Event: cu_saa 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp.copy():
@@ -402,12 +396,11 @@ class Controller(object):
                                         if pro_event.event_type == "pe_saa":
                                             cu.pe_saa_trigger.append([pro_event, []])
 
-                                        elif pro_event.event_type == "data_transfer":
-                                            self.data_transfer_trigger.append([pro_event, []])
-
+                                        elif pro_event.event_type == "edram_wr":
+                                            pe.edram_wr_trigger.append([pro_event, []])
                                 break
 
-            ### Event: pe_saa ###
+            ### Event: pe_saa 
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
                     for idx in range(len(pe.state_pe_saa)):
@@ -437,7 +430,7 @@ class Controller(object):
                                     pe.activation_trigger.append([pro_event, []])
                             break    
 
-            ### Event: activation ###
+            ### Event: activation 
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
                     for idx in range(len(pe.state_activation)):
@@ -463,7 +456,7 @@ class Controller(object):
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
-            ### Event: edram write ###
+            ### Event: edram write 
             for pe in self.PE_array:
                 for event in pe.edram_wr_erp.copy():
                     for idx in range(len(pe.state_edram_wr)):
@@ -491,16 +484,12 @@ class Controller(object):
                                         cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
-                                    elif pro_event.event_type == "edram_rd_pool":
-                                        # 目前生的order不會進到這
-                                        pe.edram_rd_pool_trigger.append([pro_event, []])
-                                    elif pro_event.event_type == "data_transfer":
 
+                                    elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
                             break
             
-
-            ### Event: edram_rd_pool ###
+            ### Event: edram_rd_pool 
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
                     event = pe.edram_rd_pool_erp[0]
@@ -547,7 +536,7 @@ class Controller(object):
                                 pos = pro_event.position_idx
                                 pe.pooling_trigger.append([pro_event, []])                                
                     
-            ### Event: pooling ###
+            ### Event: pooling 
             for pe in self.PE_array:
                 for event in pe.pooling_erp.copy():
                     for idx in range(len(pe.state_pooling)):
@@ -573,7 +562,7 @@ class Controller(object):
                             break
 
             ### Trigger events ###
-            ### Trigger interconnect ###
+            ### Trigger interconnect
             for trigger in self.data_transfer_trigger.copy():
                 pro_event = trigger[0]
                 if not self.isPipeLine:
@@ -586,7 +575,7 @@ class Controller(object):
 
 
             for pe in self.PE_array:
-                ## Trigger activation ###
+                ## Trigger activation 
                 for trigger in pe.activation_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -597,7 +586,7 @@ class Controller(object):
                         pe.activation_erp.append(pro_event)
                         pe.activation_trigger.remove(trigger)
 
-                ## Trigger edram_wr ###
+                ## Trigger edram_wr 
                 for trigger in pe.edram_wr_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -608,7 +597,7 @@ class Controller(object):
                         pe.edram_wr_erp.append(pro_event)
                         pe.edram_wr_trigger.remove(trigger)
 
-                ## Trigger edram_rd_ir ###
+                ## Trigger edram_rd_ir 
                 for trigger in pe.edram_rd_ir_trigger.copy():
                     pro_event = trigger[0]
                     cu_idx = trigger[1][0]
@@ -620,7 +609,7 @@ class Controller(object):
                         pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
                         pe.edram_rd_ir_trigger.remove(trigger)
                 
-                ## Trigger pooling ###
+                ## Trigger pooling 
                 for trigger in pe.pooling_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -631,7 +620,7 @@ class Controller(object):
                         pe.pooling_erp.append(pro_event)
                         pe.pooling_trigger.remove(trigger)
 
-                ## Trigger edram_rd_ir_pool ###
+                ## Trigger edram_rd_ir_pool 
                 for trigger in pe.edram_rd_pool_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -642,7 +631,7 @@ class Controller(object):
                         pe.edram_rd_pool_erp.append(pro_event)
                         pe.edram_rd_pool_trigger.remove(trigger)
                 for cu in pe.CU_array:
-                    ## Trigger ou operation ###
+                    ## Trigger ou operation 
                     for trigger in cu.ou_operation_trigger.copy():
                         pro_event = trigger[0]
                         xb_idx = trigger[1][1]
@@ -653,19 +642,17 @@ class Controller(object):
                         else:
                             cu.XB_array[xb_idx].ou_operation_erp.append(pro_event)
                             cu.ou_operation_trigger.remove(trigger)
-                    ## Trigger pe saa ###
+                    ## Trigger pe saa 
                     for trigger in cu.pe_saa_trigger.copy():
                         pro_event = trigger[0]
                         if not self.isPipeLine:
                             if pro_event.nlayer == self.pipeline_layer_stage:
-                                pe.pe_saa_erp.append(pro_event) 
-                                #cu.pe_saa_trigger = []
+                                pe.pe_saa_erp.append(pro_event)
                                 cu.pe_saa_trigger.remove(trigger)
                         else:
                             pe.pe_saa_erp.append(pro_event) 
-                            #cu.pe_saa_trigger = []
                             cu.pe_saa_trigger.remove(trigger)
-                    ### Trigger cu_saa ###
+                    ### Trigger cu_saa 
                     for xb in cu.XB_array:
                         for trigger in xb.cu_saa_trigger.copy():
                             pro_event = trigger[0]
@@ -678,7 +665,7 @@ class Controller(object):
                                 pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
                                 xb.cu_saa_trigger.remove(trigger)
 
-                ## Trigger pe saa (for data transfer) ##
+                ### Trigger pe saa (for data transfer) 
                 for trigger in pe.pe_saa_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -779,7 +766,7 @@ class Controller(object):
             self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
         self.avg_buffer_size = self.total_buffer_size / len(self.PE_array)
 
-        self.print_statistics_result()
+        
 
     def print_statistics_result(self):
         print("Cycles time:", self.cycle_time)
