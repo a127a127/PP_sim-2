@@ -426,7 +426,7 @@ class ParallelismMapping(object):
                                         for xx in range(self.hd_info.Xbar_num_x):
                                             self.xb_mapping_dict[ctr] = [ry, rx, py, px, cy, cx, xy, xx]
                                             ctr += 1
-        print(self.xb_mapping_dict)
+        #print(self.xb_mapping_dict)
 
         self.map()
         #print(self.crossbar_array[0][0][0][0][0][0][0][0][0][2])
