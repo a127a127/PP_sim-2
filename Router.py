@@ -2,7 +2,7 @@ class Router(object):
     def __init__(self, h, w):
         self.pos = (h, w)
         
-        self.queue_size = 20 # n packets 
+        self.queue_size = 2000 # n packets  large enough
 
         # input port
         self.arrived_order = []
@@ -18,6 +18,7 @@ class Router(object):
 
     def packet_in(self, packet, port_type):
         if self.queue_size == len(self.input_queue[port_type]):
+            # TODO: deal with queue full 
             # queue full
             print("router queue full")
             exit()
@@ -35,32 +36,32 @@ class Router(object):
         
         # X-Y routing
         if packet.destination[1] > self.pos[1]:
-            print("\t", packet.data, "往東走")
+            #print("\t", packet.data, "往東走")
             return packet, "east"
         elif packet.destination[1] < self.pos[1]:
-            print("\t", packet.data, "往西走")
+            #print("\t", packet.data, "往西走")
             return packet, "west"
         else:
             if packet.destination[0] > self.pos[0]:
-                print("\t", packet.data, "往南走")
+                #print("\t", packet.data, "往南走")
                 return packet, "south"
             elif packet.destination[0] < self.pos[0]:
-                print("\t", packet.data, "往北走")
+                #print("\t", packet.data, "往北走")
                 return packet, "north"
             else:
                 #抵達router
-                print("\t", packet.data, "抵達router", end="")
+                #print("\t", packet.data, "抵達router", end="")
                 if packet.destination[2] == 0 and packet.destination[3] == 0:
-                    print("西北")
+                    #print("西北")
                     return packet, "pe_north_west"
                 elif packet.destination[2] == 0 and packet.destination[3] == 1:
-                    print("東北")
+                    #print("東北")
                     return packet, "pe_north_east"
                 elif packet.destination[2] == 1 and packet.destination[3] == 0:
-                    print("西南")
+                    #print("西南")
                     return packet, "pe_south_west"
                 else:  #packet.destination[2] == 1 and packet.destination[3] == 1:
-                    print("東南")
+                    #print("東南")
                     return packet, "pe_south_east"
                 
     def __str__(self):
