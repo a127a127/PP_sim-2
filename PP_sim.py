@@ -59,13 +59,13 @@ def main():
 
     ### Scheduling ###
     if scheduling == 0:
-        isPipeLine = True
-    elif scheduling == 1:
         isPipeLine = False
+    elif scheduling == 1:
+        isPipeLine = True
 
     ### Trace ###
     istrace = True
-    isStatistic_order = True
+    isStatistic_order = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()

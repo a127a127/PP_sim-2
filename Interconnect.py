@@ -10,6 +10,8 @@ class Interconnect(object):
 
         self.router_array = np.array(self.router_array)
         self.router_array = self.router_array.reshape(rt_h, rt_w)
+        self.step_energy_consumption = 0
+        self.router_step_energy = 42
 
         self.arrived_list = []
 
@@ -36,12 +38,14 @@ class Interconnect(object):
         self.router_array[rt_y][rt_x].packet_in(packet, port_type)
 
     def step(self):
+        self.step_energy_consumption = 0
         packet_transfer = []
         for h in range(self.router_array.shape[0]):
             for w in range(self.router_array.shape[1]):
                 if not self.router_array[h][w].arrived_order:
                     continue
                 packet, port_type = self.router_array[h][w].step()
+                self.step_energy_consumption += self.router_step_energy
                 if port_type == "east":
                     packet_transfer.append((h, w+1, packet, port_type))
                 elif port_type == "west":

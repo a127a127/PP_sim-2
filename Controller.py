@@ -86,7 +86,7 @@ class Controller(object):
         self.activation_energy_total = 0
         self.pooling_energy_total = 0
         self.edram_wr_energy_total = 0
-        self.interconnect_total = 0
+        self.interconnect_energy_total = 0
 
         self.pe_or_energy_total = 0
         self.cu_ir_energy_total = 0
@@ -122,7 +122,7 @@ class Controller(object):
         self.fetch_array = [] # TODO: 改掉
 
         self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
-        self.interconnect_step = 1 # TODO: 可調
+        self.interconnect_step = 120 # TODO: 可調
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
 
@@ -168,11 +168,13 @@ class Controller(object):
             ### Interconnect 
             for s in range(self.interconnect_step):
                 self.interconnect.step()
+                self.interconnect_energy_total += self.interconnect.step_energy_consumption
 
             # Store data into buffer, trigger event
             arrived_packet = self.interconnect.get_arrived_packet()
             for pk in arrived_packet:
-                print("\tArrived packet:", pk)
+                if self.trace:
+                    print("\tArrived packet:", pk)
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
                 rty, rtx = pk.destination[0], pk.destination[1]
@@ -184,7 +186,8 @@ class Controller(object):
                 
                 if pro_event.event_type == "edram_rd_ir":
                     # 1. store data into buffer
-                    print("\t\twrite data into buffer:", pk.data)
+                    if self.trace:
+                        print("\t\twrite data into buffer:", pk.data)
                     pe.edram_buffer.put(pk.data)
                     # 2. trigger event
                     cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
@@ -783,14 +786,14 @@ class Controller(object):
         self.cu_energy_total = self.ou_operation_energy_total + self.cu_ir_energy_total + self.cu_or_energy_total + self.cu_saa_energy_total
         self.pe_energy_total = self.cu_energy_total + self.edram_energy_total +  + self.pe_saa_energy_total + \
                                self.activation_energy_total+ self.pooling_energy_total + self.pe_or_energy_total
-        self.energy_total = self.pe_energy_total #+ self.interconnect_energy_total
+        self.energy_total = self.pe_energy_total + self.interconnect_energy_total
 
         print("--Power breakdown--")
 
         print("\tTotal:", self.energy_total, "J")
         print("Chip level")
         print("\tPE: %.4e (%.2f%%)" %(self.pe_energy_total, self.pe_energy_total/self.energy_total*100))
-        #print("\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
+        print("\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
         print()
         print("PE level")
         print("\tCU: %.4e (%.2f%%)" %(self.cu_energy_total, self.cu_energy_total/self.pe_energy_total*100))
@@ -820,6 +823,7 @@ class Controller(object):
             pipe_str = "pipeline"
         else:
             pipe_str = "non_pipeline"
+        
 
         ### non-pipeline stage
         if not self.isPipeLine:
@@ -837,6 +841,7 @@ class Controller(object):
         
         plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
         #plt.show()
+        plt.title(self.mapping_str+", "+pipe_str)
         plt.ylabel('Energy (nJ)')
         plt.xlabel('Cycle')
         plt.ylim([0, 20])
@@ -844,6 +849,17 @@ class Controller(object):
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/energy_utilization.png')
         plt.clf()
         
+        ### Power breakdown
+        # chip
+        labels = "PE", "Interconnect"
+        value = [self.pe_energy_total, self.interconnect_energy_total]
+        plt.title(self.mapping_str+", "+pipe_str)
+        plt.pie(value , labels = labels,autopct='%1.1f%%')
+        plt.axis('equal')
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Power_breakdown_chip.png')
+        plt.clf()
+
+
         ### PE usage
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -851,9 +867,11 @@ class Controller(object):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
         plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
+        plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
-        plt.ylim([-1, 10])
+        plt.ylim([-1, 16])
+        plt.xlim([1, 200])  ### @@
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
         plt.clf()
 
@@ -864,6 +882,7 @@ class Controller(object):
                 writer.writerow([row+1, self.xbar_utilization[row]])
         
         plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
+        plt.title(self.mapping_str+", "+pipe_str)
         #plt.show()
         plt.ylabel('Xbar number')
         plt.xlabel('Cycle')
@@ -885,6 +904,7 @@ class Controller(object):
 
         for i in range(len(self.PE_array)):
             plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i]) #, c=self.color[i])
+        plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('Buffer size (number of data)')
         plt.ylim([0, self.max_buffer_size+5])

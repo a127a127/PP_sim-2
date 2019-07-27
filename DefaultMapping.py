@@ -418,13 +418,14 @@ class ParallelismMapping(object):
                                             ctr += 1
             else:
                 for rx in range(self.hd_info.Router_num_x-1, -1, -1):
-                        for py in range(self.hd_info.PE_num_y):
-                            for px in range(self.hd_info.PE_num_x):
-                                for cy in range(self.hd_info.CU_num_y):
-                                    for cx in range(self.hd_info.CU_num_x): 
-                                        for xy in range(self.hd_info.Xbar_num_y):
-                                            for xx in range(self.hd_info.Xbar_num_x):
-                                                self.xb_mapping_dict[ctr] = [ry, rx, py, px, cy, cx, xy, xx]
+                    for py in range(self.hd_info.PE_num_y):
+                        for px in range(self.hd_info.PE_num_x):
+                            for cy in range(self.hd_info.CU_num_y):
+                                for cx in range(self.hd_info.CU_num_x): 
+                                    for xy in range(self.hd_info.Xbar_num_y):
+                                        for xx in range(self.hd_info.Xbar_num_x):
+                                            self.xb_mapping_dict[ctr] = [ry, rx, py, px, cy, cx, xy, xx]
+                                            ctr += 1
         #print(self.xb_mapping_dict)
 
         self.map()
