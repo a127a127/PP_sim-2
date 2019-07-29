@@ -23,38 +23,38 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 4
+    model_type = 0
     print("Model type:  ", end="")
     if model_type == 0:
-        model_information = TestModelConfig()
         print("TestModelConfig")
+        model_information = TestModelConfig()
     elif model_type == 1:
-        model_information = LenetConfig()
         print("LenetConfig")
+        model_information = LenetConfig()
     elif model_type == 2:
-        model_information = Cifar10Config()
         print("Cifar10Config")
+        model_information = Cifar10Config()
     elif model_type == 3:
-        model_information = CaffenetConfig()
         print("CaffenetConfig")
+        model_information = CaffenetConfig()
     elif model_type == 4:
-        model_information = TestModelConfig2()
         print("TestModelConfig2")
+        model_information = TestModelConfig2()
     
     ### Mapping ##
     print("Mapping policy:  ", end="")
     if mapping == 0:
+        print("DefaultMapping")
         mapping_information = DefaultMapping(hardware_information, model_information)
         mapping_str = "DefaultMapping"
-        print("DefaultMapping")
     elif mapping == 1:
+        print("ParallelismMapping")
         mapping_information = ParallelismMapping(hardware_information, model_information)
         mapping_str = "ParallelismMapping"
-        print("ParallelismMapping")
     elif mapping == 2:
+        print("TransferMapping") 
         mapping_information = TransferMapping(hardware_information, model_information)
         mapping_str = "TransferMapping"
-        print("TransferMapping") 
     
 
     ### Scheduling ###
@@ -65,7 +65,7 @@ def main():
 
     ### Trace ###
     istrace = True
-    isStatistic_order = False
+    isStatistic_order = True
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
