@@ -871,7 +871,7 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
         plt.ylim([-1, 16])
-        plt.xlim([1, 200])  ### @@
+        plt.xlim([1, 250])  ### @@
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
         plt.clf()
 

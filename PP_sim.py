@@ -64,8 +64,8 @@ def main():
         isPipeLine = True
 
     ### Trace ###
-    istrace = True
-    isStatistic_order = True
+    istrace = False
+    isStatistic_order = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
