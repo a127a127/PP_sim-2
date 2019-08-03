@@ -64,8 +64,8 @@ def main():
         isPipeLine = True
 
     ### Trace ###
-    istrace = False
-    isStatistic_order = False
+    isTrace_order = False
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
@@ -75,13 +75,13 @@ def main():
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---" % (end_order_time - start_order_time))
-    if isStatistic_order:
-        statistic_order(order_generator)
+    if isTrace_order:
+        trace_order(order_generator)
     
     ## Power and performance simulation ###
     start_simulation_time = time.time()
 
-    controller = Controller(order_generator, isPipeLine, istrace, mapping_str)
+    controller = Controller(order_generator, isPipeLine, isTrace_controller, mapping_str)
     controller.run()
 
     end_simulation_time = time.time()
@@ -89,8 +89,7 @@ def main():
 
     controller.print_statistics_result()
 
-    
-def statistic_order(order_generator):
+def trace_order(order_generator):
     edram_rd_ir_ctr = 0
     ou_operation_ctr = 0
     cu_saa_ctr = 0
@@ -135,10 +134,8 @@ def statistic_order(order_generator):
 
 
     for e in order_generator.Computation_order:
-        if e.nlayer == 1 or e.nlayer == 0:
-            print(order_generator.Computation_order.index(e), e)
-            print()
-
+        print(order_generator.Computation_order.index(e), e)
+        print()
 
 if __name__ == '__main__':
     main()
