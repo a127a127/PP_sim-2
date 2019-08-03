@@ -134,9 +134,8 @@ def trace_order(order_generator):
 
 
     for e in order_generator.Computation_order:
-        if e.nlayer == 1 or e.nlayer == 0:
-            print(order_generator.Computation_order.index(e), e)
-            print()
+        print(order_generator.Computation_order.index(e), e)
+        print()
 
 if __name__ == '__main__':
     main()

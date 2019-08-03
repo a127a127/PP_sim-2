@@ -7,7 +7,7 @@ class TestModelConfig(object):
             LayerMetaData("convolution", 2, 2, 2, 1, 0, 0, 0), # (type, conv_n, conv_h, conv_w, conv_c, pool_h, pool_w, fully_n)
             #LayerMetaData("convolution", 10, 2, 2, 20, 0, 0, 0),
             LayerMetaData("pooling",     0, 0, 0, 0, 2, 2, 0),
-            #LayerMetaData("fully",      0, 0, 0, 0, 0, 0, 10),
+            LayerMetaData("fully",      0, 0, 0, 0, 0, 0, 3),
             ]
 
         #model data
