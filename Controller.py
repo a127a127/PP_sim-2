@@ -199,6 +199,18 @@ class Controller(object):
                         if self.trace:
                             print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
+                elif pro_event.event_type == "edram_rd_pool":
+                    # 1. store data into buffer
+                    if self.trace:
+                        print("\t\twrite data into buffer:", pk.data)
+                    pe.edram_buffer.put(pk.data)
+                    # 2. trigger event
+                    pro_event.current_number_of_preceding_event += 1
+                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                        if self.trace:
+                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                        pe.edram_rd_pool_trigger.append([pro_event, []])
+
                 elif pro_event.event_type == "pe_saa":
                     # trigger event
                     pro_event.current_number_of_preceding_event += 1
@@ -220,6 +232,8 @@ class Controller(object):
                 #print(des_list)
                 pro_event_idx = event.proceeding_event[0]
                 if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
+                    packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
+                elif self.Computation_order[pro_event_idx].event_type == "edram_rd_pool":
                     packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
                 else:
                     packet = Packet(src, des, [], pro_event_idx)
@@ -260,8 +274,7 @@ class Controller(object):
                         continue
                     #print("\tevent:", event.event_type)
                     if not cu.state and not cu.state_edram_rd_ir:
-
-                        ## Data in eDRAM buffer?
+                        ## Is Data in eDRAM buffer
                         isData_ready = True
                         # inputs: [[num_input, fm_h, fm_w, fm_c]]
                         for inp in event.inputs:
@@ -474,20 +487,20 @@ class Controller(object):
                                         cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
-
+                                    elif pro_event.event_type == "edram_rd_pool":
+                                        pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
                             break
             
-            ### Event: edram_rd_pool 
+            ### Event: edram_rd_pool # TOOOOO
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
                     event = pe.edram_rd_pool_erp[0]
                 else:
                     continue
                 if not pe.state_edram_rd_pool:
-                    
-                    ## Data in eDRAM buffer?
+                    ## Data in eDRAM buffer
                     isData_ready = True
                     for data in event.inputs:
                         #print(event.nlayer, data)
