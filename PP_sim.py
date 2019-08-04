@@ -23,7 +23,7 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 0
+    model_type = 4
     print("Model type:  ", end="")
     if model_type == 0:
         print("TestModelConfig")
@@ -121,7 +121,7 @@ def trace_order(order_generator):
         elif t == "data_transfer":
             data_transfer_ctr += 1
         else:
-            print("???")
+            print("event type error..")
 
     print("edram_rd_ir_ctr", edram_rd_ir_ctr)
     print("ou_operation_ctr", ou_operation_ctr)
