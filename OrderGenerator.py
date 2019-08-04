@@ -710,13 +710,13 @@ class OrderGenerator(object):
                     edram_wr_inputs  = [[0, 0, nfilter]]
                     edram_wr_outputs = [[0, 0, nfilter]]
                     
+                    event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
+                    self.Computation_order.append(event) 
+
                     if nlayer+1 < len(self.layer_list):
                         if self.feature_mat[nlayer][nfilter][0][0] == 0.0:
                             self.feature_mat[nlayer][nfilter][0][0] = []
                         self.feature_mat[nlayer][nfilter][0][0].append(edram_wr_event_idx)
-
-                    event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
-                    self.Computation_order.append(event) 
      
             elif self.layer_list[nlayer].layer_type == "pooling":
                 for rty_idx in range(self.RT_num_y):
@@ -768,23 +768,28 @@ class OrderGenerator(object):
                                             erp_position_idx = pe_pos
                                             erp_input_sequence = inputs
                                             erp_output_sequence = inputs
-                                            event = EventMetaData("edram_rd_pool", erp_position_idx, erp_preceding_count, [erp_event_idx+1], nlayer, erp_input_sequence, erp_output_sequence)
+                                            event = EventMetaData("edram_rd_pool", erp_position_idx, erp_preceding_count, [], nlayer, erp_input_sequence, erp_output_sequence)
                                             self.Computation_order.append(event)
                 
                 ### Event: pooling
+                                            pool_event_index = len(self.Computation_order)
+                                            self.Computation_order[erp_event_idx].proceeding_event.append(pool_event_index)
+
                                             pool_position_idx = pe_pos
                                             pool_preceding_count = 1
-                                            pool_event_index = len(self.Computation_order)
                                             pool_input_sequence = erp_input_sequence
                                             pool_output_sequence = [[pool_input_sequence[0][0] // self.pooling_h[nlayer], pool_input_sequence[0][1] // self.pooling_w[nlayer], pool_input_sequence[0][2]]]
 
-                                            event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [pool_event_index+1], nlayer, pool_input_sequence, pool_output_sequence)
+                                            event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
                                             self.Computation_order.append(event)
 
                 ### Event: edram_wr
+
+                                            edram_wr_event_idx = len(self.Computation_order)
+                                            self.Computation_order[pool_event_index].proceeding_event.append(edram_wr_event_idx)
+
                                             edram_wr_position_idx = pe_pos
                                             edram_wr_preceding_count = 1
-                                            edram_wr_event_idx = len(self.Computation_order)
                                             edram_wr_input_sequence = pool_output_sequence
                                             edram_wr_output_sequence = pool_output_sequence
                                             event = EventMetaData("edram_wr", edram_wr_position_idx, edram_wr_preceding_count, [], nlayer, edram_wr_input_sequence, edram_wr_output_sequence)
