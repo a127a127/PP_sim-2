@@ -525,7 +525,6 @@ class OrderGenerator(object):
                         eri_input_sequence = data_feed_to_cu
                         eri_output_sequence = data_feed_to_cu
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
-                        print("event", event)
                         self.Computation_order.append(event)
 
                 ### Event: ou_operation
@@ -729,7 +728,6 @@ class OrderGenerator(object):
                                     if mapping_data.nlayer == nlayer:
                 ### Event: edram_rd_pool, data_transfer
                                         for inputs in mapping_data.inputs:
-                                            print(inputs)
                                             # [[h, w, c], [h, w, c], ...]
                                             erp_preceding_count = 0
                                             start_append_idx = len(self.Computation_order)
@@ -751,7 +749,6 @@ class OrderGenerator(object):
                                                             data_transfer_inputs  = edram_wr_event.outputs
                                                             data_transfer_outputs = edram_wr_event.outputs
                                                             event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
-                                                            print("append transfer")
                                                             self.Computation_order.append(event)
                                         
                                                     # dependency
@@ -779,7 +776,6 @@ class OrderGenerator(object):
                                             pool_preceding_count = 1
                                             pool_event_index = len(self.Computation_order)
                                             pool_input_sequence = erp_input_sequence
-                                            print(pool_input_sequence)
                                             pool_output_sequence = [[pool_input_sequence[0][0] // self.pooling_h[nlayer], pool_input_sequence[0][1] // self.pooling_w[nlayer], pool_input_sequence[0][2]]]
 
                                             event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [pool_event_index+1], nlayer, pool_input_sequence, pool_output_sequence)
