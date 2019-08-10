@@ -147,7 +147,7 @@ class Controller(object):
                 if e.event_type == 'edram_rd_ir':
                     pos = e.position_idx
                     rty, rtx, pey, pex, cuy, cux = pos[0], pos[1], pos[2], pos[3], pos[4], pos[5]
-                    idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * rtx * self.PE_num
+                    idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.RT_num_x * self.PE_num
                     cu_idx = cux + cuy * self.CU_num_x
                     self.PE_array[idx].CU_array[cu_idx].edram_rd_ir_erp.append(e)
                 else:
@@ -210,7 +210,6 @@ class Controller(object):
                         if self.trace:
                             print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_rd_pool_trigger.append([pro_event, []])
-
                 elif pro_event.event_type == "pe_saa":
                     # trigger event
                     pro_event.current_number_of_preceding_event += 1
@@ -284,7 +283,7 @@ class Controller(object):
                                 # Data not in buffer
                                 if self.trace:
                                     print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, event.event_type, data)
-                                    print("\tBuffer:", pe.edram_buffer.buffer)
+                                    #print("\tBuffer:", pe.edram_buffer.buffer)
                                 isData_ready = False
                                 cu.edram_rd_ir_erp.remove(event)
                                 break
@@ -300,7 +299,8 @@ class Controller(object):
                         else:
                             ## Check how many event can be done in a cycle
                             if self.trace:  
-                                print("\tdo edram_rd_ir, cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                print("\t\tread data:", event.inputs)
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
                             
@@ -845,7 +845,7 @@ class Controller(object):
                 for row in range(self.cycle_ctr):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
-        fre = 100
+        fre = 1
         ### Energy per 100 cycle
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/Energy.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
