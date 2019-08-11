@@ -147,7 +147,7 @@ class Controller(object):
                 if e.event_type == 'edram_rd_ir':
                     pos = e.position_idx
                     rty, rtx, pey, pex, cuy, cux = pos[0], pos[1], pos[2], pos[3], pos[4], pos[5]
-                    idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * rtx * self.PE_num
+                    idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.RT_num_x * self.PE_num
                     cu_idx = cux + cuy * self.CU_num_x
                     self.PE_array[idx].CU_array[cu_idx].edram_rd_ir_erp.append(e)
                 else:
@@ -199,6 +199,17 @@ class Controller(object):
                         if self.trace:
                             print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
+                elif pro_event.event_type == "edram_rd_pool":
+                    # 1. store data into buffer
+                    if self.trace:
+                        print("\t\twrite data into buffer:", pk.data)
+                    pe.edram_buffer.put(pk.data)
+                    # 2. trigger event
+                    pro_event.current_number_of_preceding_event += 1
+                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                        if self.trace:
+                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                        pe.edram_rd_pool_trigger.append([pro_event, []])
                 elif pro_event.event_type == "pe_saa":
                     # trigger event
                     pro_event.current_number_of_preceding_event += 1
@@ -207,11 +218,15 @@ class Controller(object):
                             print("\t\tProceeding event is triggered.", pro_event.event_type)
 
                         pe.pe_saa_trigger.append([pro_event, []])
-                                
+
+            # Event: data_transfer                    
             # packet from pe to interconnect module
             for event in self.data_transfer_erp.copy():
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                #if self.Computation_order.index(event) <= 20149 and self.Computation_order.index(event) >= 20149:
+                if self.Computation_order.index(event) <= 14544 and self.Computation_order.index(event) >= 14544:
+                    print(self.Computation_order.index(event), event)
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]
@@ -220,6 +235,8 @@ class Controller(object):
                 #print(des_list)
                 pro_event_idx = event.proceeding_event[0]
                 if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
+                    packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
+                elif self.Computation_order[pro_event_idx].event_type == "edram_rd_pool":
                     packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
                 else:
                     packet = Packet(src, des, [], pro_event_idx)
@@ -260,8 +277,7 @@ class Controller(object):
                         continue
                     #print("\tevent:", event.event_type)
                     if not cu.state and not cu.state_edram_rd_ir:
-
-                        ## Data in eDRAM buffer?
+                        ## Is Data in eDRAM buffer
                         isData_ready = True
                         # inputs: [[num_input, fm_h, fm_w, fm_c]]
                         for inp in event.inputs:
@@ -271,7 +287,7 @@ class Controller(object):
                                 # Data not in buffer
                                 if self.trace:
                                     print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, event.event_type, data)
-                                    print("\tBuffer:", pe.edram_buffer.buffer)
+                                    #print("\tBuffer:", pe.edram_buffer.buffer)
                                 isData_ready = False
                                 cu.edram_rd_ir_erp.remove(event)
                                 break
@@ -287,7 +303,8 @@ class Controller(object):
                         else:
                             ## Check how many event can be done in a cycle
                             if self.trace:  
-                                print("\tdo edram_rd_ir, cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                print("\t\tread data:", event.inputs)
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
                             
@@ -474,20 +491,20 @@ class Controller(object):
                                         cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
-
+                                    elif pro_event.event_type == "edram_rd_pool":
+                                        pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
                             break
             
-            ### Event: edram_rd_pool 
+            ### Event: edram_rd_pool # TOOOOO
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
                     event = pe.edram_rd_pool_erp[0]
                 else:
                     continue
                 if not pe.state_edram_rd_pool:
-                    
-                    ## Data in eDRAM buffer?
+                    ## Data in eDRAM buffer
                     isData_ready = True
                     for data in event.inputs:
                         #print(event.nlayer, data)
@@ -832,7 +849,7 @@ class Controller(object):
                 for row in range(self.cycle_ctr):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
-        fre = 100
+        fre = 1
         ### Energy per 100 cycle
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/Energy.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)

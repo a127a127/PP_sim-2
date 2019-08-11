@@ -23,40 +23,39 @@ def main():
     hardware_information = HardwareMetaData()
 
     ### Model ###
-    model_type = 0
+    model_type = 4
     print("Model type:  ", end="")
-    if model_type == 0:
+    if model_type == 0: #TestModelConfig
         print("TestModelConfig")
         model_information = TestModelConfig()
-    elif model_type == 1:
+    elif model_type == 1: #LenetConfig
         print("LenetConfig")
         model_information = LenetConfig()
-    elif model_type == 2:
+    elif model_type == 2: #Cifar10Config
         print("Cifar10Config")
         model_information = Cifar10Config()
-    elif model_type == 3:
+    elif model_type == 3: #CaffenetConfig
         print("CaffenetConfig")
         model_information = CaffenetConfig()
-    elif model_type == 4:
+    elif model_type == 4: #TestModelConfig2
         print("TestModelConfig2")
         model_information = TestModelConfig2()
     
     ### Mapping ##
     print("Mapping policy:  ", end="")
-    if mapping == 0:
+    if mapping == 0: #DefaultMapping
         print("DefaultMapping")
         mapping_information = DefaultMapping(hardware_information, model_information)
         mapping_str = "DefaultMapping"
-    elif mapping == 1:
+    elif mapping == 1: #ParallelismMapping
         print("ParallelismMapping")
         mapping_information = ParallelismMapping(hardware_information, model_information)
         mapping_str = "ParallelismMapping"
-    elif mapping == 2:
+    elif mapping == 2: #TransferMapping
         print("TransferMapping") 
         mapping_information = TransferMapping(hardware_information, model_information)
         mapping_str = "TransferMapping"
     
-
     ### Scheduling ###
     if scheduling == 0:
         isPipeLine = False
@@ -65,7 +64,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = False
+    isTrace_controller = True
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
@@ -121,7 +120,7 @@ def trace_order(order_generator):
         elif t == "data_transfer":
             data_transfer_ctr += 1
         else:
-            print("???")
+            print("event type error..")
 
     print("edram_rd_ir_ctr", edram_rd_ir_ctr)
     print("ou_operation_ctr", ou_operation_ctr)
@@ -131,7 +130,6 @@ def trace_order(order_generator):
     print("edram_wr_ctr", edram_wr_ctr)
     print("edram_rd_pool_ctr", edram_rd_pool_ctr)
     print("data_transfer_ctr", data_transfer_ctr)
-
 
     for e in order_generator.Computation_order:
         print(order_generator.Computation_order.index(e), e)
