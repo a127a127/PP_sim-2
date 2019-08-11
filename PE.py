@@ -5,11 +5,6 @@ from CU import CU
 class PE(object):
     def __init__(self, pe_pos, input_bit):
         ### hardware state flags
-        #self.state_xbar = False
-        #self.state_pooling = [False] * num_of_saa
-        #self.state_activation = [False] * num_of_saa
-        #self.state_saa = [False] * num_of_saa
-        
         self.position = pe_pos
 
         ### for buffer size analysis
@@ -20,8 +15,7 @@ class PE(object):
         self.Pooling = []
         
         ### events per cycle
-        ###     Todo: 隨給定資料調整
-        self.pe_saa_epc = 32
+        self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
         self.activation_epc = 16
         self.edram_wr_epc = 16 # 一個cycle可寫幾筆資料
         self.pooling_epc = 16

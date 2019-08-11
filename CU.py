@@ -7,9 +7,8 @@ class CU(object):
 
         self.state = False # CU busy
 
-        ### events per cycle
-        ### Todo: 隨給定資料調整
-        self.cu_saa_epc = 32
+        ### saa amount per cycle
+        self.cu_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
 
         ### event ready pool
         self.edram_rd_ir_erp = []

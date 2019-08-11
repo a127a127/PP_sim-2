@@ -822,14 +822,16 @@ class TransferMapping(object):
                 matrix_width = self.filter_n[nlayer] * self.model_info.filter_bit
                 
                 mapping_height_num_xb_per_pe = ceil(matrix_height / self.hd_info.Xbar_h)
-
-                if self.num_of_xb_in_pe // mapping_height_num_xb_per_pe > matrix_width // self.hd_info.Xbar_w:
-                    mapping_width_num_xb_per_pe = matrix_width // self.hd_info.Xbar_w
-                else:
-                    mapping_width_num_xb_per_pe = self.num_of_xb_in_pe // mapping_height_num_xb_per_pe
-
+                if mapping_height_num_xb_per_pe > self.num_of_xb_in_pe:
+                    print("Mapping error: mapping_height_num_xb_per_pe > num_of_xb_in_pe.")
+                    exit()
+                mapping_width_num_xb_per_pe = self.num_of_xb_in_pe // mapping_height_num_xb_per_pe
+                if mapping_width_num_xb_per_pe * self.hd_info.Xbar_w > matrix_width:
+                    mapping_width_num_xb_per_pe = ceil(matrix_width / self.hd_info.Xbar_w)
+                
                 num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
-
+                if num_filter_per_pe > self.filter_n[nlayer]:
+                    num_filter_per_pe = self.filter_n[nlayer]
                 this_layer_xb_mapping_idx = xbar_mapping_idx
 
                 for pe_n in range(ceil(self.filter_n[nlayer] / num_filter_per_pe)):
@@ -855,7 +857,6 @@ class TransferMapping(object):
                                     width = self.hd_info.Xbar_w
                             else:
                                 width = self.hd_info.Xbar_w
-
 
                             for h in range(height):
                                 for w in range(width):
