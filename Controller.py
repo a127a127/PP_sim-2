@@ -224,9 +224,6 @@ class Controller(object):
             for event in self.data_transfer_erp.copy():
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                #if self.Computation_order.index(event) <= 20149 and self.Computation_order.index(event) >= 20149:
-                if self.Computation_order.index(event) <= 14544 and self.Computation_order.index(event) >= 14544:
-                    print(self.Computation_order.index(event), event)
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]
@@ -478,6 +475,8 @@ class Controller(object):
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
+                            pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
+
                             ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
                             for proceeding_index in event.proceeding_event:
                                 pro_event = self.Computation_order[proceeding_index]
@@ -497,7 +496,7 @@ class Controller(object):
                                         self.data_transfer_trigger.append([pro_event, []])
                             break
             
-            ### Event: edram_rd_pool # TOOOOO
+            ### Event: edram_rd_pool
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
                     event = pe.edram_rd_pool_erp[0]
