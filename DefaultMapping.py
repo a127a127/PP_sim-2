@@ -57,10 +57,9 @@ class DefaultMapping(object):
                 self.input_w.append(1)
                 self.input_c.append(1)
 
-        
-        self.crossbar_array = []   # Weights
-        self.layer_mapping_to_xbar = [] # Xbar
-        self.layer_mapping_to_pe = []  # Pooling
+        self.crossbar_array = []   
+        self.layer_mapping_to_xbar = [] 
+        self.layer_mapping_to_pe = []  
 
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
@@ -371,10 +370,9 @@ class ParallelismMapping(object):
                 self.input_w.append(1)
                 self.input_c.append(1)
         
-
-        self.crossbar_array = []   # Weights
-        self.layer_mapping_to_xbar = [] # Xbar
-        self.layer_mapping_to_pe = []  # Pooling
+        self.crossbar_array = []
+        self.layer_mapping_to_xbar = []
+        self.layer_mapping_to_pe = []
 
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
@@ -433,9 +431,29 @@ class ParallelismMapping(object):
                                             ctr += 1
 
         self.map()
-        #print(self.crossbar_array[0][0][0][0][0][0][1][0][2][0])
-        #print(self.layer_mapping_to_xbar[0][0][0][0][0][0][1][1][0])
 
+        # for ry in range(self.hd_info.Router_num_y):
+        #     for rx in range(self.hd_info.Router_num_x):
+        #         for py in range(self.hd_info.PE_num_y):
+        #             for px in range(self.hd_info.PE_num_x):
+        #                 for cy in range(self.hd_info.CU_num_y):
+        #                     for cx in range(self.hd_info.CU_num_x): 
+        #                         for xy in range(self.hd_info.Xbar_num_y):
+        #                             for xx in range(self.hd_info.Xbar_num_x):
+        #                                 I = self.layer_mapping_to_xbar[ry][rx][py][px][cy][cx][xy][xx]
+        #                                 if I:
+        #                                     for i in I:
+        #                                         print(i)
+        #                                 for h in range(self.hd_info.Xbar_h):
+        #                                     for w in range(self.hd_info.Xbar_w):
+        #                                         p = (ry, rx, py, px, cy, cx, xy, xx, h, w)
+        #                                         A = self.crossbar_array[ry][rx][py][px][cy][cx][xy][xx][h][w]
+        #                                         if A != 0:
+        #                                             #pass
+        #                                             print(p, A)
+
+        #print(self.crossbar_array[1][0][1][1][0][0][0][0][0][0])
+        
     def map(self):
         xbar_idx = 0
         xbar_height_start_idx = 0 
@@ -461,7 +479,6 @@ class ParallelismMapping(object):
                                     nn.append([num_input, oh+h, ow+w, c]) # input feature map position
                         inputs.append(nn)
                 inputs = np.array(inputs)
-                #print(inputs)
 
                 matrix_height = self.filter_length[nlayer]
                 matrix_width = self.filter_n[nlayer] * self.model_info.filter_bit
@@ -470,8 +487,7 @@ class ParallelismMapping(object):
                 for ou_idx_x in range(OU_num_x):
                     for ou_idx_y in range(OU_num_y):
                         ## OU block
-                        # xbar mapping position
-                        pos = self.xb_mapping_dict[xbar_idx]
+                        pos = self.xb_mapping_dict[xbar_idx] # xbar mapping position
                         rt_h, rt_w = pos[0], pos[1]
                         pe_h, pe_w = pos[2], pos[3]
                         cu_h, cu_w = pos[4], pos[5]
@@ -490,7 +506,7 @@ class ParallelismMapping(object):
                                 block_w = self.hd_info.OU_w
                         else:
                             block_w = self.hd_info.OU_w
-
+                        
                         ## map weight
                         for b_h in range(block_h):            
                             for b_w in range(block_w):
@@ -532,7 +548,6 @@ class ParallelismMapping(object):
                 inputs.append(nn)
                 inputs = np.array(inputs)
                
-
                 matrix_height = self.filter_length[nlayer]
                 matrix_width = self.filter_n[nlayer] * self.model_info.filter_bit
                 OU_num_y = ceil(matrix_height / self.hd_info.OU_h)

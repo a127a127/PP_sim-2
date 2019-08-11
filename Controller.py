@@ -218,11 +218,15 @@ class Controller(object):
                             print("\t\tProceeding event is triggered.", pro_event.event_type)
 
                         pe.pe_saa_trigger.append([pro_event, []])
-                                
+
+            # Event: data_transfer                    
             # packet from pe to interconnect module
             for event in self.data_transfer_erp.copy():
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                #if self.Computation_order.index(event) <= 20149 and self.Computation_order.index(event) >= 20149:
+                if self.Computation_order.index(event) <= 14544 and self.Computation_order.index(event) >= 14544:
+                    print(self.Computation_order.index(event), event)
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]

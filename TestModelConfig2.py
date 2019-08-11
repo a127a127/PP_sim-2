@@ -6,7 +6,7 @@ class TestModelConfig2(object):
         self.layer_list = [
             LayerMetaData("convolution", 20, 5, 5, 3 , 0, 0, 0),
             LayerMetaData("convolution", 10, 2, 2, 20, 0, 0, 0),
-            LayerMetaData("pooling",      0, 0, 0,  0, 2, 2, 0),
+            #LayerMetaData("pooling",      0, 0, 0,  0, 2, 2, 0),
             LayerMetaData("fully",       0, 0, 0, 0, 0, 0,  10)
             ]
 
