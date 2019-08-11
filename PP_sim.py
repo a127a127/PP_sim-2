@@ -64,7 +64,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = True
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
@@ -132,8 +132,10 @@ def trace_order(order_generator):
     print("data_transfer_ctr", data_transfer_ctr)
 
     for e in order_generator.Computation_order:
-        print(order_generator.Computation_order.index(e), e)
-        print()
+        #if 201 in e.proceeding_event:
+        if True:
+            print(order_generator.Computation_order.index(e), e)
+            print()
 
 if __name__ == '__main__':
     main()
