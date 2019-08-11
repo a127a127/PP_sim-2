@@ -858,7 +858,6 @@ class TransferMapping(object):
                             else:
                                 width = self.hd_info.Xbar_w
 
-
                             for h in range(height):
                                 for w in range(width):
                                     matrix_w = w + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
