@@ -436,7 +436,6 @@ class ParallelismMapping(object):
         xbar_idx = 0
         xbar_height_start_idx = 0 
         xbar_width_start_idx = 0
-        pool_pos = (0,0,0,0)
          
         for nlayer in range(self.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
