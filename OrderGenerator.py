@@ -322,7 +322,7 @@ class OrderGenerator(object):
                                                     if nfilter == ou_outputs[column][1][0]:
                                                         input_nbit = ou_outputs[0][0][4]
                                                         filter_nbit = ou_outputs[column][1][2]
-                                                        cu_saa_inputs.append((input_nbit, nfilter, filter_nbit))
+                                                        cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
 
                                                 ### add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
@@ -420,10 +420,11 @@ class OrderGenerator(object):
 
                             do_edram_wr_pos = do_act_pos
                             edram_wr_preceding_count = 1
+                            edram_wr_inputs  = [[window_h, window_w, nfilter]]
+                            edram_wr_outputs = [[window_h, window_w, nfilter]]
+                                    
                             if nlayer+1 < len(self.layer_list):
                                 if self.layer_list[nlayer+1].layer_type != "fully":
-                                    edram_wr_inputs  = [[window_h, window_w, nfilter]]
-                                    edram_wr_outputs = [[window_h, window_w, nfilter]]
                                     if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
                                         self.feature_mat[nlayer][window_h][window_w][nfilter] = []
                                     self.feature_mat[nlayer][window_h][window_w][nfilter].append(edram_wr_event_idx)
@@ -614,7 +615,7 @@ class OrderGenerator(object):
                                                     if nfilter == ou_outputs[column][1][0]:
                                                         input_nbit = ou_outputs[0][0][4]
                                                         filter_nbit = ou_outputs[column][1][2]
-                                                        cu_saa_inputs.append((input_nbit, nfilter, filter_nbit))
+                                                        cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
 
                                                 ### add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
@@ -638,11 +639,11 @@ class OrderGenerator(object):
                     grid = self.pe_saa_mat[nlayer][num_input][nfilter]
                     if grid == 0.0:
                         self.pe_saa_mat[nlayer][num_input][nfilter] = []
-                    preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter] # 5, 10, 13, 15
+                    preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter]
                     
                     pe_saa_preceding_count = 0 # append pe_saa前有幾個event先append了
-                    first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event # 5
-                    do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2] # 5的pe position
+                    first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event
+                    do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2]
                     
                     start_append_idx = len(self.Computation_order)
         
@@ -798,11 +799,11 @@ class OrderGenerator(object):
 
                                             edram_wr_position_idx = pe_pos
                                             edram_wr_preceding_count = 1
+                                            edram_wr_input_sequence  = pool_output_sequence
+                                            edram_wr_output_sequence = pool_output_sequence
 
                                             if nlayer+1 < len(self.layer_list):
                                                 if self.layer_list[nlayer+1].layer_type != "fully":
-                                                    edram_wr_input_sequence  = pool_output_sequence
-                                                    edram_wr_output_sequence = pool_output_sequence
                                                     if self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] == 0.0:
                                                         self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] = []
                                                     self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]].append(edram_wr_event_idx)
@@ -810,7 +811,6 @@ class OrderGenerator(object):
                                                     o_height = self.input_h[nlayer] // self.pooling_h[nlayer]
                                                     o_width = self.input_w[nlayer] // self.pooling_w[nlayer]
                                                     edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
-                                                    #edram_wr_input_sequence  = pool_output_sequence
                                                     edram_wr_output_sequence = edram_wr_input_sequence
                                                     if self.feature_mat[nlayer][pool_input_sequence[0][0] * self.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] == 0.0:
                                                         self.feature_mat[nlayer][pool_input_sequence[0][0] * self.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] = []

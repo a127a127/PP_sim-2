@@ -371,67 +371,78 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp.copy():
-                        for idx in range(len(cu.state_cu_saa)):
-                            if not cu.state_cu_saa[idx]:
+                        if self.trace:
+                            print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        if not self.isPipeLine:
+                            self.this_layer_event_ctr += 1
+
+                        cu.cu_saa_erp.remove(event)
+
+                        need_saa = 0
+                        for saa_amount in range(len(event.inputs)): # amounts of saa 
+                            need_saa += 1
+                            for idx in range(len(cu.state_cu_saa)):
+                                if not cu.state_cu_saa[idx]:
+                                    self.cu_saa_energy_total += self.cu_saa_energy
+                                    self.cu_or_energy_total += self.cu_or_energy
+                                    self.cycle_energy += self.cu_saa_energy
+                                    self.cycle_energy += self.cu_or_energy
+
+                                    cu.state_cu_saa[idx] = True
+                                    break
+                        if need_saa > len(cu.state_cu_saa):
+                            print("no enough cu saa per cycle..")
+                            exit()
+                        
+                        ### add next event counter: pe_saa, data_transfer
+                        for proceeding_index in event.proceeding_event:
+                            pro_event = self.Computation_order[proceeding_index]
+                            pro_event.current_number_of_preceding_event += 1
+
+                            if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                 if self.trace:
-                                    print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                                if not self.isPipeLine:
-                                    self.this_layer_event_ctr += 1
+                                    print("\t\tProceeding event is triggered.", pro_event.event_type)
+                                if pro_event.event_type == "pe_saa":
+                                    cu.pe_saa_trigger.append([pro_event, []])
 
-                                self.cu_saa_energy_total += self.cu_saa_energy
-                                self.cu_or_energy_total += self.cu_or_energy
-
-                                self.cycle_energy += self.cu_saa_energy
-                                self.cycle_energy += self.cu_or_energy
-
-
-                                cu.state_cu_saa[idx] = True
-                                cu.cu_saa_erp.remove(event)
-
-                                ### add next event counter: pe_saa, data_transfer
-                                for proceeding_index in event.proceeding_event:
-                                    pro_event = self.Computation_order[proceeding_index]
-                                    pro_event.current_number_of_preceding_event += 1
-
-                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                        if self.trace:
-                                            print("\t\tProceeding event is triggered.", pro_event.event_type)
-                                        if pro_event.event_type == "pe_saa":
-                                            cu.pe_saa_trigger.append([pro_event, []])
-
-                                        elif pro_event.event_type == "edram_wr":
-                                            pe.edram_wr_trigger.append([pro_event, []])
-                                break
+                                elif pro_event.event_type == "edram_wr":
+                                    pe.edram_wr_trigger.append([pro_event, []])
 
             ### Event: pe_saa 
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
-                    for idx in range(len(pe.state_pe_saa)):
-                        if not pe.state_pe_saa[idx]:
-                            if self.trace:
+                    if self.trace:
                                 print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            if not self.isPipeLine:
-                                self.this_layer_event_ctr += 1
+                    if not self.isPipeLine:
+                        self.this_layer_event_ctr += 1
+                    
+                    pe.pe_saa_erp.remove(event)
+                    
+                    need_saa = 0
+                    for saa_amount in range(event.preceding_event_count): # amounts of saa
+                        need_saa += 1
+                        for idx in range(len(pe.state_pe_saa)):
+                            if not pe.state_pe_saa[idx]:
+                                self.pe_saa_energy_total += self.pe_saa_energy
+                                self.pe_or_energy_total += self.pe_or_energy
+                                self.cycle_energy += self.pe_saa_energy
+                                self.cycle_energy += self.pe_or_energy
 
-                            self.pe_saa_energy_total += self.pe_saa_energy
-                            self.pe_or_energy_total += self.pe_or_energy
+                                pe.state_pe_saa[idx] = True
+                                break
+                        if need_saa > len(pe.state_pe_saa):
+                            print("no enough pe saa per cycle..")
+                            exit()
 
-                            self.cycle_energy += self.pe_saa_energy
-                            self.cycle_energy += self.pe_or_energy
-
-                            pe.state_pe_saa[idx] = True
-                            pe.pe_saa_erp.remove(event)
-
-                            ### add next event counter: activation
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = self.Computation_order[proceeding_index]
-                                pro_event.current_number_of_preceding_event += 1
-                                
-                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                    if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                    pe.activation_trigger.append([pro_event, []])
-                            break    
+                        ### add next event counter: activation
+                        for proceeding_index in event.proceeding_event:
+                            pro_event = self.Computation_order[proceeding_index]
+                            pro_event.current_number_of_preceding_event += 1
+                            
+                            if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                if self.trace:
+                                    print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                pe.activation_trigger.append([pro_event, []])
 
             ### Event: activation 
             for pe in self.PE_array:
