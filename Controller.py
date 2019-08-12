@@ -783,7 +783,6 @@ class Controller(object):
             self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
         self.avg_buffer_size = self.total_buffer_size / len(self.PE_array)
 
-
     def print_statistics_result(self):
         print("Cycles time:", self.cycle_time)
         print("Cycles:", self.cycle_ctr)
@@ -818,25 +817,25 @@ class Controller(object):
         print("--Power breakdown--")
 
         print("\tTotal:", self.energy_total, "J")
-        print("Chip level")
-        print("\tPE: %.4e (%.2f%%)" %(self.pe_energy_total, self.pe_energy_total/self.energy_total*100))
-        print("\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
+        print("\tChip level")
+        print("\t\tPE: %.4e (%.2f%%)" %(self.pe_energy_total, self.pe_energy_total/self.energy_total*100))
+        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
         print()
-        print("PE level")
-        print("\tCU: %.4e (%.2f%%)" %(self.cu_energy_total, self.cu_energy_total/self.pe_energy_total*100))
-        print("\tBuffer: %.4e (%.2f%%)" %(self.edram_energy_total, self.edram_energy_total/self.pe_energy_total*100))
-        print("\tShift Add: %.4e (%.2f%%)" %(self.pe_saa_energy_total, self.pe_saa_energy_total/self.pe_energy_total*100))
-        print("\tActivation: %.4e (%.2f%%)" %(self.activation_energy_total, self.activation_energy_total/self.pe_energy_total*100))
-        print("\tPooling: %.4e (%.2f%%)" %(self.pooling_energy_total, self.pooling_energy_total/self.pe_energy_total*100))
-        print("\tOR: %.4e (%.2f%%)" %(self.pe_or_energy_total, self.pe_or_energy_total/self.pe_energy_total*100))
+        print("\tPE level")
+        print("\t\tCU: %.4e (%.2f%%)" %(self.cu_energy_total, self.cu_energy_total/self.pe_energy_total*100))
+        print("\t\tBuffer: %.4e (%.2f%%)" %(self.edram_energy_total, self.edram_energy_total/self.pe_energy_total*100))
+        print("\t\tShift Add: %.4e (%.2f%%)" %(self.pe_saa_energy_total, self.pe_saa_energy_total/self.pe_energy_total*100))
+        print("\t\tActivation: %.4e (%.2f%%)" %(self.activation_energy_total, self.activation_energy_total/self.pe_energy_total*100))
+        print("\t\tPooling: %.4e (%.2f%%)" %(self.pooling_energy_total, self.pooling_energy_total/self.pe_energy_total*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.pe_or_energy_total, self.pe_or_energy_total/self.pe_energy_total*100))
         print()
-        print("CU level")
-        print("\tDAC: %.4e (%.2f%%)" %(self.dac_energy_total, self.dac_energy_total/self.cu_energy_total*100))
-        print("\tCrossbar: %.4e (%.2f%%)" %(self.xb_energy_total, self.xb_energy_total/self.cu_energy_total*100))
-        print("\tSA: %.4e (%.2f%%)" %(self.sa_energy_total, self.sa_energy_total/self.cu_energy_total*100))
-        print("\tShift Add: %.4e (%.2f%%)" %(self.cu_saa_energy_total, self.cu_saa_energy_total/self.cu_energy_total*100))
-        print("\tIR: %.4e (%.2f%%)" %(self.cu_ir_energy_total, self.cu_ir_energy_total/self.cu_energy_total*100))
-        print("\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
+        print("\tCU level")
+        print("\t\tDAC: %.4e (%.2f%%)" %(self.dac_energy_total, self.dac_energy_total/self.cu_energy_total*100))
+        print("\t\tCrossbar: %.4e (%.2f%%)" %(self.xb_energy_total, self.xb_energy_total/self.cu_energy_total*100))
+        print("\t\tSA: %.4e (%.2f%%)" %(self.sa_energy_total, self.sa_energy_total/self.cu_energy_total*100))
+        print("\t\tShift Add: %.4e (%.2f%%)" %(self.cu_saa_energy_total, self.cu_saa_energy_total/self.cu_energy_total*100))
+        print("\t\tIR: %.4e (%.2f%%)" %(self.cu_ir_energy_total, self.cu_ir_energy_total/self.cu_energy_total*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
         print()
 
         print('memory accesss times:', self.mem_acc_ctr)
@@ -851,7 +850,6 @@ class Controller(object):
         else:
             pipe_str = "non_pipeline"
         
-
         ### non-pipeline stage
         if not self.isPipeLine:
             with open('./statistics/non_pipeline/'+self.mapping_str+'/stage.csv', 'w', newline='') as csvfile:
