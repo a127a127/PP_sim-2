@@ -57,9 +57,12 @@ def main():
         mapping_str = "TransferMapping"
     
     ### Scheduling ###
+    print("Scheduling policy: ", end="")
     if scheduling == 0:
+        print("Non-pipeline")
         isPipeLine = False
     elif scheduling == 1:
+        print("Pipeline")
         isPipeLine = True
 
     ### Trace ###
