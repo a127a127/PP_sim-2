@@ -64,6 +64,7 @@ def main():
     elif scheduling == 1:
         print("Pipeline")
         isPipeLine = True
+    print()
 
     ### Trace ###
     isTrace_order = False
@@ -71,23 +72,24 @@ def main():
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
-    print("Generate computation order graph...")
+    print("--- Generate computation order graph ---")
 
     order_generator = OrderGenerator(model_information, hardware_information, mapping_information)
 
     end_order_time = time.time()
-    print("--- Computation order graph is generated in %s seconds ---" % (end_order_time - start_order_time))
+    print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
     if isTrace_order:
         trace_order(order_generator)
     
     ## Power and performance simulation ###
     start_simulation_time = time.time()
+    print("--- Simulation power and performance ---")
 
     controller = Controller(order_generator, isPipeLine, isTrace_controller, mapping_str)
     controller.run()
 
     end_simulation_time = time.time()
-    print("--- Simulation in %s seconds ---" % (end_simulation_time - start_simulation_time))
+    print("--- Simulation in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
 
     controller.print_statistics_result()
 

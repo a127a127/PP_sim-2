@@ -125,7 +125,6 @@ class Controller(object):
         self.interconnect_step = 120 # TODO: 可調
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
-
         
         ### Pipeline control
         if not self.isPipeLine:
@@ -139,7 +138,6 @@ class Controller(object):
                 self.events_each_layer[e.nlayer] += 1
             self.this_layer_event_ctr = 0
 
-        print("Total event:", len(self.Computation_order))
 
     def run(self):
         for e in self.Computation_order:
@@ -784,9 +782,14 @@ class Controller(object):
         self.avg_buffer_size = self.total_buffer_size / len(self.PE_array)
 
     def print_statistics_result(self):
-        print("Cycles time:", self.cycle_time)
-        print("Cycles:", self.cycle_ctr)
+        print("Total Cycles:", self.cycle_ctr)
+        print("Cycles time:", self.cycle_time, "ns\n")
         
+        print('memory accesss times:', self.mem_acc_ctr)
+        print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
+        print("Avg buffer size:", self.avg_buffer_size)
+        print()
+
         print("Leakage:")
         print("\tTotal:", self.total_leakage)
         print("\teDRAM_buffer_leakage:", self.eDRAM_buffer_leakage)
@@ -814,7 +817,7 @@ class Controller(object):
                                self.activation_energy_total+ self.pooling_energy_total + self.pe_or_energy_total
         self.energy_total = self.pe_energy_total + self.interconnect_energy_total
 
-        print("--Power breakdown--")
+        print("Power breakdown:")
 
         print("\tTotal:", self.energy_total, "J")
         print("\tChip level")
@@ -838,12 +841,8 @@ class Controller(object):
         print("\t\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
         print()
 
-        print('memory accesss times:', self.mem_acc_ctr)
-        print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
-        print("Avg buffer size:", self.avg_buffer_size)
 
         #print("Transfer count:", self.network_transfer.transfer_count)
-
 
         if self.isPipeLine:
             pipe_str = "pipeline"
