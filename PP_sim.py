@@ -1,4 +1,3 @@
-from HardwareMetaData import HardwareMetaData
 
 from TestModelConfig import TestModelConfig
 from TestModelConfig2 import TestModelConfig2
@@ -6,9 +5,9 @@ from LenetConfig import LenetConfig
 from Cifar10Config import Cifar10Config
 
 from CaffenetConfig import CaffenetConfig
-from DefaultMapping import DefaultMapping
-from DefaultMapping import ParallelismMapping
-from DefaultMapping import TransferMapping
+from Mapping import DefaultMapping
+from Mapping import ParallelismMapping
+from Mapping import TransferMapping
 
 from OrderGenerator import OrderGenerator
 from Controller import Controller
@@ -19,49 +18,46 @@ def main():
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
 
-    ### Hardware configuration ###
-    hardware_information = HardwareMetaData()
-
     ### Model ###
-    model_type = 4
+    model_type = 0
     print("Model type:  ", end="")
-    if model_type == 0: #TestModelConfig
+    if model_type == 0: # TestModelConfig
         print("TestModelConfig")
         model_information = TestModelConfig()
-    elif model_type == 1: #LenetConfig
+    elif model_type == 1: # LenetConfig
         print("LenetConfig")
         model_information = LenetConfig()
-    elif model_type == 2: #Cifar10Config
+    elif model_type == 2: # Cifar10Config
         print("Cifar10Config")
         model_information = Cifar10Config()
-    elif model_type == 3: #CaffenetConfig
+    elif model_type == 3: # CaffenetConfig
         print("CaffenetConfig")
         model_information = CaffenetConfig()
-    elif model_type == 4: #TestModelConfig2
+    elif model_type == 4: # TestModelConfig2
         print("TestModelConfig2")
         model_information = TestModelConfig2()
     
     ### Mapping ##
     print("Mapping policy:  ", end="")
-    if mapping == 0: #DefaultMapping
+    if mapping == 0: # DefaultMapping
         print("DefaultMapping")
-        mapping_information = DefaultMapping(hardware_information, model_information)
+        mapping_information = DefaultMapping(model_information)
         mapping_str = "DefaultMapping"
-    elif mapping == 1: #ParallelismMapping
+    elif mapping == 1: # ParallelismMapping
         print("ParallelismMapping")
-        mapping_information = ParallelismMapping(hardware_information, model_information)
+        mapping_information = ParallelismMapping(model_information)
         mapping_str = "ParallelismMapping"
-    elif mapping == 2: #TransferMapping
+    elif mapping == 2: # TransferMapping
         print("TransferMapping") 
-        mapping_information = TransferMapping(hardware_information, model_information)
+        mapping_information = TransferMapping(model_information)
         mapping_str = "TransferMapping"
     
     ### Scheduling ###
     print("Scheduling policy: ", end="")
-    if scheduling == 0:
+    if scheduling == 0: # Non-pipeline
         print("Non-pipeline")
         isPipeLine = False
-    elif scheduling == 1:
+    elif scheduling == 1: # Pipeline
         print("Pipeline")
         isPipeLine = True
     print()
@@ -74,7 +70,7 @@ def main():
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
 
-    order_generator = OrderGenerator(model_information, hardware_information, mapping_information)
+    order_generator = OrderGenerator(model_information, mapping_information)
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))

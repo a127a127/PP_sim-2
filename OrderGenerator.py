@@ -1,12 +1,13 @@
+from HardwareMetaData import HardwareMetaData
 from PE import PE
 from XBAR import XBAR
 from EventMetaData import EventMetaData
 import numpy as np 
 
 class OrderGenerator(object):
-    def __init__(self, model_information, hardware_information, mapping_information):
+    def __init__(self, model_information, mapping_information):
         self.model_information = model_information
-        self.hardware_information = hardware_information
+        self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
 
         # model
@@ -65,23 +66,6 @@ class OrderGenerator(object):
                 self.input_c.append(1)
                 self.input_number.append(self.layer_list[i].neuron_n)
         
-        # hardware
-        self.Xbar_h = self.hardware_information.Xbar_h
-        self.Xbar_w = self.hardware_information.Xbar_w
-        self.OU_h = self.hardware_information.OU_h
-        self.OU_w = self.hardware_information.OU_w
-        self.RT_num_y = self.hardware_information.Router_num_y
-        self.RT_num_x = self.hardware_information.Router_num_x
-        self.RT_num = self.hardware_information.Router_num
-        self.PE_num_y = self.hardware_information.PE_num_y
-        self.PE_num_x = self.hardware_information.PE_num_x
-        self.PE_num = self.hardware_information.PE_num
-        self.CU_num_y = self.hardware_information.CU_num_y
-        self.CU_num_x = self.hardware_information.CU_num_x
-        self.CU_num = self.hardware_information.CU_num
-        self.XB_num_y = self.hardware_information.Xbar_num_y
-        self.XB_num_x = self.hardware_information.Xbar_num_x
-        self.XB_num = self.hardware_information.Xbar_num
 
         # mapping
         self.crossbar_array = self.mapping_information.crossbar_array # 
@@ -91,17 +75,17 @@ class OrderGenerator(object):
         self.XB_array = []
         self.cu_traverse_idx = []
 
-        for rty_idx in range(self.RT_num_y):
-            for rtx_idx in range(self.RT_num_x):
-                for pey_idx in range(self.PE_num_y):
-                    for pex_idx in range(self.PE_num_x):
-                        for cuy_idx in range(self.CU_num_y):
-                            for cux_idx in range(self.CU_num_x):
+        for rty_idx in range(self.hd_info.Router_num_y):
+            for rtx_idx in range(self.hd_info.Router_num_x):
+                for pey_idx in range(self.hd_info.PE_num_y):
+                    for pex_idx in range(self.hd_info.PE_num_x):
+                        for cuy_idx in range(self.hd_info.CU_num_y):
+                            for cux_idx in range(self.hd_info.CU_num_x):
                                 cu_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx)
                                 self.cu_traverse_idx.append(cu_pos)
 
-                                for xby_idx in range(self.XB_num_y):
-                                    for xbx_idx in range(self.XB_num_x):
+                                for xby_idx in range(self.hd_info.Xbar_num_y):
+                                    for xbx_idx in range(self.hd_info.Xbar_num_x):
                                         xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
                                         xb = XBAR(xb_pos) # TODO: 跟XB合併或改比較好辨認的名字
 
@@ -155,15 +139,15 @@ class OrderGenerator(object):
                     cuy_idx, cux_idx = cu_pos[4], cu_pos[5]
                     
                     max_xb_input_len = 0
-                    for xby_idx in range(self.XB_num_y):
-                        for xbx_idx in range(self.XB_num_x):
-                            xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                            (cux_idx * self.XB_num) + \
-                                            (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                            (pex_idx * self.CU_num * self.XB_num) + \
-                                            (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                            (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                            (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                    for xby_idx in range(self.hd_info.Xbar_num_y):
+                        for xbx_idx in range(self.hd_info.Xbar_num_x):
+                            xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                            (cux_idx * self.hd_info.Xbar_num) + \
+                                            (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                            (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                            (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                            (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                            (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
                             num_inp = 0
                             for mapping_inp in self.XB_array[xbar_array_idx].Convolution:
                                 if mapping_inp.nlayer == nlayer:
@@ -172,15 +156,15 @@ class OrderGenerator(object):
                     
                     for nInp in range(max_xb_input_len):
                         data_feed_to_cu = []
-                        for xby_idx in range(self.XB_num_y):
-                            for xbx_idx in range(self.XB_num_x):
-                                xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                                (cux_idx * self.XB_num) + \
-                                                (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                                (pex_idx * self.CU_num * self.XB_num) + \
-                                                (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                                (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                                (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                        for xby_idx in range(self.hd_info.Xbar_num_y):
+                            for xbx_idx in range(self.hd_info.Xbar_num_x):
+                                xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                                (cux_idx * self.hd_info.Xbar_num) + \
+                                                (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                                (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                                (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
 
                                 idx = 0
                                 inp = []
@@ -239,15 +223,15 @@ class OrderGenerator(object):
                         self.Computation_order.append(event)
 
                 ### Event: ou_operation
-                        for xby_idx in range(self.XB_num_y):
-                            for xbx_idx in range(self.XB_num_x):
-                                xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                                (cux_idx * self.XB_num) + \
-                                                (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                                (pex_idx * self.CU_num * self.XB_num) + \
-                                                (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                                (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                                (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                        for xby_idx in range(self.hd_info.Xbar_num_y):
+                            for xbx_idx in range(self.hd_info.Xbar_num_x):
+                                xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                                (cux_idx * self.hd_info.Xbar_num) + \
+                                                (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                                (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                                (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
 
                                 idx = 0
                                 this_input = []
@@ -267,14 +251,14 @@ class OrderGenerator(object):
                                 xbar_block_w = []
                                 index = 0
                                 while index < len(this_input.xbar_row): # y-axis
-                                    this_block = this_input.xbar_row[index:index + self.OU_h]
+                                    this_block = this_input.xbar_row[index:index + self.hd_info.OU_h]
                                     xbar_block_h.append(this_block)
-                                    index += self.OU_h
+                                    index += self.hd_info.OU_h
                                 index = 0
                                 while index < len(this_input.xbar_column): # x-axis 
-                                    this_block = this_input.xbar_column[index:index + self.OU_w]
+                                    this_block = this_input.xbar_column[index:index + self.hd_info.OU_w]
                                     xbar_block_w.append(this_block)
-                                    index += self.OU_w
+                                    index += self.hd_info.OU_w
                             
 
                                 for input_bit in range(self.input_bit):
@@ -447,15 +431,15 @@ class OrderGenerator(object):
                     cuy_idx, cux_idx = cu_pos[4], cu_pos[5]
                     
                     max_xb_input_len = 0
-                    for xby_idx in range(self.XB_num_y):
-                        for xbx_idx in range(self.XB_num_x):
-                            xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                            (cux_idx * self.XB_num) + \
-                                            (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                            (pex_idx * self.CU_num * self.XB_num) + \
-                                            (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                            (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                            (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                    for xby_idx in range(self.hd_info.Xbar_num_y):
+                        for xbx_idx in range(self.hd_info.Xbar_num_x):
+                            xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                            (cux_idx * self.hd_info.Xbar_num) + \
+                                            (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                            (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                            (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                            (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                            (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
                             num_inp = 0
                             for mapping_inp in self.XB_array[xbar_array_idx].Fully:
                                 if mapping_inp.nlayer == nlayer:
@@ -464,15 +448,15 @@ class OrderGenerator(object):
                     
                     for nInp in range(max_xb_input_len):
                         data_feed_to_cu = []
-                        for xby_idx in range(self.XB_num_y):
-                            for xbx_idx in range(self.XB_num_x):
-                                xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                                (cux_idx * self.XB_num) + \
-                                                (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                                (pex_idx * self.CU_num * self.XB_num) + \
-                                                (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                                (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                                (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                        for xby_idx in range(self.hd_info.Xbar_num_y):
+                            for xbx_idx in range(self.hd_info.Xbar_num_x):
+                                xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                                (cux_idx * self.hd_info.Xbar_num) + \
+                                                (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                                (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                                (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
 
                                 idx = 0
                                 inp = []
@@ -532,15 +516,15 @@ class OrderGenerator(object):
                         self.Computation_order.append(event)
 
                 ### Event: ou_operation
-                        for xby_idx in range(self.XB_num_y):
-                            for xbx_idx in range(self.XB_num_x):
-                                xbar_array_idx = xbx_idx + (xby_idx * self.XB_num_x) + \
-                                                (cux_idx * self.XB_num) + \
-                                                (cuy_idx * self.CU_num_x * self.XB_num) + \
-                                                (pex_idx * self.CU_num * self.XB_num) + \
-                                                (pey_idx * self.PE_num_x * self.XB_num * self.CU_num) + \
-                                                (rtx_idx * self.PE_num * self.CU_num * self.XB_num) + \
-                                                (rty_idx * self.RT_num_x * self.PE_num * self.CU_num * self.XB_num)
+                        for xby_idx in range(self.hd_info.Xbar_num_y):
+                            for xbx_idx in range(self.hd_info.Xbar_num_x):
+                                xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                                (cux_idx * self.hd_info.Xbar_num) + \
+                                                (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                                (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                                (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                                (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
 
                                 idx = 0
                                 this_input = []
@@ -560,14 +544,14 @@ class OrderGenerator(object):
                                 xbar_block_w = []
                                 index = 0
                                 while index < len(this_input.xbar_row): # y-axis
-                                    this_block = this_input.xbar_row[index:index + self.OU_h]
+                                    this_block = this_input.xbar_row[index:index + self.hd_info.OU_h]
                                     xbar_block_h.append(this_block)
-                                    index += self.OU_h
+                                    index += self.hd_info.OU_h
                                 index = 0
                                 while index < len(this_input.xbar_column): # x-axis 
-                                    this_block = this_input.xbar_column[index:index + self.OU_w]
+                                    this_block = this_input.xbar_column[index:index + self.hd_info.OU_w]
                                     xbar_block_w.append(this_block)
-                                    index += self.OU_w
+                                    index += self.hd_info.OU_w
                             
 
                                 for input_bit in range(self.input_bit):
@@ -722,10 +706,10 @@ class OrderGenerator(object):
                         self.feature_mat[nlayer][nfilter][0][0].append(edram_wr_event_idx)
      
             elif self.layer_list[nlayer].layer_type == "pooling":
-                for rty_idx in range(self.RT_num_y):
-                    for rtx_idx in range(self.RT_num_x):
-                        for pey_idx in range(self.PE_num_y):
-                            for pex_idx in range(self.PE_num_x):
+                for rty_idx in range(self.hd_info.Router_num_y):
+                    for rtx_idx in range(self.hd_info.Router_num_x):
+                        for pey_idx in range(self.hd_info.PE_num_y):
+                            for pex_idx in range(self.hd_info.PE_num_x):
                                 pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
                                 for mapping_data in self.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx]:
                                     if mapping_data.nlayer == nlayer:

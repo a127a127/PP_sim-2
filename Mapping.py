@@ -1,3 +1,4 @@
+from HardwareMetaData import HardwareMetaData
 from MappingMetaData import MappingMetaData
 from CrossbarGridMetaData import CrossbarGridMetaData
 import sys
@@ -5,9 +6,9 @@ from math import ceil
 import numpy as np
 
 class DefaultMapping(object):
-    def __init__(self, hd_info, model_info):
+    def __init__(self, model_info):
         self.model_info = model_info
-        self.hd_info = hd_info
+        self.hd_info = HardwareMetaData()
 
         self.layer_list = model_info.layer_list 
         self.layer_length = len(self.layer_list) 
@@ -318,9 +319,9 @@ class DefaultMapping(object):
         return str(self.__dict__)
 
 class ParallelismMapping(object):
-    def __init__(self, hd_info, model_info):
+    def __init__(self, model_info):
         self.model_info = model_info
-        self.hd_info = hd_info
+        self.hd_info = HardwareMetaData()
 
         self.layer_list = model_info.layer_list  
         self.layer_length = len(model_info.layer_list)  
@@ -609,9 +610,9 @@ class ParallelismMapping(object):
         return str(self.__dict__)
 
 class TransferMapping(object):
-    def __init__(self, hd_info, model_info):
+    def __init__(self, model_info):
         self.model_info = model_info
-        self.hd_info = hd_info
+        self.hd_info = HardwareMetaData()
 
         self.layer_list = model_info.layer_list  
         self.layer_length = len(model_info.layer_list)  
