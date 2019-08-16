@@ -1,10 +1,10 @@
 
-from TestModelConfig import TestModelConfig
-from TestModelConfig2 import TestModelConfig2
-from LenetConfig import LenetConfig
-from Cifar10Config import Cifar10Config
+from configs.TestModelConfig import TestModelConfig
+from configs.TestModelConfig2 import TestModelConfig2
+from configs.LenetConfig import LenetConfig
+from configs.Cifar10Config import Cifar10Config
+from configs.CaffenetConfig import CaffenetConfig
 
-from CaffenetConfig import CaffenetConfig
 from Mapping import DefaultMapping
 from Mapping import ParallelismMapping
 from Mapping import TransferMapping
@@ -24,18 +24,18 @@ def main():
     if model_type == 0: # TestModelConfig
         print("TestModelConfig")
         model_information = TestModelConfig()
-    elif model_type == 1: # LenetConfig
-        print("LenetConfig")
-        model_information = LenetConfig()
+    elif model_type == 1: # TestModelConfig2
+        print("TestModelConfig2")
+        model_information = TestModelConfig2()
     elif model_type == 2: # Cifar10Config
         print("Cifar10Config")
         model_information = Cifar10Config()
     elif model_type == 3: # CaffenetConfig
         print("CaffenetConfig")
         model_information = CaffenetConfig()
-    elif model_type == 4: # TestModelConfig2
-        print("TestModelConfig2")
-        model_information = TestModelConfig2()
+    elif model_type == 4: # LenetConfig
+        print("LenetConfig")
+        model_information = LenetConfig()
     
     ### Mapping ##
     print("Mapping policy:  ", end="")
@@ -64,7 +64,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = True
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
