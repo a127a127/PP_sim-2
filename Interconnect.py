@@ -23,8 +23,10 @@ class Interconnect(object):
 
         rt_y, rt_x = source[0], source[1]
         pe_y, pe_x = source[2], source[3]
-
-        if pe_y == 0 and pe_x == 0:
+        
+        if pe_y == -1 and pe_x == -1:
+            port_type = "off_chip"
+        elif pe_y == 0 and pe_x == 0:
             port_type = "pe_north_west"
         elif pe_y == 0 and pe_x == 1:
             port_type = "pe_north_east"
