@@ -6,7 +6,8 @@ class Router(object):
 
         # input port
         self.arrived_order = []
-        self.input_queue = {"pe_north_west":[], \
+        self.input_queue = {"off_chip":[], \
+                            "pe_north_west":[], \
                             "pe_north_east":[], \
                             "pe_south_west":[], \
                             "pe_south_east":[], \
@@ -36,34 +37,28 @@ class Router(object):
         
         # X-Y routing
         if packet.destination[1] > self.pos[1]:
-            #print("\t", packet.data, "往東走")
             return packet, "east"
         elif packet.destination[1] < self.pos[1]:
-            #print("\t", packet.data, "往西走")
             return packet, "west"
         else:
             if packet.destination[0] > self.pos[0]:
-                #print("\t", packet.data, "往南走")
                 return packet, "south"
             elif packet.destination[0] < self.pos[0]:
-                #print("\t", packet.data, "往北走")
                 return packet, "north"
             else:
-                #抵達router
-                #print("\t", packet.data, "抵達router", end="")
+                #print("\t", packet.data, "arrive router", end="")
                 if packet.destination[2] == 0 and packet.destination[3] == 0:
-                    #print("西北")
                     return packet, "pe_north_west"
                 elif packet.destination[2] == 0 and packet.destination[3] == 1:
-                    #print("東北")
                     return packet, "pe_north_east"
                 elif packet.destination[2] == 1 and packet.destination[3] == 0:
-                    #print("西南")
                     return packet, "pe_south_west"
-                else:  #packet.destination[2] == 1 and packet.destination[3] == 1:
-                    #print("東南")
+                elif packet.destination[2] == 1 and packet.destination[3] == 1:
                     return packet, "pe_south_east"
-                
+                else:
+                    print("router traverse error")
+                    exit()
+
     def __str__(self):
         return str(self.__dict__)
 

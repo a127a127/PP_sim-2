@@ -119,7 +119,7 @@ class Controller(object):
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
 
-        self.fetch_array = [] # TODO: 改掉
+        self.fetch_array = []
 
         self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
         self.interconnect_step = 120 # TODO: 可調
@@ -227,7 +227,6 @@ class Controller(object):
                 src = event.position_idx[0]
                 des = event.position_idx[1]
                 
-                #print(des_list)
                 pro_event_idx = event.proceeding_event[0]
                 if self.Computation_order[pro_event_idx].event_type == "edram_rd_ir":
                     packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_idx)
@@ -243,25 +242,29 @@ class Controller(object):
                 FE.cycles_counter += 1
                 #print(FE.cycles_counter, end=' ')
                 if FE.cycles_counter == FE.fetch_cycle:
-                    #print('@', end='/')
-                    
+                    src  = (0, FE.event.position_idx[1], -1, -1)
+                    des  = FE.event.position_idx[0:4]
                     if FE.event.event_type == "edram_rd_ir":
-                        pe_idx = FE.index[0]
-                        cu_idx = FE.index[1]
+                        if not self.isPipeLine:
+                            self.this_layer_event_ctr -= len(FE.event.inputs)
+                        FE.event.preceding_event_count += len(FE.event.inputs)
                         for inp in FE.event.inputs:
                             data = inp[1:]
-                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data])
-
-                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.insert(0, FE.event)
+                            pro_event_idx = self.Computation_order.index(FE.event)
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            self.interconnect.input_packet(packet)
                     
                     elif FE.event.event_type == "edram_rd_pool":
+                        if not self.isPipeLine:
+                            self.this_layer_event_ctr -= len(FE.event.inputs)
+                        FE.event.preceding_event_count += len(FE.event.inputs)
+
                         for data in FE.event.inputs:
-                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data])
-                        self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event)
+                            pro_event_idx = self.Computation_order.index(FE.event)
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            self.interconnect.input_packet(packet)
 
                     self.fetch_array.remove(FE)
-                    #self.mem_acc_ctr += 1
-                    #print(XB_array[0].OnchipBuffer.arr) 
 
             ### Event: edram_rd_ir
             for pe in self.PE_array:
@@ -284,14 +287,13 @@ class Controller(object):
                                     print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, event.event_type, data)
                                     #print("\tBuffer:", pe.edram_buffer.buffer)
                                 isData_ready = False
-                                cu.edram_rd_ir_erp.remove(event)
                                 break
                         
                         if not isData_ready:
                             self.mem_acc_ctr += 1
+                            cu.edram_rd_ir_erp.remove(event)
                             pe_idx = self.PE_array.index(pe)
                             cu_idx = pe.CU_array.index(cu)
-                            #print("PE_array index", pe_idx, "data not ready")
                             cu.state_edram_rd_ir = True
                             self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
 
@@ -410,7 +412,7 @@ class Controller(object):
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
                     if self.trace:
-                                print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
@@ -727,7 +729,7 @@ class Controller(object):
             self.xbar_utilization.append(self.act_xb_ctr)
             #print(self.cycle_energy)
             
-            ### Finish?
+            ### Is finish?
             isDone = True
             if self.fetch_array or self.data_transfer_erp or self.data_transfer_trigger:
                 isDone = False
