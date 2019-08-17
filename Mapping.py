@@ -14,7 +14,6 @@ class DefaultMapping(object):
         self.crossbar_array = []
         self.layer_mapping_to_xbar = [] 
         self.layer_mapping_to_pe = []  
-
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
@@ -69,7 +68,7 @@ class DefaultMapping(object):
         pe_idx = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
-                ## Prepare weights
+                ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
 
@@ -100,11 +99,10 @@ class DefaultMapping(object):
 
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                 
-                ## Prepare input for each xbar
+                ## Inputs
+                inputs = []
                 o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
                 o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
-
-                inputs = []
                 for oh in range(o_height): 
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -138,7 +136,7 @@ class DefaultMapping(object):
 
                         if (w+1) * self.hd_info.Xbar_w <= matrix_width: 
                             xbar_column = [i for i in range(self.hd_info.Xbar_w)]
-                        else: # most right
+                        else:
                             empt = (w+1) * self.hd_info.Xbar_w - matrix_width
                             full = self.hd_info.Xbar_w - empt
                             xbar_column = [i for i in range(full)]
@@ -156,7 +154,7 @@ class DefaultMapping(object):
                 pe_idx += pe_total_num
                        
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
-                ## Prepare weights
+                ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
                 
@@ -187,7 +185,7 @@ class DefaultMapping(object):
 
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
 
-                ## Prepare input for each xbar   
+                ## Inputs   
                 inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
@@ -213,7 +211,6 @@ class DefaultMapping(object):
                         rt_w = self.pe_mapping_dict[pe_num][1]
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
-
                         
                         xbar_inputs = inputs[:, h*self.hd_info.Xbar_h : (h+1)*self.hd_info.Xbar_h].tolist()
 
@@ -238,7 +235,6 @@ class DefaultMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                 o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
-
                 inputs = []
                 for oh in range(o_height):
                     for ow in range(o_width):
@@ -246,7 +242,7 @@ class DefaultMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([oh*self.model_info.pooling_h[nlayer] + ph, ow*self.model_info.pooling_w[nlayer] + pw, c])
+                                    nn.append([oh * self.model_info.pooling_h[nlayer] + ph, ow * self.model_info.pooling_w[nlayer] + pw, c])
                             inputs.append(nn)
                 inputs = np.array(inputs)
 
@@ -261,7 +257,10 @@ class DefaultMapping(object):
                     pe_h = self.pe_mapping_dict[pe_idx + pe_n][2]
                     pe_w = self.pe_mapping_dict[pe_idx + pe_n][3]
 
-                    this_input = inputs[pe_n * input_per_pe : (pe_n+1) * input_per_pe].tolist()
+                    if pe_n + 1 == pe_total_num:
+                        this_input = inputs[pe_n * input_per_pe : ].tolist()
+                    else:
+                        this_input = inputs[pe_n * input_per_pe : (pe_n+1) * input_per_pe].tolist()
                     xbar_column = [-1]
                     xbar_row = [-1]
                     if this_input:
@@ -279,7 +278,6 @@ class ParallelismMapping(object):
         self.crossbar_array = []
         self.layer_mapping_to_xbar = []
         self.layer_mapping_to_pe = []
-
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
@@ -348,7 +346,7 @@ class ParallelismMapping(object):
                 ## PE for pooling 
                 pool_pos = self.xb_mapping_dict[xbar_idx][:4]
 
-                ## Prepare inputs
+                ## Inputs
                 inputs = []
                 o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
                 o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
@@ -369,7 +367,6 @@ class ParallelismMapping(object):
                 OU_num_x = ceil(matrix_width / self.hd_info.OU_w)
                 for ou_idx_x in range(OU_num_x):
                     for ou_idx_y in range(OU_num_y):
-                        ## OU block
                         pos = self.xb_mapping_dict[xbar_idx] # xbar mapping position
                         rt_h, rt_w = pos[0], pos[1]
                         pe_h, pe_w = pos[2], pos[3]
@@ -377,20 +374,16 @@ class ParallelismMapping(object):
                         xb_h, xb_w = pos[6], pos[7]
 
                         # OU block size
-                        if ou_idx_y == OU_num_y - 1:
-                            block_h = matrix_height % self.hd_info.OU_h
-                            if block_h == 0:
-                                block_h = self.hd_info.OU_h
+                        if ou_idx_y + 1 == OU_num_y:
+                            block_h = matrix_height - ou_idx_y * self.hd_info.OU_h
                         else:
                             block_h = self.hd_info.OU_h
-                        if ou_idx_x == OU_num_x - 1: 
-                            block_w = matrix_width % self.hd_info.OU_w
-                            if block_w == 0:
-                                block_w = self.hd_info.OU_w
+                        if ou_idx_x + 1 == OU_num_x: 
+                            block_w = matrix_width - ou_idx_x * self.hd_info.OU_w
                         else:
                             block_w = self.hd_info.OU_w
                         
-                        ## map weight
+                        ## Weight
                         for b_h in range(block_h):            
                             for b_w in range(block_w):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
@@ -423,7 +416,7 @@ class ParallelismMapping(object):
                                 xbar_width_start_idx += self.hd_info.OU_w
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
-                ## Prepare inputs
+                ## Inputs
                 inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
@@ -437,8 +430,6 @@ class ParallelismMapping(object):
                 OU_num_x = ceil(matrix_width / self.hd_info.OU_w)
                 for ou_idx_x in range(OU_num_x):
                     for ou_idx_y in range(OU_num_y):
-                        ## OU block
-                        # xbar mapping position
                         pos = self.xb_mapping_dict[xbar_idx]
                         rt_h, rt_w = pos[0], pos[1]
                         pe_h, pe_w = pos[2], pos[3]
@@ -446,20 +437,16 @@ class ParallelismMapping(object):
                         xb_h, xb_w = pos[6], pos[7]
 
                         # OU block size
-                        if ou_idx_y == OU_num_y - 1:
-                            block_h = matrix_height % self.hd_info.OU_h
-                            if block_h == 0:
-                                block_h = self.hd_info.OU_h
+                        if ou_idx_y + 1 == OU_num_y:
+                            block_h = matrix_height - ou_idx_y * self.hd_info.OU_h
                         else:
                             block_h = self.hd_info.OU_h
-                        if ou_idx_x == OU_num_x - 1: 
-                            block_w = matrix_width % self.hd_info.OU_w
-                            if block_w == 0:
-                                block_w = self.hd_info.OU_w
+                        if ou_idx_x + 1 == OU_num_x: 
+                            block_w = matrix_width - ou_idx_x * self.hd_info.OU_w
                         else:
                             block_w = self.hd_info.OU_w
 
-                        ## map weight
+                        ## Weight
                         for b_h in range(block_h):            
                             for b_w in range(block_w):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
@@ -502,13 +489,14 @@ class ParallelismMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([oh*self.model_info.pooling_h[nlayer] + ph, ow*self.model_info.pooling_w[nlayer] + pw, c])
+                                    nn.append([oh * self.model_info.pooling_h[nlayer] + ph, ow * self.model_info.pooling_w[nlayer] + pw, c])
                             inputs.append(nn)
 
                 rty, rtx = pool_pos[0], pool_pos[1]
                 pey, pex = pool_pos[2], pool_pos[3]
                 xbar_column = [-1]
                 xbar_row = [-1]
+
                 self.layer_mapping_to_pe[rty][rtx][pey][pex].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, inputs))
 
     def __str__(self):
@@ -522,7 +510,6 @@ class TransferMapping(object):
         self.crossbar_array = []
         self.layer_mapping_to_xbar = []
         self.layer_mapping_to_pe = []
-
         for rty_idx in range(self.hd_info.Router_num_y):
             self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
@@ -557,7 +544,6 @@ class TransferMapping(object):
 
         self.xb_mapping_dict = dict()
         self.num_of_xb_in_pe = self.hd_info.Xbar_num * self.hd_info.CU_num
-
         ctr =  0
         for ry in range(self.hd_info.Router_num_y):
             if ry % 2 == 0:
@@ -586,6 +572,7 @@ class TransferMapping(object):
         xbar_mapping_idx = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
+                ## Inputs
                 inputs = []
                 o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
                 o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
@@ -600,9 +587,10 @@ class TransferMapping(object):
                         inputs.append(nn)
                 inputs = np.array(inputs)
 
-                ## Prepare weights
+                ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                
                 mapping_height_num_xb_per_pe = ceil(matrix_height / self.hd_info.Xbar_h)
                 if mapping_height_num_xb_per_pe > self.num_of_xb_in_pe:
                     print("Mapping error: mapping_height_num_xb_per_pe > num_of_xb_in_pe.")
@@ -619,44 +607,39 @@ class TransferMapping(object):
                 for pe_n in range(ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)):
                     for xb_w_idx in range(mapping_width_num_xb_per_pe):
                         for xb_h_idx in range(mapping_height_num_xb_per_pe):
-                            # XB
                             pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
                             rt_h, rt_w = pos[0], pos[1]
                             pe_h, pe_w = pos[2], pos[3]
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
                         
-                            if xb_h_idx == mapping_height_num_xb_per_pe - 1:
-                                height = matrix_height % self.hd_info.Xbar_h
-                                if height == 0:
-                                    height = self.hd_info.Xbar_h
+                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
+                                block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
-                                height = self.hd_info.Xbar_h
+                                block_height = self.hd_info.Xbar_h
 
-                            if xb_w_idx == mapping_width_num_xb_per_pe - 1:
-                                width = (num_filter_per_pe * self.model_info.filter_bit) % self.hd_info.Xbar_w
-                                if width == 0:
-                                    width = self.hd_info.Xbar_w
+                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe:
+                                block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
                             else:
-                                width = self.hd_info.Xbar_w
+                                block_width = self.hd_info.Xbar_w
                         
-                            for h in range(height):
-                                for w in range(width):
-                                    matrix_w = w + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
-                                    matrix_h = h + xb_h_idx * self.hd_info.Xbar_h
+                            for bh in range(block_height):
+                                for bw in range(block_width):
+                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
+                                    h = bh + xb_h_idx * self.hd_info.Xbar_h
 
-                                    nfilter = matrix_w // self.model_info.filter_bit
-                                    nbit = matrix_w % self.model_info.filter_bit
-                                    ngrid = matrix_h
+                                    nfilter = w // self.model_info.filter_bit
+                                    nbit = w % self.model_info.filter_bit
+                                    ngrid = h
 
-                                    cell_h = h
-                                    cell_w = w
+                                    cell_h = bh
+                                    cell_w = bw
                                     self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                                 
-                            ## Prepare inputs
-                            xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + height].tolist()
-                            xbar_column = [i for i in range(width)]
-                            xbar_row = [i for i in range(height)]
+                            ## Inputs
+                            xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
+                            xbar_column = [i for i in range(block_width)]
+                            xbar_row = [i for i in range(block_height)]
                             for inp in xbar_inputs:
                                 self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("convolution", nlayer, xbar_row, xbar_column, inp))
 
@@ -668,6 +651,7 @@ class TransferMapping(object):
                 xbar_mapping_idx += used_xbar_num
           
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
+                ## Inputs
                 inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
@@ -675,7 +659,7 @@ class TransferMapping(object):
                 inputs.append(nn)
                 inputs = np.array(inputs)
 
-                ## Prepare weights
+                ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
                 
@@ -695,44 +679,39 @@ class TransferMapping(object):
                 for pe_n in range(ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)):
                     for xb_w_idx in range(mapping_width_num_xb_per_pe):
                         for xb_h_idx in range(mapping_height_num_xb_per_pe):
-                            # XB
                             pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
                             rt_h, rt_w = pos[0], pos[1]
                             pe_h, pe_w = pos[2], pos[3]
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
                         
-                            if xb_h_idx == mapping_height_num_xb_per_pe - 1:
-                                height = matrix_height % self.hd_info.Xbar_h
-                                if height == 0:
-                                    height = self.hd_info.Xbar_h
+                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
+                                block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
-                                height = self.hd_info.Xbar_h
+                                block_height = self.hd_info.Xbar_h
 
-                            if xb_w_idx == mapping_width_num_xb_per_pe - 1: 
-                                width = (num_filter_per_pe * self.model_info.filter_bit) % self.hd_info.Xbar_w
-                                if width == 0:
-                                    width = self.hd_info.Xbar_w
+                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe: 
+                                block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
                             else:
-                                width = self.hd_info.Xbar_w
+                                block_width = self.hd_info.Xbar_w
 
-                            for h in range(height):
-                                for w in range(width):
-                                    matrix_w = w + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
-                                    matrix_h = h + xb_h_idx * self.hd_info.Xbar_h
+                            for bh in range(block_height):
+                                for bw in range(block_width):
+                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
+                                    h = bh + xb_h_idx * self.hd_info.Xbar_h
 
-                                    nfilter = matrix_w // self.model_info.filter_bit
-                                    nbit = matrix_w % self.model_info.filter_bit
-                                    ngrid = matrix_h
+                                    nfilter = w // self.model_info.filter_bit
+                                    nbit = w % self.model_info.filter_bit
+                                    ngrid = h
 
-                                    cell_h = h
-                                    cell_w = w
+                                    cell_h = bh
+                                    cell_w = bw
                                     self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                                 
-                            ## Prepare inputs
-                            xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + height].tolist()
-                            xbar_column = [i for i in range(width)]
-                            xbar_row = [i for i in range(height)]
+                            ## Inputs
+                            xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
+                            xbar_column = [i for i in range(block_width)]
+                            xbar_row = [i for i in range(block_height)]
                             for inp in xbar_inputs:
                                 self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_row, xbar_column, inp))
 
@@ -746,7 +725,6 @@ class TransferMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                 o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
-                        
                 inputs = []
                 for oh in range(o_height):
                     for ow in range(o_width):
@@ -768,7 +746,10 @@ class TransferMapping(object):
                     rt_h, rt_w = pos[0], pos[1]
                     pe_h, pe_w = pos[2], pos[3]
 
-                    this_input = inputs[pe_n * input_per_pe : (pe_n+1) * input_per_pe].tolist()
+                    if pe_n + 1 == used_pe_num:
+                        this_input = inputs[pe_n * input_per_pe : ].tolist()
+                    else:
+                        this_input = inputs[pe_n * input_per_pe : (pe_n+1) * input_per_pe].tolist()
                     xbar_column = [-1]
                     xbar_row = [-1]
                     if this_input:
