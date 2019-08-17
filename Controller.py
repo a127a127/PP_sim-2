@@ -172,7 +172,8 @@ class Controller(object):
             arrived_packet = self.interconnect.get_arrived_packet()
             for pk in arrived_packet:
                 if self.trace:
-                    print("\tArrived packet:", pk)
+                    pass
+                    #print("\tArrived packet:", pk)
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
                 rty, rtx = pk.destination[0], pk.destination[1]
@@ -185,7 +186,8 @@ class Controller(object):
                 if pro_event.event_type == "edram_rd_ir":
                     # 1. store data into buffer
                     if self.trace:
-                        print("\t\twrite data into buffer:", pk.data)
+                        pass
+                        #print("\t\twrite data into buffer:", pk.data)
                     pe.edram_buffer.put(pk.data)
                     # 2. trigger event
                     cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
@@ -195,7 +197,8 @@ class Controller(object):
                     pro_event.current_number_of_preceding_event += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
-                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                            print("\t\tProceeding event is triggered.", \
+                                pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                 elif pro_event.event_type == "edram_rd_pool":
                     # 1. store data into buffer
@@ -284,7 +287,9 @@ class Controller(object):
                             if not pe.edram_buffer.check([event.nlayer, data]):
                                 # Data not in buffer
                                 if self.trace:
-                                    print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, event.event_type, data)
+                                    print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
+                                        event.event_type, "index:", self.Computation_order.index(event), data,
+                                        "position:", cu.position)
                                     #print("\tBuffer:", pe.edram_buffer.buffer)
                                 isData_ready = False
                                 break
@@ -294,7 +299,7 @@ class Controller(object):
                             cu.edram_rd_ir_erp.remove(event)
                             pe_idx = self.PE_array.index(pe)
                             cu_idx = pe.CU_array.index(cu)
-                            cu.state_edram_rd_ir = True
+                            #cu.state_edram_rd_ir = True
                             self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
 
                         else:
@@ -528,7 +533,7 @@ class Controller(object):
                     
                     if not isData_ready:
                         pe_idx = self.PE_array.index(pe)
-                        pe.state_edram_rd_pool = True
+                        #pe.state_edram_rd_pool = True
                         self.fetch_array.append(FetchEvent(event, [pe_idx]))
 
                     else:
@@ -617,16 +622,16 @@ class Controller(object):
                         pe.edram_wr_erp.append(pro_event)
                         pe.edram_wr_trigger.remove(trigger)
 
-                ## Trigger edram_rd_ir 
+                ## Trigger edram_rd_ir
                 for trigger in pe.edram_rd_ir_trigger.copy():
                     pro_event = trigger[0]
                     cu_idx = trigger[1][0]
                     if not self.isPipeLine:
                         if pro_event.nlayer == self.pipeline_layer_stage:
-                            pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                            pe.CU_array[cu_idx].edram_rd_ir_erp.insert(0, pro_event) # trigger的放在最前面(資料剛到)
                             pe.edram_rd_ir_trigger.remove(trigger)
                     else:
-                        pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                        pe.CU_array[cu_idx].edram_rd_ir_erp.insert(0, pro_event) # trigger的放在最前面(資料剛到)
                         pe.edram_rd_ir_trigger.remove(trigger)
                 
                 ## Trigger pooling 
