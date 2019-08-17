@@ -1,21 +1,18 @@
 class XB(object):
     def __init__(self, xb_pos):
-        ### events per cycle
+        ## events per cycle
         # TODO: 隨給定資料調整
         self.ou_operation_epc = 1
 
-        ### for mapping
-        self.position = xb_pos
-
-        ### trigger event list
+        ## trigger event list
         self.cu_saa_trigger = [] # [pro_event, [cu_idx]]
         
-        ### event ready pool
+        ## event ready pool
         self.ou_operation_erp = []
         
         self.reset()
         
-        ### for mapping
+        ### for order generator
         self.position = xb_pos
         self.crossbar_array = []
         self.Convolution = []
@@ -23,7 +20,7 @@ class XB(object):
         self.Computation_order = []
 
     def reset(self):
-        ### state
+        ## state
         self.state_ou_operation = [False] * self.ou_operation_epc
 
     def check_state(self):
