@@ -39,36 +39,35 @@ class OrderGenerator(object):
                                                 xb.Convolution.append(mapping_inp)
                                             if mapping_inp.eventtype == "fully":
                                                 xb.Fully.append(mapping_inp)
-                                        self.XB_array.append(xb) 
-        self.pe_saa_mat = []
-        self.feature_mat = []
-        for i in range(len(self.model_info.layer_list)):
+                                        self.XB_array.append(xb)
+        self.pe_saa_mat = [] # for dependency
+        self.feature_mat = [] # for dependency
+        for i in range(self.model_info.layer_length):
             if self.model_info.layer_list[i].layer_type == "convolution":
                 self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
-                if i+1 < len(self.model_info.layer_list):
+                if i+1 < self.model_info.layer_length:
                     if self.model_info.layer_list[i+1].layer_type == "fully":
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
                     else:
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "pooling":
                 self.pe_saa_mat.append([])
-                if i+1 < len(self.model_info.layer_list):
+                if i+1 < self.model_info.layer_length:
                     if self.model_info.layer_list[i+1].layer_type == "fully":
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
                     else:
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "fully":
                 self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
-                if i+1 < len(self.model_info.layer_list):
+                if i+1 < self.model_info.layer_length:
                     self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
         
         self.Computation_order = []
         self.generate_order()
 
     def generate_order(self):
-        for nlayer in range(len(self.model_info.layer_list)):
+        for nlayer in range(self.model_info.layer_length):
             print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
-            
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 ### Event: data_transfer, edram_rd_ir
                 for nCU in range(len(self.cu_traverse_idx)):
@@ -346,7 +345,7 @@ class OrderGenerator(object):
                             edram_wr_inputs  = [[window_h, window_w, nfilter]]
                             edram_wr_outputs = [[window_h, window_w, nfilter]]
                                     
-                            if nlayer+1 < len(self.model_info.layer_list):
+                            if nlayer+1 < self.model_info.layer_length:
                                 if self.model_info.layer_list[nlayer+1].layer_type != "fully":
                                     if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
                                         self.feature_mat[nlayer][window_h][window_w][nfilter] = []
@@ -639,7 +638,7 @@ class OrderGenerator(object):
                     event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
                     self.Computation_order.append(event) 
 
-                    if nlayer+1 < len(self.model_info.layer_list):
+                    if nlayer+1 < self.model_info.layer_length:
                         if self.feature_mat[nlayer][nfilter][0][0] == 0.0:
                             self.feature_mat[nlayer][nfilter][0][0] = []
                         self.feature_mat[nlayer][nfilter][0][0].append(edram_wr_event_idx)
