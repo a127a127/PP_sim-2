@@ -245,28 +245,33 @@ class Controller(object):
                 FE.cycles_counter += 1
                 #print(FE.cycles_counter, end=' ')
                 if FE.cycles_counter == FE.fetch_cycle:
-                    src  = (0, FE.event.position_idx[1], -1, -1)
-                    des  = FE.event.position_idx[0:4]
+                    # o src  = (0, FE.event.position_idx[1], -1, -1)
+                    # o des  = FE.event.position_idx[0:4]
                     if FE.event.event_type == "edram_rd_ir":
-                        if not self.isPipeLine:
-                            self.this_layer_event_ctr -= len(FE.event.inputs)
-                        FE.event.preceding_event_count += len(FE.event.inputs)
+                        pe_idx = FE.index[0] # o 
+                        cu_idx = FE.index[1] # o 
+                        # o if not self.isPipeLine:
+                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
+                        # o FE.event.preceding_event_count += len(FE.event.inputs)
                         for inp in FE.event.inputs:
                             data = inp[1:]
-                            pro_event_idx = self.Computation_order.index(FE.event)
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            self.interconnect.input_packet(packet)
-                    
+                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
+                            # o pro_event_idx = self.Computation_order.index(FE.event)
+                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            # o self.interconnect.input_packet(packet)
+                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.insert(0, FE.event) # o 
+
                     elif FE.event.event_type == "edram_rd_pool":
-                        if not self.isPipeLine:
-                            self.this_layer_event_ctr -= len(FE.event.inputs)
-                        FE.event.preceding_event_count += len(FE.event.inputs)
+                        # o if not self.isPipeLine:
+                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
+                        # o FE.event.preceding_event_count += len(FE.event.inputs)
 
                         for data in FE.event.inputs:
-                            pro_event_idx = self.Computation_order.index(FE.event)
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            self.interconnect.input_packet(packet)
-
+                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
+                            # o pro_event_idx = self.Computation_order.index(FE.event)
+                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            # o self.interconnect.input_packet(packet)
+                        self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event) # o 
                     self.fetch_array.remove(FE)
 
             ### Event: edram_rd_ir
