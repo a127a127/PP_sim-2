@@ -1,7 +1,7 @@
 from HardwareMetaData import HardwareMetaData
 from Model import Model
 from PE import PE
-from XBAR import XBAR
+from XB import XB
 from EventMetaData import EventMetaData
 import numpy as np 
 
@@ -18,7 +18,6 @@ class OrderGenerator(object):
 
         self.XB_array = []
         self.cu_traverse_idx = []
-
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
                 for pey_idx in range(self.hd_info.PE_num_y):
@@ -27,11 +26,10 @@ class OrderGenerator(object):
                             for cux_idx in range(self.hd_info.CU_num_x):
                                 cu_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx)
                                 self.cu_traverse_idx.append(cu_pos)
-
                                 for xby_idx in range(self.hd_info.Xbar_num_y):
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
                                         xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
-                                        xb = XBAR(xb_pos) # TODO: 跟XB合併或改比較好辨認的名字
+                                        xb = XB(xb_pos)
                                         # weights
                                         xb.crossbar_array = self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
                                     
@@ -44,7 +42,6 @@ class OrderGenerator(object):
                                         self.XB_array.append(xb) 
         self.pe_saa_mat = []
         self.feature_mat = []
-
         for i in range(len(self.model_info.layer_list)):
             if self.model_info.layer_list[i].layer_type == "convolution":
                 self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
