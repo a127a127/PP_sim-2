@@ -2,7 +2,7 @@ class Router(object):
     def __init__(self, h, w):
         self.pos = (h, w)
         
-        self.queue_size = 2000 # n packets  large enough
+        self.queue_size = 20000 # n packets  large enough
 
         # input port
         self.arrived_order = []
