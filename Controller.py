@@ -93,7 +93,7 @@ class Controller(object):
         self.cu_or_energy_total = 0
 
 
-        self.input_bit = self.ordergenerator.model_information.input_bit
+        self.input_bit = self.ordergenerator.model_info.input_bit
         self.PE_array = []
         for rty_idx in range(self.RT_num_y):
             for rtx_idx in range(self.RT_num_x):
@@ -130,7 +130,7 @@ class Controller(object):
         if not self.isPipeLine:
             self.pipeline_layer_stage = 0
             self.pipeline_stage_record = []
-            self.num_layer = len(self.ordergenerator.layer_list)
+            self.num_layer = len(self.ordergenerator.model_info.layer_list)
             self.events_each_layer = []
             for layer in range(self.num_layer):
                 self.events_each_layer.append(0)

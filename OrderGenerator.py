@@ -1,74 +1,18 @@
 from HardwareMetaData import HardwareMetaData
+from Model import Model
 from PE import PE
 from XBAR import XBAR
 from EventMetaData import EventMetaData
 import numpy as np 
 
 class OrderGenerator(object):
-    def __init__(self, model_information, mapping_information):
-        self.model_information = model_information
+    def __init__(self, model_config, mapping_information):
+        self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
-
-        # model
-        self.input_n = model_information.input_n
-        self.layer_list = model_information.layer_list  # conv, pool, conv, ...
-        self.filter_n = [] 
-        self.filter_h = []
-        self.filter_w = []
-        self.filter_c = []
-        self.filter_length = [] # Straighten kernel length
-        self.pooling_h = []
-        self.pooling_w = []
-        self.input_h = [model_information.input_h] # input feature map height (each layer)
-        self.input_w = [model_information.input_w] # input feature map width (each layer)
-        self.input_c = [model_information.input_c] # input feature map channel (each layer)
-        self.input_number = [] # input windows number
-        self.input_bit = model_information.input_bit 
-        self.filter_bit = model_information.filter_bit
-
         
-        for i in range(len(self.layer_list)):
-            if self.layer_list[i].layer_type == "convolution":
-                self.filter_n.append(self.layer_list[i].filter_n)
-                self.filter_h.append(self.layer_list[i].filter_h)
-                self.filter_w.append(self.layer_list[i].filter_w)
-                self.filter_c.append(self.layer_list[i].filter_c)
-                self.filter_length.append(self.layer_list[i].filter_h * self.layer_list[i].filter_w * self.layer_list[i].filter_c)
-                self.pooling_h.append(0)
-                self.pooling_w.append(0)
-                self.input_h.append(self.input_h[i] - self.layer_list[i].filter_h + 1)
-                self.input_w.append(self.input_w[i] - self.layer_list[i].filter_w + 1)
-                self.input_c.append(self.layer_list[i].filter_n)
-                self.input_number.append((self.input_h[i] - self.layer_list[i].filter_h + 1) * (self.input_w[i] - self.layer_list[i].filter_w + 1))
-            elif self.layer_list[i].layer_type == "pooling":
-                self.filter_n.append(0)
-                self.filter_h.append(0)
-                self.filter_w.append(0)
-                self.filter_c.append(0)
-                self.filter_length.append(0)
-                self.pooling_h.append(self.layer_list[i].pooling_h)
-                self.pooling_w.append(self.layer_list[i].pooling_w)
-                self.input_h.append(self.input_h[i] // self.layer_list[i].pooling_h)
-                self.input_w.append(self.input_w[i] // self.layer_list[i].pooling_w)
-                self.input_c.append(self.input_c[i])
-                self.input_number.append((self.input_h[i] // self.layer_list[i].pooling_h) * (self.input_w[i] // self.layer_list[i].pooling_w) * (self.input_c[i]))
-            elif self.layer_list[i].layer_type == "fully":
-                self.filter_n.append(self.layer_list[i].neuron_n)
-                self.filter_h.append(0)
-                self.filter_w.append(0)
-                self.filter_c.append(0)
-                self.filter_length.append(self.input_h[i] * self.input_w[i] * self.input_c[i])
-                self.pooling_h.append(0)
-                self.pooling_w.append(0)
-                self.input_h.append(self.filter_n[i])
-                self.input_w.append(1)
-                self.input_c.append(1)
-                self.input_number.append(self.layer_list[i].neuron_n)
-        
-
         # mapping
-        self.crossbar_array = self.mapping_information.crossbar_array # 
+        self.crossbar_array = self.mapping_information.crossbar_array
         self.layer_mapping_to_xbar = self.mapping_information.layer_mapping_to_xbar
         self.layer_mapping_to_pe = self.mapping_information.layer_mapping_to_pe
 
@@ -88,10 +32,9 @@ class OrderGenerator(object):
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
                                         xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
                                         xb = XBAR(xb_pos) # TODO: 跟XB合併或改比較好辨認的名字
-
                                         # weights
                                         xb.crossbar_array = self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
-                                        
+                                    
                                         # inputs
                                         for mapping_inp in self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]:
                                             if mapping_inp.eventtype == "convolution":
@@ -102,34 +45,34 @@ class OrderGenerator(object):
         self.pe_saa_mat = []
         self.feature_mat = []
 
-        for i in range(len(self.layer_list)):
-            if self.layer_list[i].layer_type == "convolution":  
-                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.layer_list[i].filter_n)).tolist())
-                if i+1 < len(self.layer_list):
-                    if self.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
+        for i in range(len(self.model_info.layer_list)):
+            if self.model_info.layer_list[i].layer_type == "convolution":
+                self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
+                if i+1 < len(self.model_info.layer_list):
+                    if self.model_info.layer_list[i+1].layer_type == "fully":
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
                     else:
-                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
-            elif self.layer_list[i].layer_type == "pooling":      
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
+            elif self.model_info.layer_list[i].layer_type == "pooling":
                 self.pe_saa_mat.append([])
-                if i+1 < len(self.layer_list):
-                    if self.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.input_h[i+1] * self.input_w[i+1] * self.input_c[i+1], 1, 1)).tolist())
+                if i+1 < len(self.model_info.layer_list):
+                    if self.model_info.layer_list[i+1].layer_type == "fully":
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
                     else:
-                        self.feature_mat.append(np.zeros((self.input_h[i+1], self.input_w[i+1], self.input_c[i+1])).tolist())
-            elif self.layer_list[i].layer_type == "fully":
-                self.pe_saa_mat.append(np.zeros((self.input_number[i], self.filter_n[i])).tolist())
-                if i+1 < len(self.layer_list):
-                    self.feature_mat.append(np.zeros((self.filter_n[i], 1, 1)).tolist())
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
+            elif self.model_info.layer_list[i].layer_type == "fully":
+                self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
+                if i+1 < len(self.model_info.layer_list):
+                    self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
         
         self.Computation_order = []
         self.generate_order()
 
     def generate_order(self):
-        for nlayer in range(len(self.layer_list)):
-            print("Generate layer", nlayer, self.layer_list[nlayer].layer_type)
+        for nlayer in range(len(self.model_info.layer_list)):
+            print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
             
-            if self.layer_list[nlayer].layer_type == "convolution":
+            if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 ### Event: data_transfer, edram_rd_ir
                 for nCU in range(len(self.cu_traverse_idx)):
                     cu_pos = self.cu_traverse_idx[nCU]
@@ -259,9 +202,8 @@ class OrderGenerator(object):
                                     this_block = this_input.xbar_column[index:index + self.hd_info.OU_w]
                                     xbar_block_w.append(this_block)
                                     index += self.hd_info.OU_w
-                            
 
-                                for input_bit in range(self.input_bit):
+                                for input_bit in range(self.model_info.input_bit):
                                     for xh in xbar_block_h:
                                         for xw in xbar_block_w:
                                             # OU block
@@ -283,7 +225,7 @@ class OrderGenerator(object):
                                                     ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
                                                                             (filter_nfilter, filter_ngrid, filter_nbit)])
                                                 idx += 1
-                                        
+
                                             ### add dependency
                                             ou_event_idx = len(self.Computation_order)
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
@@ -292,7 +234,7 @@ class OrderGenerator(object):
                                             preceding_count = 1
                                             event = EventMetaData("ou_operation", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
                                             self.Computation_order.append(event)              
-    
+
                 ### Event: cu_saa                      
                                             filter_list = []                            
                                             for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
@@ -325,11 +267,11 @@ class OrderGenerator(object):
                                                 self.Computation_order.append(event)
 
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
-                windowlen_w = self.input_w[nlayer] - self.filter_w[nlayer] + 1 # stride = 1
-                windowlen_h = self.input_h[nlayer] - self.filter_h[nlayer] + 1 # stride = 1
+                windowlen_w = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1 # stride = 1
+                windowlen_h = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1 # stride = 1
                 for window_h in range(windowlen_h):
                     for window_w in range(windowlen_w):
-                        for nfilter in range(self.filter_n[nlayer]):
+                        for nfilter in range(self.model_info.filter_n[nlayer]):
 
                             num_input = window_h * windowlen_w + window_w
                             
@@ -407,21 +349,21 @@ class OrderGenerator(object):
                             edram_wr_inputs  = [[window_h, window_w, nfilter]]
                             edram_wr_outputs = [[window_h, window_w, nfilter]]
                                     
-                            if nlayer+1 < len(self.layer_list):
-                                if self.layer_list[nlayer+1].layer_type != "fully":
+                            if nlayer+1 < len(self.model_info.layer_list):
+                                if self.model_info.layer_list[nlayer+1].layer_type != "fully":
                                     if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
                                         self.feature_mat[nlayer][window_h][window_w][nfilter] = []
                                     self.feature_mat[nlayer][window_h][window_w][nfilter].append(edram_wr_event_idx)
                                 else:
                                     edram_wr_inputs  = [[nfilter, 0, 0]]
                                     edram_wr_outputs = [[nfilter, 0, 0]]
-                                    if self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] == 0.0:
-                                        self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] = []
-                                    self.feature_mat[nlayer][window_h * self.input_w[nlayer+1] + window_w + nfilter * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)                             
+                                    if self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
+                                        self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
+                                    self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
                             event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
                             self.Computation_order.append(event)
                             
-            elif self.layer_list[nlayer].layer_type == "fully":
+            elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 ### Event: data_transfer, edram_rd_ir
                 for nCU in range(len(self.cu_traverse_idx)):
                     cu_pos = self.cu_traverse_idx[nCU]
@@ -554,7 +496,7 @@ class OrderGenerator(object):
                                     index += self.hd_info.OU_w
                             
 
-                                for input_bit in range(self.input_bit):
+                                for input_bit in range(self.model_info.input_bit):
                                     for xh in xbar_block_h:
                                         for xw in xbar_block_w:
                                             # OU block
@@ -618,7 +560,7 @@ class OrderGenerator(object):
                                                 self.Computation_order.append(event)
 
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
-                for nfilter in range(self.filter_n[nlayer]):
+                for nfilter in range(self.model_info.filter_n[nlayer]):
                     num_input = 0
                     grid = self.pe_saa_mat[nlayer][num_input][nfilter]
                     if grid == 0.0:
@@ -700,12 +642,12 @@ class OrderGenerator(object):
                     event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
                     self.Computation_order.append(event) 
 
-                    if nlayer+1 < len(self.layer_list):
+                    if nlayer+1 < len(self.model_info.layer_list):
                         if self.feature_mat[nlayer][nfilter][0][0] == 0.0:
                             self.feature_mat[nlayer][nfilter][0][0] = []
                         self.feature_mat[nlayer][nfilter][0][0].append(edram_wr_event_idx)
      
-            elif self.layer_list[nlayer].layer_type == "pooling":
+            elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 for rty_idx in range(self.hd_info.Router_num_y):
                     for rtx_idx in range(self.hd_info.Router_num_x):
                         for pey_idx in range(self.hd_info.PE_num_y):
@@ -771,7 +713,7 @@ class OrderGenerator(object):
                                             pool_position_idx = pe_pos
                                             pool_preceding_count = 1
                                             pool_input_sequence = erp_input_sequence
-                                            pool_output_sequence = [[pool_input_sequence[0][0] // self.pooling_h[nlayer], pool_input_sequence[0][1] // self.pooling_w[nlayer], pool_input_sequence[0][2]]]
+                                            pool_output_sequence = [[pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer], pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer], pool_input_sequence[0][2]]]
 
                                             event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
                                             self.Computation_order.append(event)
@@ -786,19 +728,19 @@ class OrderGenerator(object):
                                             edram_wr_input_sequence  = pool_output_sequence
                                             edram_wr_output_sequence = pool_output_sequence
 
-                                            if nlayer+1 < len(self.layer_list):
-                                                if self.layer_list[nlayer+1].layer_type != "fully":
+                                            if nlayer+1 < len(self.model_info.layer_list):
+                                                if self.model_info.layer_list[nlayer+1].layer_type != "fully":
                                                     if self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] == 0.0:
                                                         self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] = []
                                                     self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]].append(edram_wr_event_idx)
                                                 else:
-                                                    o_height = self.input_h[nlayer] // self.pooling_h[nlayer]
-                                                    o_width = self.input_w[nlayer] // self.pooling_w[nlayer]
-                                                    edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
+                                                    o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
+                                                    o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
+                                                    edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
                                                     edram_wr_output_sequence = edram_wr_input_sequence
-                                                    if self.feature_mat[nlayer][pool_input_sequence[0][0] * self.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] == 0.0:
-                                                        self.feature_mat[nlayer][pool_input_sequence[0][0] * self.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0] = []
-                                                    self.feature_mat[nlayer][pool_input_sequence[0][0] * self.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.input_h[nlayer+1] * self.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
+                                                    if self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
+                                                        self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
+                                                    self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
                                             event = EventMetaData("edram_wr", edram_wr_position_idx, edram_wr_preceding_count, [], nlayer, edram_wr_input_sequence, edram_wr_output_sequence)
                                             self.Computation_order.append(event)
         print('Order generated!')

@@ -6,6 +6,7 @@ class Model(object):
         self.input_h = [model_config.input_h] 
         self.input_w = [model_config.input_w] 
         self.input_c = [model_config.input_c] 
+        self.input_number = [] # input windows number
         self.filter_n = [] 
         self.filter_h = []
         self.filter_w = []
@@ -29,6 +30,7 @@ class Model(object):
                 self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1
                 self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1
                 self.input_c.append(self.layer_list[nlayer].filter_n)
+                self.input_number.append((self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) * (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1))
             elif self.layer_list[nlayer].layer_type == "pooling":
                 self.filter_n.append(0)
                 self.filter_h.append(0)
@@ -40,6 +42,7 @@ class Model(object):
                 self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h)
                 self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w)
                 self.input_c.append(self.input_c[nlayer])
+                self.input_number.append((self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) * (self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) * (self.input_c[nlayer]))
             elif self.layer_list[nlayer].layer_type == "fully":
                 self.filter_n.append(self.layer_list[nlayer].neuron_n)
                 self.filter_h.append(0)
@@ -51,6 +54,7 @@ class Model(object):
                 self.input_h.append(self.layer_list[nlayer].neuron_n)
                 self.input_w.append(1)
                 self.input_c.append(1)
+                self.input_number.append(self.layer_list[nlayer].neuron_n)
 
     def __str__(self):
         return str(self.__dict__)
