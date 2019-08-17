@@ -40,6 +40,7 @@ class OrderGenerator(object):
                                             if mapping_inp.eventtype == "fully":
                                                 xb.Fully.append(mapping_inp)
                                         self.XB_array.append(xb)
+
         self.pe_saa_mat = [] # for dependency
         self.feature_mat = [] # for dependency
         for i in range(self.model_info.layer_length):
@@ -182,7 +183,7 @@ class OrderGenerator(object):
                                         else:
                                             idx += 1
                                 if not this_input:
-                                    break
+                                    continue
 
                                 num_input = this_input.inputs[0][0]
 
@@ -474,7 +475,7 @@ class OrderGenerator(object):
                                         else:
                                             idx += 1
                                 if not this_input:
-                                    break
+                                    continue
 
                                 num_input = this_input.inputs[0][0]
 
