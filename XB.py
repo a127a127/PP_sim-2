@@ -17,7 +17,6 @@ class XB(object):
         self.crossbar_array = []
         self.Convolution = []
         self.Fully = []
-        self.Computation_order = []
 
     def reset(self):
         ## state
