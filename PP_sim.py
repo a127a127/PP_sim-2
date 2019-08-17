@@ -19,37 +19,37 @@ def main():
     scheduling = int(sys.argv[2])
 
     ### Model ###
-    model_type = 0
+    model_type = 1
     print("Model type:  ", end="")
     if model_type == 0: # TestModelConfig
         print("TestModelConfig")
-        model_information = TestModelConfig()
+        model_config = TestModelConfig()
     elif model_type == 1: # TestModelConfig2
         print("TestModelConfig2")
-        model_information = TestModelConfig2()
+        model_config = TestModelConfig2()
     elif model_type == 2: # Cifar10Config
         print("Cifar10Config")
-        model_information = Cifar10Config()
+        model_config = Cifar10Config()
     elif model_type == 3: # CaffenetConfig
         print("CaffenetConfig")
-        model_information = CaffenetConfig()
+        model_config = CaffenetConfig()
     elif model_type == 4: # LenetConfig
         print("LenetConfig")
-        model_information = LenetConfig()
+        model_config = LenetConfig()
     
     ### Mapping ##
     print("Mapping policy:  ", end="")
     if mapping == 0: # DefaultMapping
         print("DefaultMapping")
-        mapping_information = DefaultMapping(model_information)
+        mapping_information = DefaultMapping(model_config)
         mapping_str = "DefaultMapping"
     elif mapping == 1: # ParallelismMapping
         print("ParallelismMapping")
-        mapping_information = ParallelismMapping(model_information)
+        mapping_information = ParallelismMapping(model_config)
         mapping_str = "ParallelismMapping"
     elif mapping == 2: # TransferMapping
         print("TransferMapping") 
-        mapping_information = TransferMapping(model_information)
+        mapping_information = TransferMapping(model_config)
         mapping_str = "TransferMapping"
     
     ### Scheduling ###
@@ -70,7 +70,7 @@ def main():
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
 
-    order_generator = OrderGenerator(model_information, mapping_information)
+    order_generator = OrderGenerator(model_config, mapping_information)
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))

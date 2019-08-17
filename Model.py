@@ -16,7 +16,7 @@ class Model(object):
         self.pooling_w = []
 
         self.input_bit = model_config.input_bit
-        self.filter_bit = model_config.input_bit
+        self.filter_bit = model_config.filter_bit
 
         for nlayer in range(self.layer_length):
             if self.layer_list[nlayer].layer_type == "convolution":
