@@ -114,7 +114,8 @@ class Controller(object):
         ## utilization
         self.energy_utilization = []
         self.xbar_utilization = []
-        self.pe_state_for_plot = [[],[]]
+        self.pe_state_for_plot = [[], []]
+        self.cu_state_for_plot = [[], []]
         self.buffer_size = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
@@ -122,7 +123,7 @@ class Controller(object):
         self.fetch_array = []
 
         self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
-        self.interconnect_step = 120 # TODO: 可調
+        self.interconnect_step = 120 # TODO: tune
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         
@@ -245,92 +246,95 @@ class Controller(object):
                 FE.cycles_counter += 1
                 #print(FE.cycles_counter, end=' ')
                 if FE.cycles_counter == FE.fetch_cycle:
-                    src  = (0, FE.event.position_idx[1], -1, -1)
-                    des  = FE.event.position_idx[0:4]
+                    # o src  = (0, FE.event.position_idx[1], -1, -1)
+                    # o des  = FE.event.position_idx[0:4]
                     if FE.event.event_type == "edram_rd_ir":
-                        if not self.isPipeLine:
-                            self.this_layer_event_ctr -= len(FE.event.inputs)
-                        FE.event.preceding_event_count += len(FE.event.inputs)
+                        pe_idx = FE.index[0] # o 
+                        cu_idx = FE.index[1] # o 
+                        # o if not self.isPipeLine:
+                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
+                        # o FE.event.preceding_event_count += len(FE.event.inputs)
                         for inp in FE.event.inputs:
                             data = inp[1:]
-                            pro_event_idx = self.Computation_order.index(FE.event)
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            self.interconnect.input_packet(packet)
-                    
+                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
+                            # o pro_event_idx = self.Computation_order.index(FE.event)
+                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            # o self.interconnect.input_packet(packet)
+                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.insert(0, FE.event) # o 
+
                     elif FE.event.event_type == "edram_rd_pool":
-                        if not self.isPipeLine:
-                            self.this_layer_event_ctr -= len(FE.event.inputs)
-                        FE.event.preceding_event_count += len(FE.event.inputs)
+                        # o if not self.isPipeLine:
+                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
+                        # o FE.event.preceding_event_count += len(FE.event.inputs)
 
                         for data in FE.event.inputs:
-                            pro_event_idx = self.Computation_order.index(FE.event)
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            self.interconnect.input_packet(packet)
-
+                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
+                            # o pro_event_idx = self.Computation_order.index(FE.event)
+                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
+                            # o self.interconnect.input_packet(packet)
+                        self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event) # o 
                     self.fetch_array.remove(FE)
 
             ### Event: edram_rd_ir
             for pe in self.PE_array:
                 for cu in pe.CU_array:
-                    if cu.edram_rd_ir_erp:
-                        event = cu.edram_rd_ir_erp[0]
-                    else:
-                        continue
-                    #print("\tevent:", event.event_type)
-                    if not cu.state and not cu.state_edram_rd_ir:
-                        ## Is Data in eDRAM buffer
-                        isData_ready = True
-                        # inputs: [[num_input, fm_h, fm_w, fm_c]]
-                        for inp in event.inputs:
-                            data = inp[1:]
-                            #print(event.nlayer, data)
-                            if not pe.edram_buffer.check([event.nlayer, data]):
-                                # Data not in buffer
-                                if self.trace:
-                                    print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
-                                        event.event_type, "index:", self.Computation_order.index(event), data,
-                                        "position:", cu.position)
-                                    #print("\tBuffer:", pe.edram_buffer.buffer)
-                                isData_ready = False
-                                break
-                        
-                        if not isData_ready:
-                            self.mem_acc_ctr += 1
-                            cu.edram_rd_ir_erp.remove(event)
-                            pe_idx = self.PE_array.index(pe)
-                            cu_idx = pe.CU_array.index(cu)
-                            #cu.state_edram_rd_ir = True
-                            self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
-
-                        else:
-                            ## Check how many event can be done in a cycle
-                            if self.trace:  
-                                print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
-                                print("\t\tread data:", event.inputs)
-                            if not self.isPipeLine:
-                                self.this_layer_event_ctr += 1
-                            
-                            self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
-                            self.cycle_energy += self.edram_rd_ir_energy
-
-                            cu.state = True
-                            cu.state_edram_rd_ir = True
-                            cu.edram_rd_ir_erp.remove(event)
-                            
-                            ### add next event counter: ou_operation
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = self.Computation_order[proceeding_index]
-                                pro_event.current_number_of_preceding_event += 1
-                                
-                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                    for event in cu.edram_rd_ir_erp.copy():
+                        #print("\tevent:", event.event_type)
+                        if not cu.state and not cu.state_edram_rd_ir:
+                            ## Is Data in eDRAM buffer
+                            isData_ready = True
+                            # inputs: [[num_input, fm_h, fm_w, fm_c]]
+                            for inp in event.inputs:
+                                data = inp[1:]
+                                #print(event.nlayer, data)
+                                if not pe.edram_buffer.check([event.nlayer, data]):
+                                    # Data not in buffer
                                     if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                    pos = pro_event.position_idx
-                                    cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
-                                    cu_idx = cu_x + cu_y * self.CU_num_x
-                                    xb_idx = xb_x + xb_y * self.XB_num_x
-                                    cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])                                
+                                        print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
+                                            event.event_type, "index:", self.Computation_order.index(event), data,
+                                            "position:", cu.position)
+                                        #print("\tBuffer:", pe.edram_buffer.buffer)
+                                    isData_ready = False
+                                    break
+                            
+                            if not isData_ready:
+                                self.mem_acc_ctr += 1
+                                cu.edram_rd_ir_erp.remove(event)
+                                pe_idx = self.PE_array.index(pe)
+                                cu_idx = pe.CU_array.index(cu)
+                                #cu.state_edram_rd_ir = True
+                                self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
 
+                            else:
+                                ## Check how many event can be done in a cycle
+                                if self.trace:
+                                    print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                    print("\t\tread data:", event.inputs)
+                                if not self.isPipeLine:
+                                    self.this_layer_event_ctr += 1
+                                
+                                self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
+                                self.cycle_energy += self.edram_rd_ir_energy
+
+                                cu.state = True
+                                cu.state_edram_rd_ir = True
+                                cu.edram_rd_ir_erp.remove(event)
+
+                                ### add next event counter: ou_operation
+                                for proceeding_index in event.proceeding_event:
+                                    pro_event = self.Computation_order[proceeding_index]
+                                    pro_event.current_number_of_preceding_event += 1
+
+                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                        if self.trace:
+                                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                        pos = pro_event.position_idx
+                                        cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
+                                        cu_idx = cu_x + cu_y * self.CU_num_x
+                                        xb_idx = xb_x + xb_y * self.XB_num_x
+                                        cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+                        else:
+                            break
             ### Event: ou_operation 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -701,12 +705,17 @@ class Controller(object):
                         pe.pe_saa_erp.append(pro_event)
                         pe.pe_saa_trigger.remove(trigger)
                         
-            ### Record PE state ###
+            ### Record State ###
+            ## PE
             for pe in self.PE_array:
                 if pe.check_state():
                     self.pe_state_for_plot[0].append(self.cycle_ctr)
                     self.pe_state_for_plot[1].append(self.PE_array.index(pe))
-
+                for cu in pe.CU_array:
+                    if cu.check_state():
+                        self.cu_state_for_plot[0].append(self.cycle_ctr)
+                        self.cu_state_for_plot[1].append(self.PE_array.index(pe)*self.hardware_information.CU_num + \
+                                                        pe.CU_array.index(cu))
             ### Reset ###
             for pe in self.PE_array:
                 pe.reset()
@@ -897,14 +906,33 @@ class Controller(object):
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1])
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
         plt.ylim([-1, 16])
-        plt.xlim([1, 250])  ### @@
+        #plt.xlim([1, 250])  ### @@
+        plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
         plt.clf()
+        
+        ### CU usage
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.cu_state_for_plot[0]), fre):
+                writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
+
+
+        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=3, c='blue')
+        plt.title(self.mapping_str+", "+pipe_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('CU number')
+        plt.ylim([-1, 64])
+        #plt.xlim([1, 250])  ### @@
+        plt.xticks(np.arange(0,250, 20), fontsize=8)
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
+        plt.clf()
+        
 
         ### Xbar usage
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
