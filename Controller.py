@@ -123,7 +123,7 @@ class Controller(object):
         self.fetch_array = []
 
         self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
-        self.interconnect_step = 120 # TODO: 可調
+        self.interconnect_step = 120 # TODO: tune
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         
@@ -278,65 +278,63 @@ class Controller(object):
             ### Event: edram_rd_ir
             for pe in self.PE_array:
                 for cu in pe.CU_array:
-                    if cu.edram_rd_ir_erp:
-                        event = cu.edram_rd_ir_erp[0]
-                    else:
-                        continue
-                    #print("\tevent:", event.event_type)
-                    if not cu.state and not cu.state_edram_rd_ir:
-                        ## Is Data in eDRAM buffer
-                        isData_ready = True
-                        # inputs: [[num_input, fm_h, fm_w, fm_c]]
-                        for inp in event.inputs:
-                            data = inp[1:]
-                            #print(event.nlayer, data)
-                            if not pe.edram_buffer.check([event.nlayer, data]):
-                                # Data not in buffer
-                                if self.trace:
-                                    print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
-                                        event.event_type, "index:", self.Computation_order.index(event), data,
-                                        "position:", cu.position)
-                                    #print("\tBuffer:", pe.edram_buffer.buffer)
-                                isData_ready = False
-                                break
-                        
-                        if not isData_ready:
-                            self.mem_acc_ctr += 1
-                            cu.edram_rd_ir_erp.remove(event)
-                            pe_idx = self.PE_array.index(pe)
-                            cu_idx = pe.CU_array.index(cu)
-                            #cu.state_edram_rd_ir = True
-                            self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
-
-                        else:
-                            ## Check how many event can be done in a cycle
-                            if self.trace:  
-                                print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
-                                print("\t\tread data:", event.inputs)
-                            if not self.isPipeLine:
-                                self.this_layer_event_ctr += 1
-                            
-                            self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
-                            self.cycle_energy += self.edram_rd_ir_energy
-
-                            cu.state = True
-                            cu.state_edram_rd_ir = True
-                            cu.edram_rd_ir_erp.remove(event)
-                            
-                            ### add next event counter: ou_operation
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = self.Computation_order[proceeding_index]
-                                pro_event.current_number_of_preceding_event += 1
-                                
-                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                    for event in cu.edram_rd_ir_erp.copy():
+                        #print("\tevent:", event.event_type)
+                        if not cu.state and not cu.state_edram_rd_ir:
+                            ## Is Data in eDRAM buffer
+                            isData_ready = True
+                            # inputs: [[num_input, fm_h, fm_w, fm_c]]
+                            for inp in event.inputs:
+                                data = inp[1:]
+                                #print(event.nlayer, data)
+                                if not pe.edram_buffer.check([event.nlayer, data]):
+                                    # Data not in buffer
                                     if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                    pos = pro_event.position_idx
-                                    cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
-                                    cu_idx = cu_x + cu_y * self.CU_num_x
-                                    xb_idx = xb_x + xb_y * self.XB_num_x
-                                    cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])                                
+                                        print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
+                                            event.event_type, "index:", self.Computation_order.index(event), data,
+                                            "position:", cu.position)
+                                        #print("\tBuffer:", pe.edram_buffer.buffer)
+                                    isData_ready = False
+                                    break
+                            
+                            if not isData_ready:
+                                self.mem_acc_ctr += 1
+                                cu.edram_rd_ir_erp.remove(event)
+                                pe_idx = self.PE_array.index(pe)
+                                cu_idx = pe.CU_array.index(cu)
+                                #cu.state_edram_rd_ir = True
+                                self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
 
+                            else:
+                                ## Check how many event can be done in a cycle
+                                if self.trace:
+                                    print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
+                                    print("\t\tread data:", event.inputs)
+                                if not self.isPipeLine:
+                                    self.this_layer_event_ctr += 1
+                                
+                                self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
+                                self.cycle_energy += self.edram_rd_ir_energy
+
+                                cu.state = True
+                                cu.state_edram_rd_ir = True
+                                cu.edram_rd_ir_erp.remove(event)
+
+                                ### add next event counter: ou_operation
+                                for proceeding_index in event.proceeding_event:
+                                    pro_event = self.Computation_order[proceeding_index]
+                                    pro_event.current_number_of_preceding_event += 1
+
+                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                        if self.trace:
+                                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                        pos = pro_event.position_idx
+                                        cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
+                                        cu_idx = cu_x + cu_y * self.CU_num_x
+                                        xb_idx = xb_x + xb_y * self.XB_num_x
+                                        cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+                        else:
+                            break
             ### Event: ou_operation 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
