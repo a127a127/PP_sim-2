@@ -266,11 +266,9 @@ class OrderGenerator(object):
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
                 windowlen_w = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1 # stride = 1
                 windowlen_h = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1 # stride = 1
-
                 for nfilter in range(self.model_info.filter_n[nlayer]):
                     for window_h in range(windowlen_h):
                         for window_w in range(windowlen_w):
-
                             num_input = window_h * windowlen_w + window_w
                             
                             preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter] 

@@ -260,7 +260,7 @@ class Controller(object):
                             # o pro_event_idx = self.Computation_order.index(FE.event)
                             # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
                             # o self.interconnect.input_packet(packet)
-                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.insert(0, FE.event) # o 
+                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(FE.event) # o
 
                     elif FE.event.event_type == "edram_rd_pool":
                         # o if not self.isPipeLine:
@@ -279,7 +279,6 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.edram_rd_ir_erp.copy():
-                        #print("\tevent:", event.event_type)
                         if not cu.state and not cu.state_edram_rd_ir:
                             ## Is Data in eDRAM buffer
                             isData_ready = True
@@ -327,7 +326,8 @@ class Controller(object):
 
                                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                         if self.trace:
-                                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                            pass
+                                            #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                         pos = pro_event.position_idx
                                         cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
                                         cu_idx = cu_x + cu_y * self.CU_num_x
@@ -369,7 +369,8 @@ class Controller(object):
                                         
                                         if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                             if self.trace:
-                                                print("\t\tProceeding event is triggered.", pro_event.event_type)
+                                                pass
+                                                #print("\t\tProceeding event is triggered.", pro_event.event_type)
                                             pos = pro_event.position_idx
                                             cu_y, cu_x = pos[4], pos[5]
                                             cu_idx = cu_x + cu_y * self.CU_num_x
@@ -410,7 +411,8 @@ class Controller(object):
 
                             if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                 if self.trace:
-                                    print("\t\tProceeding event is triggered.", pro_event.event_type)
+                                    pass
+                                    #print("\t\tProceeding event is triggered.", pro_event.event_type)
                                 if pro_event.event_type == "pe_saa":
                                     cu.pe_saa_trigger.append([pro_event, []])
 
@@ -450,7 +452,8 @@ class Controller(object):
                             
                             if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                 if self.trace:
-                                    print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                    pass
+                                    #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pe.activation_trigger.append([pro_event, []])
 
             ### Event: activation 
@@ -476,7 +479,8 @@ class Controller(object):
                                 
                                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                     if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
+                                        pass
+                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
@@ -486,7 +490,8 @@ class Controller(object):
                     for idx in range(len(pe.state_edram_wr)):
                         if not pe.state_edram_wr[idx]:
                             if self.trace:
-                                print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, \
+                                        ",order index:", self.Computation_order.index(event), "data:", event.outputs)
                             if not self.isPipeLine:    
                                 self.this_layer_event_ctr += 1
 
@@ -504,7 +509,8 @@ class Controller(object):
                             
                                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                     if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                        pass
+                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pos = pro_event.position_idx
                                     if pro_event.event_type == "edram_rd_ir":
                                         cu_y, cu_x = pos[4], pos[5]
@@ -560,7 +566,8 @@ class Controller(object):
                             
                             if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                 if self.trace:
-                                    print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                    pass
+                                    #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pos = pro_event.position_idx
                                 pe.pooling_trigger.append([pro_event, []])                                
                     
@@ -587,7 +594,8 @@ class Controller(object):
 
                                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                     if self.trace:
-                                        print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                        pass
+                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
@@ -632,10 +640,10 @@ class Controller(object):
                     cu_idx = trigger[1][0]
                     if not self.isPipeLine:
                         if pro_event.nlayer == self.pipeline_layer_stage:
-                            pe.CU_array[cu_idx].edram_rd_ir_erp.insert(0, pro_event) # trigger的放在最前面(資料剛到)
+                            pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
                             pe.edram_rd_ir_trigger.remove(trigger)
                     else:
-                        pe.CU_array[cu_idx].edram_rd_ir_erp.insert(0, pro_event) # trigger的放在最前面(資料剛到)
+                        pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
                         pe.edram_rd_ir_trigger.remove(trigger)
                 
                 ## Trigger pooling 
@@ -922,8 +930,7 @@ class Controller(object):
             for row in range(0, len(self.cu_state_for_plot[0]), fre):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
 
-
-        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=3, c='blue')
+        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('CU number')
