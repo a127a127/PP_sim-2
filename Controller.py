@@ -913,7 +913,8 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
         plt.ylim([-1, 16])
-        plt.xlim([1, 250])  ### @@
+        #plt.xlim([1, 250])  ### @@
+        plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
         plt.clf()
         
@@ -929,7 +930,8 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylabel('CU number')
         plt.ylim([-1, 64])
-        plt.xlim([1, 250])  ### @@
+        #plt.xlim([1, 250])  ### @@
+        plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
         plt.clf()
         
