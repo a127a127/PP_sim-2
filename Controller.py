@@ -123,7 +123,7 @@ class Controller(object):
         self.fetch_array = []
 
         self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
-        self.interconnect_step = 120 # TODO: tune
+        self.interconnect_step = 120 #120 # TODO: tune
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         
@@ -198,8 +198,9 @@ class Controller(object):
                     pro_event.current_number_of_preceding_event += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
-                            print("\t\tProceeding event is triggered.", \
-                                pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
+                            pass
+                            #print("\t\tProceeding event is triggered.", \
+                            #    pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                 elif pro_event.event_type == "edram_rd_pool":
                     # 1. store data into buffer
@@ -210,14 +211,16 @@ class Controller(object):
                     pro_event.current_number_of_preceding_event += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
-                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                            pass
+                            #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_rd_pool_trigger.append([pro_event, []])
                 elif pro_event.event_type == "pe_saa":
                     # trigger event
                     pro_event.current_number_of_preceding_event += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
-                            print("\t\tProceeding event is triggered.", pro_event.event_type)
+                            pass
+                            #print("\t\tProceeding event is triggered.", pro_event.event_type)
 
                         pe.pe_saa_trigger.append([pro_event, []])
 
@@ -225,7 +228,8 @@ class Controller(object):
             # packet from pe to interconnect module
             for event in self.data_transfer_erp.copy():
                 if self.trace:
-                    print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                    pass
+                    #print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]
@@ -335,6 +339,7 @@ class Controller(object):
                                         cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
                         else:
                             break
+            
             ### Event: ou_operation 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -344,7 +349,8 @@ class Controller(object):
                                 #print(xb.state_ou_operation[idx], idx)
                                 if not xb.state_ou_operation[idx]:
                                     if self.trace:
-                                        print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                        pass
+                                        #print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                                     
                                     if not self.isPipeLine:
                                         self.this_layer_event_ctr += 1
@@ -382,7 +388,8 @@ class Controller(object):
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp.copy():
                         if self.trace:
-                            print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            pass
+                            #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
 
@@ -934,8 +941,9 @@ class Controller(object):
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('CU number')
-        plt.ylim([-1, 64])
+        #plt.ylim([-1, 64])
         #plt.xlim([1, 250])  ### @@
+        plt.yticks(np.arange(0,64, 2), fontsize=6)
         plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
         plt.clf()
