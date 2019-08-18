@@ -116,6 +116,7 @@ class Controller(object):
         self.xbar_utilization = []
         self.pe_state_for_plot = [[], []]
         self.cu_state_for_plot = [[], []]
+        self.xb_state_for_plot = [[], []]
         self.buffer_size = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
@@ -721,7 +722,6 @@ class Controller(object):
                         pe.pe_saa_trigger.remove(trigger)
                         
             ### Record State ###
-            ## PE
             for pe in self.PE_array:
                 if pe.check_state():
                     self.pe_state_for_plot[0].append(self.cycle_ctr)
@@ -729,8 +729,16 @@ class Controller(object):
                 for cu in pe.CU_array:
                     if cu.check_state():
                         self.cu_state_for_plot[0].append(self.cycle_ctr)
-                        self.cu_state_for_plot[1].append(self.PE_array.index(pe)*self.hardware_information.CU_num + \
+                        self.cu_state_for_plot[1].append(self.PE_array.index(pe) * self.hardware_information.CU_num + \
                                                         pe.CU_array.index(cu))
+                    
+                    for xb in cu.XB_array:
+                        if xb.check_state():
+                            self.xb_state_for_plot[0].append(self.cycle_ctr)
+                            self.xb_state_for_plot[1].append( \
+                                self.PE_array.index(pe) * self.hardware_information.CU_num + \
+                                pe.CU_array.index(cu) * self.hardware_information.Xbar_num + cu.XB_array.index(xb)
+                                )
             ### Reset ###
             for pe in self.PE_array:
                 pe.reset()
@@ -947,22 +955,37 @@ class Controller(object):
         plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
         plt.clf()
+
+        ### XB usage
+        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.xb_state_for_plot[0]), fre):
+                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
+
+        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=1, c='blue')
+        plt.title(self.mapping_str+", "+pipe_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('XB number')
+        plt.yticks(np.arange(0,64, 2), fontsize=6)
+        plt.xticks(np.arange(0,250, 20), fontsize=8)
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png')
+        plt.clf()
         
 
         ### Xbar usage
-        with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, fre):
-                writer.writerow([row+1, self.xbar_utilization[row]])
+        # with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for row in range(0, self.cycle_ctr, fre):
+        #         writer.writerow([row+1, self.xbar_utilization[row]])
         
-        plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
-        plt.title(self.mapping_str+", "+pipe_str)
-        #plt.show()
-        plt.ylabel('Xbar number')
-        plt.xlabel('Cycle')
-        plt.ylim([0, 10]) #
-        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png') 
-        plt.clf()
+        # plt.bar(range(1, self.cycle_ctr+1), self.xbar_utilization)
+        # plt.title(self.mapping_str+", "+pipe_str)
+        # #plt.show()
+        # plt.ylabel('Xbar number')
+        # plt.xlabel('Cycle')
+        # plt.ylim([0, 10]) #
+        # plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png') 
+        # plt.clf()
 
 
 
