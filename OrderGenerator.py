@@ -266,9 +266,10 @@ class OrderGenerator(object):
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
                 windowlen_w = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1 # stride = 1
                 windowlen_h = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1 # stride = 1
-                for window_h in range(windowlen_h):
-                    for window_w in range(windowlen_w):
-                        for nfilter in range(self.model_info.filter_n[nlayer]):
+
+                for nfilter in range(self.model_info.filter_n[nlayer]):
+                    for window_h in range(windowlen_h):
+                        for window_w in range(windowlen_w):
 
                             num_input = window_h * windowlen_w + window_w
                             
@@ -352,8 +353,9 @@ class OrderGenerator(object):
                                         self.feature_mat[nlayer][window_h][window_w][nfilter] = []
                                     self.feature_mat[nlayer][window_h][window_w][nfilter].append(edram_wr_event_idx)
                                 else:
-                                    edram_wr_inputs  = [[nfilter, 0, 0]]
-                                    edram_wr_outputs = [[nfilter, 0, 0]]
+                                    seq = window_w + window_h * windowlen_w + nfilter * windowlen_w * windowlen_h
+                                    edram_wr_inputs  = [[seq, 0, 0]]
+                                    edram_wr_outputs = [[seq, 0, 0]]
                                     if self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                         self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
                                     self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
