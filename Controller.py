@@ -250,33 +250,33 @@ class Controller(object):
                 FE.cycles_counter += 1
                 #print(FE.cycles_counter, end=' ')
                 if FE.cycles_counter == FE.fetch_cycle:
-                    # o src  = (0, FE.event.position_idx[1], -1, -1)
-                    # o des  = FE.event.position_idx[0:4]
+                    src  = (0, FE.event.position_idx[1], -1, -1) # o
+                    des  = FE.event.position_idx[0:4] # o
                     if FE.event.event_type == "edram_rd_ir":
-                        pe_idx = FE.index[0] # o 
-                        cu_idx = FE.index[1] # o 
-                        # o if not self.isPipeLine:
-                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
-                        # o FE.event.preceding_event_count += len(FE.event.inputs)
+                        # o pe_idx = FE.index[0] 
+                        # o cu_idx = FE.index[1] 
+                        if not self.isPipeLine: # o
+                            self.this_layer_event_ctr -= len(FE.event.inputs) # o
+                        FE.event.preceding_event_count += len(FE.event.inputs) # o 
                         for inp in FE.event.inputs:
                             data = inp[1:]
-                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
-                            # o pro_event_idx = self.Computation_order.index(FE.event)
-                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            # o self.interconnect.input_packet(packet)
-                        self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(FE.event) # o
+                            # o self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) 
+                            pro_event_idx = self.Computation_order.index(FE.event) # o 
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o 
+                            self.interconnect.input_packet(packet) # o 
+                        # o self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(FE.event)
 
                     elif FE.event.event_type == "edram_rd_pool":
-                        # o if not self.isPipeLine:
-                        # o     self.this_layer_event_ctr -= len(FE.event.inputs)
-                        # o FE.event.preceding_event_count += len(FE.event.inputs)
+                        if not self.isPipeLine: # o 
+                            self.this_layer_event_ctr -= len(FE.event.inputs) # o 
+                        FE.event.preceding_event_count += len(FE.event.inputs) # o 
 
                         for data in FE.event.inputs:
-                            self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) # o 
-                            # o pro_event_idx = self.Computation_order.index(FE.event)
-                            # o packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
-                            # o self.interconnect.input_packet(packet)
-                        self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event) # o 
+                            # o self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) 
+                            pro_event_idx = self.Computation_order.index(FE.event) # o 
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o 
+                            self.interconnect.input_packet(packet) # o 
+                        # o self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event)
                     self.fetch_array.remove(FE)
 
             ### Event: edram_rd_ir
@@ -929,7 +929,8 @@ class Controller(object):
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
+        plt.scatter(self.pe_state_for_plot[0][:100], self.pe_state_for_plot[1][:100], s=3, c='blue')
+        plt.scatter(self.pe_state_for_plot[0][100:], self.pe_state_for_plot[1][100:], s=3, c='green')
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
