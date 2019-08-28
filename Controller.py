@@ -139,7 +139,8 @@ class Controller(object):
             for e in self.Computation_order:
                 self.events_each_layer[e.nlayer] += 1
             self.this_layer_event_ctr = 0
-
+            self.this_layer_cycle_ctr = 0
+            self.cycles_each_layer = []
 
     def run(self):
         for e in self.Computation_order:
@@ -160,6 +161,7 @@ class Controller(object):
         while not isDone:
             self.cycle_energy = 0
             self.cycle_ctr += 1
+            self.this_layer_cycle_ctr += 1
             self.act_xb_ctr = 0
 
             if self.trace:
@@ -229,7 +231,7 @@ class Controller(object):
             for event in self.data_transfer_erp.copy():
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
-                            "data:", event.outputs)
+                            "pos:", event.position_idx, "data:", event.outputs)
                 self.data_transfer_erp.remove(event)
 
                 src = event.position_idx[0]
@@ -257,25 +259,25 @@ class Controller(object):
                         # o cu_idx = FE.index[1] 
                         if not self.isPipeLine: # o
                             self.this_layer_event_ctr -= len(FE.event.inputs) # o
-                        FE.event.preceding_event_count += len(FE.event.inputs) # o 
+                        FE.event.preceding_event_count += len(FE.event.inputs) # o
                         for inp in FE.event.inputs:
                             data = inp[1:]
                             # o self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) 
-                            pro_event_idx = self.Computation_order.index(FE.event) # o 
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o 
-                            self.interconnect.input_packet(packet) # o 
+                            pro_event_idx = self.Computation_order.index(FE.event) # o
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o
+                            self.interconnect.input_packet(packet) # o
                         # o self.PE_array[pe_idx].CU_array[cu_idx].edram_rd_ir_erp.append(FE.event)
 
                     elif FE.event.event_type == "edram_rd_pool":
-                        if not self.isPipeLine: # o 
-                            self.this_layer_event_ctr -= len(FE.event.inputs) # o 
-                        FE.event.preceding_event_count += len(FE.event.inputs) # o 
+                        if not self.isPipeLine: # o
+                            self.this_layer_event_ctr -= len(FE.event.inputs) # o
+                        FE.event.preceding_event_count += len(FE.event.inputs) # o
 
                         for data in FE.event.inputs:
-                            # o self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data]) 
-                            pro_event_idx = self.Computation_order.index(FE.event) # o 
-                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o 
-                            self.interconnect.input_packet(packet) # o 
+                            # o self.PE_array[pe_idx].edram_buffer.put([FE.event.nlayer, data])
+                            pro_event_idx = self.Computation_order.index(FE.event) # o
+                            packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx) # o
+                            self.interconnect.input_packet(packet) # o
                         # o self.PE_array[pe_idx].edram_rd_pool_erp.insert(0, FE.event)
                     self.fetch_array.remove(FE)
 
@@ -804,7 +806,9 @@ class Controller(object):
                 if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
                     #print("pipeline_layer_stage finished:", self.pipeline_layer_stage)
                     self.pipeline_layer_stage += 1
+                    self.cycles_each_layer.append(self.this_layer_cycle_ctr)
                     self.this_layer_event_ctr = 0
+                    self.this_layer_cycle_ctr = 0
 
             # Buffer size utilization #
             for pe_idx in range(len(self.PE_array)):
@@ -822,6 +826,7 @@ class Controller(object):
 
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
+        print("Cycles each layer:", self.cycles_each_layer)
         print("Cycles time:", self.cycle_time, "ns\n")
         
         print('memory accesss times:', self.mem_acc_ctr)
@@ -929,8 +934,7 @@ class Controller(object):
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
-        plt.scatter(self.pe_state_for_plot[0][:100], self.pe_state_for_plot[1][:100], s=3, c='blue')
-        plt.scatter(self.pe_state_for_plot[0][100:], self.pe_state_for_plot[1][100:], s=3, c='green')
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('PE number')
