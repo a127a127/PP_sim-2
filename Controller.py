@@ -30,26 +30,7 @@ class Controller(object):
         self.hardware_information = HardwareMetaData()
         self.hd_info = HardwareMetaData()
 
-        # Energy
-        self.edram_rd_ir_energy = self.hardware_information.edram_rd_ir_energy
-        self.edram_rd_pool_energy = self.hardware_information.edram_rd_pool_energy
-        self.ou_operation_energy = self.hardware_information.ou_operation_energy
-        self.pe_saa_energy = self.hardware_information.pe_saa_energy
-        self.cu_saa_energy = self.hardware_information.cu_saa_energy
-        self.activation_energy = self.hardware_information.activation_energy
-        self.pooling_energy = self.hardware_information.pooling_energy
-        self.edram_wr_energy = self.hardware_information.edram_wr_energy
-        self.router_energy = self.hardware_information.router_energy
-
-        self.pe_or_energy = self.hardware_information.pe_or_energy
-        self.cu_ir_energy = self.hardware_information.cu_ir_energy
-        self.cu_or_energy = self.hardware_information.cu_or_energy
-
-        self.dac_energy = self.hardware_information.dac_energy
-        self.xb_energy = self.hardware_information.xb_energy
-        self.sa_energy = self.hardware_information.sa_energy
-
-        ### energy consumption
+        # Energ
         self.edram_rd_ir_energy_total = 0
         self.edram_rd_pool_energy_total = 0
         self.ou_operation_energy_total = 0
@@ -74,7 +55,6 @@ class Controller(object):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
                         pe = PE(pe_pos, self.input_bit)
                         self.PE_array.append(pe)
-        #print(self.PE_array[0].CU_array[0].XB_array[0])
 
         ### Statistics
         self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -83,7 +63,7 @@ class Controller(object):
         self.act_xb_ctr = 0
         self.pe_saa_stall_cycle = 0
         
-        ## utilization
+        # Utilization
         self.energy_utilization = []
         self.xbar_utilization = []
         self.pe_state_for_plot = [[], []]
@@ -291,8 +271,8 @@ class Controller(object):
                                 if not self.isPipeLine:
                                     self.this_layer_event_ctr += 1
                                 
-                                self.edram_rd_ir_energy_total += self.edram_rd_ir_energy
-                                self.cycle_energy += self.edram_rd_ir_energy
+                                self.edram_rd_ir_energy_total += self.hd_info.edram_rd_ir_energy
+                                self.cycle_energy += self.hd_info.edram_rd_ir_energy
 
                                 cu.state = True
                                 cu.state_edram_rd_ir = True
@@ -330,13 +310,13 @@ class Controller(object):
                                     if not self.isPipeLine:
                                         self.this_layer_event_ctr += 1
 
-                                    self.ou_operation_energy_total += self.ou_operation_energy
-                                    self.cu_ir_energy_total += self.cu_ir_energy
-                                    self.cu_or_energy_total += self.cu_or_energy
+                                    self.ou_operation_energy_total += self.hd_info.ou_operation_energy
+                                    self.cu_ir_energy_total += self.hd_info.cu_ir_energy
+                                    self.cu_or_energy_total += self.hd_info.cu_or_energy
 
-                                    self.cycle_energy += self.ou_operation_energy
-                                    self.cycle_energy += self.cu_ir_energy
-                                    self.cycle_energy += self.cu_or_energy
+                                    self.cycle_energy += self.hd_info.ou_operation_energy
+                                    self.cycle_energy += self.hd_info.cu_ir_energy
+                                    self.cycle_energy += self.hd_info.cu_or_energy
 
                                     self.act_xb_ctr += 1
 
@@ -375,10 +355,10 @@ class Controller(object):
                             need_saa += 1
                             for idx in range(len(cu.state_cu_saa)):
                                 if not cu.state_cu_saa[idx]:
-                                    self.cu_saa_energy_total += self.cu_saa_energy
-                                    self.cu_or_energy_total += self.cu_or_energy
-                                    self.cycle_energy += self.cu_saa_energy
-                                    self.cycle_energy += self.cu_or_energy
+                                    self.cu_saa_energy_total += self.hd_info.cu_saa_energy
+                                    self.cu_or_energy_total += self.hd_info.cu_or_energy
+                                    self.cycle_energy += self.hd_info.cu_saa_energy
+                                    self.cycle_energy += self.hd_info.cu_or_energy
 
                                     cu.state_cu_saa[idx] = True
                                     break
@@ -417,10 +397,10 @@ class Controller(object):
                         need_saa += 1
                         for idx in range(len(pe.state_pe_saa)):
                             if not pe.state_pe_saa[idx]:
-                                self.pe_saa_energy_total += self.pe_saa_energy
-                                self.pe_or_energy_total += self.pe_or_energy
-                                self.cycle_energy += self.pe_saa_energy
-                                self.cycle_energy += self.pe_or_energy
+                                self.pe_saa_energy_total += self.hd_info.pe_saa_energy
+                                self.pe_or_energy_total += self.hd_info.pe_or_energy
+                                self.cycle_energy += self.hd_info.pe_saa_energy
+                                self.cycle_energy += self.hd_info.pe_or_energy
 
                                 pe.state_pe_saa[idx] = True
                                 break
@@ -449,8 +429,8 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
-                            self.activation_energy_total += self.activation_energy
-                            self.cycle_energy += self.activation_energy
+                            self.activation_energy_total += self.hd_info.activation_energy
+                            self.cycle_energy += self.hd_info.activation_energy
                             
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
@@ -478,8 +458,8 @@ class Controller(object):
                             if not self.isPipeLine:    
                                 self.this_layer_event_ctr += 1
 
-                            self.edram_wr_energy_total += self.edram_wr_energy
-                            self.cycle_energy += self.edram_wr_energy
+                            self.edram_wr_energy_total += self.hd_info.edram_wr_energy
+                            self.cycle_energy += self.hd_info.edram_wr_energy
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
@@ -536,8 +516,8 @@ class Controller(object):
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
 
-                        self.edram_rd_pool_energy_total += self.edram_rd_pool_energy
-                        self.cycle_energy += self.edram_rd_pool_energy
+                        self.edram_rd_pool_energy_total += self.hd_info.edram_rd_pool_energy
+                        self.cycle_energy += self.hd_info.edram_rd_pool_energy
                         
                         pe.state_edram_rd_pool = True
                         pe.edram_rd_pool_erp.remove(event)
@@ -564,8 +544,8 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
-                            self.pooling_energy_total += self.pooling_energy
-                            self.cycle_energy += self.pooling_energy
+                            self.pooling_energy_total += self.hd_info.pooling_energy
+                            self.cycle_energy += self.hd_info.pooling_energy
                             
                             pe.state_pooling[idx] = True
                             pe.pooling_erp.remove(event)
@@ -811,9 +791,9 @@ class Controller(object):
         self.edram_energy_total = self.edram_rd_energy_total + self.edram_wr_energy_total
         
 
-        self.dac_energy_total = self.dac_energy/self.ou_operation_energy * self.ou_operation_energy_total
-        self.xb_energy_total = self.xb_energy/self.ou_operation_energy * self.ou_operation_energy_total
-        self.sa_energy_total = self.sa_energy/self.ou_operation_energy * self.ou_operation_energy_total
+        self.dac_energy_total = self.hd_info.dac_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
+        self.xb_energy_total = self.hd_info.xb_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
+        self.sa_energy_total = self.hd_info.sa_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
 
         self.cu_energy_total = self.ou_operation_energy_total + self.cu_ir_energy_total + self.cu_or_energy_total + self.cu_saa_energy_total
         self.pe_energy_total = self.cu_energy_total + self.edram_energy_total +  + self.pe_saa_energy_total + \
