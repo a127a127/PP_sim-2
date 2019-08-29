@@ -21,9 +21,10 @@ class HardwareMetaData(object):
         self.Xbar_w = int(cfg['general']['Xbar_w'])
         self.OU_h = int(cfg['general']['OU_h'])
         self.OU_w = int(cfg['general']['OU_w'])
-        self.ADC_frequency = float(cfg['general']['ADC_frequency'])
+        
+        self.Frequency = float(cfg['general']['Frequency'])
         self.ADC_resolution = float(cfg['general']['ADC_resolution'])
-        self.cycle_time = 1 / self.ADC_frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
+        self.cycle_time = 1 / self.Frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
 
         self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
         self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
@@ -75,7 +76,8 @@ class HardwareMetaData(object):
         self.mux_energy = float(cfg['dynamic_energy']['mux_energy'])
         self.sa_energy = float(cfg['dynamic_energy']['sa_energy'])
         self.sa_energy += self.mux_energy
-       
+
+        self.Fetch_cycle = 1
     def __str__(self):
         return str(self.__dict__)
 

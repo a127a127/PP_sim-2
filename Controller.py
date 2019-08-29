@@ -2,7 +2,7 @@ import os
 import csv
 from PE import PE
 import numpy as np
-from math import ceil
+from math import ceil, floor
 from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
 from HardwareMetaData import HardwareMetaData
@@ -25,26 +25,11 @@ class Controller(object):
 
         self.cycle_ctr = 0
         self.cycle_energy = 0
-        self.cycle_time = 100 # ns
 
         ### Hardware
         self.hardware_information = HardwareMetaData()
-        self.eDRAM_buffer_size = self.hardware_information.eDRAM_buffer_size
-        # Leakage
-        self.eDRAM_buffer_leakage = self.hardware_information.eDRAM_buffer_leakage
-        self.Router_leakage = self.hardware_information.Router_leakage
-        self.SA_leakage = self.hardware_information.SA_leakage
-        self.Act_leakage = self.hardware_information.Act_leakage
-        self.PE_SAA_leakage = self.hardware_information.PE_SAA_leakage
-        self.Pool_leakage = self.hardware_information.Pool_leakage
-        self.DAC_leakage = self.hardware_information.DAC_leakage
-        self.MUX_leakage = self.hardware_information.MUX_leakage
-        self.SA_leakage = self.hardware_information.SA_leakage
-        self.Crossbar_leakage = self.hardware_information.Crossbar_leakage
-        self.CU_SAA_leakage = self.hardware_information.CU_SAA_leakage
-        self.total_leakage = self.eDRAM_buffer_leakage + self.Router_leakage + self.SA_leakage + \
-                                self.Act_leakage + self.PE_SAA_leakage + self.Pool_leakage + self.DAC_leakage+ \
-                                self.MUX_leakage + self.SA_leakage + self.Crossbar_leakage + self.CU_SAA_leakage
+        self.hd_info = HardwareMetaData()
+
         # Energy
         self.edram_rd_ir_energy = self.hardware_information.edram_rd_ir_energy
         self.edram_rd_pool_energy = self.hardware_information.edram_rd_pool_energy
@@ -64,19 +49,6 @@ class Controller(object):
         self.xb_energy = self.hardware_information.xb_energy
         self.sa_energy = self.hardware_information.sa_energy
 
-        self.RT_num_y = self.hardware_information.Router_num_y
-        self.RT_num_x = self.hardware_information.Router_num_x
-        self.PE_num_y = self.hardware_information.PE_num_y
-        self.PE_num_x = self.hardware_information.PE_num_x
-        self.PE_num = self.hardware_information.PE_num
-        self.CU_num_y = self.hardware_information.CU_num_y
-        self.CU_num_x = self.hardware_information.CU_num_x
-        self.CU_num = self.hardware_information.CU_num
-        self.XB_num_y = self.hardware_information.Xbar_num_y
-        self.XB_num_x = self.hardware_information.Xbar_num_x
-        self.XB_num = self.hardware_information.Xbar_num
-
-
         ### energy consumption
         self.edram_rd_ir_energy_total = 0
         self.edram_rd_pool_energy_total = 0
@@ -95,10 +67,10 @@ class Controller(object):
 
         self.input_bit = self.ordergenerator.model_info.input_bit
         self.PE_array = []
-        for rty_idx in range(self.RT_num_y):
-            for rtx_idx in range(self.RT_num_x):
-                for pey_idx in range(self.PE_num_y):
-                    for pex_idx in range(self.PE_num_x):
+        for rty_idx in range(self.hd_info.Router_num_y):
+            for rtx_idx in range(self.hd_info.Router_num_x):
+                for pey_idx in range(self.hd_info.PE_num_y):
+                    for pex_idx in range(self.hd_info.PE_num_x):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
                         pe = PE(pe_pos, self.input_bit)
                         self.PE_array.append(pe)
@@ -123,8 +95,9 @@ class Controller(object):
 
         self.fetch_array = []
 
-        self.interconnect = Interconnect(self.RT_num_y, self.RT_num_x)
-        self.interconnect_step = 120 #120 # TODO: tune
+        self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x)
+        self.interconnect_step = 32/self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
+        self.interconnect_step = floor(self.interconnect_step)
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         
@@ -148,8 +121,8 @@ class Controller(object):
                 if e.event_type == 'edram_rd_ir':
                     pos = e.position_idx
                     rty, rtx, pey, pex, cuy, cux = pos[0], pos[1], pos[2], pos[3], pos[4], pos[5]
-                    idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.RT_num_x * self.PE_num
-                    cu_idx = cux + cuy * self.CU_num_x
+                    idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.Router_num_x * self.hd_info.PE_num
+                    cu_idx = cux + cuy * self.hd_info.CU_num_x
                     self.PE_array[idx].CU_array[cu_idx].edram_rd_ir_erp.append(e)
                 else:
                     # error
@@ -182,7 +155,7 @@ class Controller(object):
                     self.this_layer_event_ctr += 1
                 rty, rtx = pk.destination[0], pk.destination[1]
                 pey, pex = pk.destination[2], pk.destination[3]
-                pe_idx = pex + pey * self.PE_num_x + rtx * self.PE_num + rty * self.PE_num * self.RT_num_x
+                pe_idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.PE_num * self.hd_info.Router_num_x
                 pe = self.PE_array[pe_idx]
                 
                 pro_event = self.Computation_order[pk.pro_event_idx]
@@ -196,7 +169,7 @@ class Controller(object):
                     # 2. trigger event
                     cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
 
-                    cu_idx = cux + cuy * self.CU_num_x
+                    cu_idx = cux + cuy * self.hd_info.CU_num_x
                     cu = pe.CU_array[cu_idx]
                     pro_event.current_number_of_preceding_event += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
@@ -336,8 +309,8 @@ class Controller(object):
                                             #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                         pos = pro_event.position_idx
                                         cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
-                                        cu_idx = cu_x + cu_y * self.CU_num_x
-                                        xb_idx = xb_x + xb_y * self.XB_num_x
+                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                        xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                         cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
                         else:
                             break
@@ -381,7 +354,7 @@ class Controller(object):
                                                 #print("\t\tProceeding event is triggered.", pro_event.event_type)
                                             pos = pro_event.position_idx
                                             cu_y, cu_x = pos[4], pos[5]
-                                            cu_idx = cu_x + cu_y * self.CU_num_x
+                                            cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                             xb.cu_saa_trigger.append([pro_event, [cu_idx]])
                                     break
 
@@ -524,7 +497,7 @@ class Controller(object):
                                     pos = pro_event.position_idx
                                     if pro_event.event_type == "edram_rd_ir":
                                         cu_y, cu_x = pos[4], pos[5]
-                                        cu_idx = cu_x + cu_y * self.CU_num_x
+                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                                     elif pro_event.event_type == "edram_rd_pool":
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
@@ -731,14 +704,14 @@ class Controller(object):
                 for cu in pe.CU_array:
                     if cu.check_state():
                         self.cu_state_for_plot[0].append(self.cycle_ctr)
-                        self.cu_state_for_plot[1].append(self.PE_array.index(pe) * self.hardware_information.CU_num + \
+                        self.cu_state_for_plot[1].append(self.PE_array.index(pe) * self.hd_info.CU_num + \
                                                         pe.CU_array.index(cu))
                     
                     for xb in cu.XB_array:
                         if xb.check_state():
                             self.xb_state_for_plot[0].append(self.cycle_ctr)
                             self.xb_state_for_plot[1].append( \
-                                self.PE_array.index(pe) * self.hardware_information.CU_num + \
+                                self.PE_array.index(pe) * self.hd_info.CU_num + \
                                 pe.CU_array.index(cu) * self.hardware_information.Xbar_num + cu.XB_array.index(xb)
                                 )
             ### Reset ###
@@ -827,26 +800,12 @@ class Controller(object):
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
         print("Cycles each layer:", self.cycles_each_layer)
-        print("Cycles time:", self.cycle_time, "ns\n")
+        print("Cycles time:", self.hardware_information.cycle_time, "ns\n")
         
         print('memory accesss times:', self.mem_acc_ctr)
         print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
         print("Avg buffer size:", self.avg_buffer_size)
         print()
-
-        print("Leakage:")
-        print("\tTotal:", self.total_leakage)
-        print("\teDRAM_buffer_leakage:", self.eDRAM_buffer_leakage)
-        print("\tRouter_leakage:", self.Router_leakage)
-        print("\tSA_leakage:", self.SA_leakage)
-        print("\tAct_leakage:", self.Act_leakage)
-        print("\tPE_SAA_leakage:", self.PE_SAA_leakage)
-        print("\tPool_leakage:", self.Pool_leakage)
-        print("\tDAC_leakage:", self.DAC_leakage)
-        print("\tMUX_leakage:", self.MUX_leakage)
-        print("\tSA_leakage:", self.SA_leakage)
-        print("\tCrossbar_leakage:", self.Crossbar_leakage)
-        print("\tCU_SAA_leakage:", self.CU_SAA_leakage)
 
         self.edram_rd_energy_total = self.edram_rd_ir_energy_total + self.edram_rd_pool_energy_total
         self.edram_energy_total = self.edram_rd_energy_total + self.edram_wr_energy_total
