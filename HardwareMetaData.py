@@ -3,7 +3,6 @@ from configparser import ConfigParser
 class HardwareMetaData(object):
     def __init__(self):
         cfg = ConfigParser()
-        #cfg.read('./configs/default_hw.ini')
         cfg.read('./configs/hardware.ini')
         
         self.Router_num_y = int(cfg['general']['Router_num_y'])
@@ -18,19 +17,17 @@ class HardwareMetaData(object):
         self.Xbar_num_y = int(cfg['general']['Xbar_num_y'])
         self.Xbar_num_x = int(cfg['general']['Xbar_num_x'])
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-
-        self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
-        #self.eDRAM_buffer_bank_num = int(cfg['general']['eDRAM_buffer_bank_num'])
-        #self.eDRAM_buffer_bus_width = int(cfg['general']['eDRAM_buffer_bus_width'])
-        
-        self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
-        
-
         self.Xbar_h = int(cfg['general']['Xbar_h'])
         self.Xbar_w = int(cfg['general']['Xbar_w'])
         self.OU_h = int(cfg['general']['OU_h'])
-        self.OU_w = int(cfg['general']['SA_num'])
+        self.OU_w = int(cfg['general']['OU_w'])
+        self.ADC_frequency = float(cfg['general']['ADC_frequency'])
+        self.ADC_resolution = float(cfg['general']['ADC_resolution'])
+        self.cycle_time = 1 / self.ADC_frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
 
+        self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
+        self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
+        
         self.eDRAM_buffer_rd_per_cycle = self.Xbar_h * self.Xbar_num
         self.CU_Shift_and_add_per_cycle = int(cfg['general']['CU_Shift_and_add_per_cycle'])
         self.PE_Shift_and_add_per_cycle = int(cfg['general']['PE_Shift_and_add_per_cycle'])
