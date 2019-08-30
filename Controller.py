@@ -79,9 +79,8 @@ class Controller(object):
         if not self.isPipeLine:
             self.pipeline_layer_stage = 0
             self.pipeline_stage_record = []
-            self.num_layer = len(self.ordergenerator.model_info.layer_list)
             self.events_each_layer = []
-            for layer in range(self.num_layer):
+            for layer in range(self.ordergenerator.model_info.layer_length):
                 self.events_each_layer.append(0)
             for e in self.Computation_order:
                 self.events_each_layer[e.nlayer] += 1
