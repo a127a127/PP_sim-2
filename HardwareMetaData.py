@@ -24,10 +24,14 @@ class HardwareMetaData(object):
         
         self.Frequency = float(cfg['general']['Frequency'])
         self.ADC_resolution = float(cfg['general']['ADC_resolution'])
+        self.Router_flit_size = float(cfg['general']['Router_flit_size'])
         self.cycle_time = 1 / self.Frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
+
 
         self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
         self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
+        self.CU_Input_Reg_size = int(cfg['general']['CU_Input_Reg_size'])
+        self.CU_Output_Reg_size = int(cfg['general']['CU_Output_Reg_size'])
         
         self.eDRAM_buffer_rd_per_cycle = self.Xbar_h * self.Xbar_num
         self.CU_Shift_and_add_per_cycle = int(cfg['general']['CU_Shift_and_add_per_cycle'])
@@ -35,21 +39,13 @@ class HardwareMetaData(object):
         self.Activation_per_cycle = int(cfg['general']['Activation_per_cycle'])
         self.Pooling_per_cycle = int(cfg['general']['Pooling_per_cycle'])
 
-        #self.bits_per_cell = int(cfg['general']['bits_per_cell'])
-        #self.DAC_resolution = int(cfg['general']['DAC_resolution'])
-        #self.SA_resolution = int(cfg['general']['SA_resolution'])
-
-        self.CU_Input_Reg_size = int(cfg['general']['CU_Input_Reg_size'])
-        self.CU_Output_Reg_size = int(cfg['general']['CU_Output_Reg_size'])
 
         # Leakage
         self.eDRAM_buffer_leakage = float(cfg['leakage']['eDRAM_buffer_leakage'])
         self.Router_leakage = float(cfg['leakage']['Router_leakage'])
-        self.SA_leakage = float(cfg['leakage']['SA_leakage'])
         self.Act_leakage = float(cfg['leakage']['Act_leakage'])
         self.PE_SAA_leakage = float(cfg['leakage']['PE_SAA_leakage'])
         self.Pool_leakage = float(cfg['leakage']['Pool_leakage'])
-
         self.DAC_leakage = float(cfg['leakage']['DAC_leakage'])
         self.MUX_leakage = float(cfg['leakage']['MUX_leakage'])
         self.SA_leakage = float(cfg['leakage']['SA_leakage'])
@@ -58,24 +54,21 @@ class HardwareMetaData(object):
 
         # Dynamic Energy
         self.edram_rd_ir_energy = float(cfg['dynamic_energy']['edram_rd_ir_energy'])
-        self.edram_rd_pool_energy = float(cfg['dynamic_energy']['edram_rd_pool_energy'])
         self.ou_operation_energy = float(cfg['dynamic_energy']['ou_operation_energy'])
-        self.pe_saa_energy = float(cfg['dynamic_energy']['pe_saa_energy'])
         self.cu_saa_energy = float(cfg['dynamic_energy']['cu_saa_energy'])
+        self.pe_saa_energy = float(cfg['dynamic_energy']['pe_saa_energy'])
         self.activation_energy = float(cfg['dynamic_energy']['activation_energy'])
-        self.pooling_energy = float(cfg['dynamic_energy']['pooling_energy'])
         self.edram_wr_energy = float(cfg['dynamic_energy']['edram_wr_energy'])
+        self.edram_rd_pool_energy = float(cfg['dynamic_energy']['edram_rd_pool_energy'])
+        self.pooling_energy = float(cfg['dynamic_energy']['pooling_energy'])
         self.router_energy = float(cfg['dynamic_energy']['router_energy'])
-
         self.pe_or_energy = float(cfg['dynamic_energy']['pe_or_energy'])
         self.cu_ir_energy = float(cfg['dynamic_energy']['cu_ir_energy'])
         self.cu_or_energy = float(cfg['dynamic_energy']['cu_or_energy'])
-        
         self.dac_energy = float(cfg['dynamic_energy']['dac_energy'])
         self.xb_energy = float(cfg['dynamic_energy']['xb_energy'])
-        self.mux_energy = float(cfg['dynamic_energy']['mux_energy'])
-        self.sa_energy = float(cfg['dynamic_energy']['sa_energy'])
-        self.sa_energy += self.mux_energy
+        self.adc_energy = float(cfg['dynamic_energy']['adc_energy'])
+
 
         self.Fetch_cycle = 1
     def __str__(self):
