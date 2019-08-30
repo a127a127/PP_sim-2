@@ -68,9 +68,8 @@ class Controller(object):
             self.buffer_size.append([])
 
         self.fetch_array = []
-
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x)
-        self.interconnect_step = 32/self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
+        self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
         self.interconnect_step = floor(self.interconnect_step)
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
@@ -766,7 +765,7 @@ class Controller(object):
 
         self.dac_energy_total = self.hd_info.dac_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
         self.xb_energy_total = self.hd_info.xb_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
-        self.sa_energy_total = self.hd_info.sa_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
+        self.adc_energy_total = self.hd_info.adc_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
 
         self.cu_energy_total = self.ou_operation_energy_total + self.cu_ir_energy_total + self.cu_or_energy_total + self.cu_saa_energy_total
         self.pe_energy_total = self.cu_energy_total + self.edram_energy_total +  + self.pe_saa_energy_total + \
@@ -791,7 +790,7 @@ class Controller(object):
         print("\tCU level")
         print("\t\tDAC: %.4e (%.2f%%)" %(self.dac_energy_total, self.dac_energy_total/self.cu_energy_total*100))
         print("\t\tCrossbar: %.4e (%.2f%%)" %(self.xb_energy_total, self.xb_energy_total/self.cu_energy_total*100))
-        print("\t\tSA: %.4e (%.2f%%)" %(self.sa_energy_total, self.sa_energy_total/self.cu_energy_total*100))
+        print("\t\tSA: %.4e (%.2f%%)" %(self.adc_energy_total, self.adc_energy_total/self.cu_energy_total*100))
         print("\t\tShift Add: %.4e (%.2f%%)" %(self.cu_saa_energy_total, self.cu_saa_energy_total/self.cu_energy_total*100))
         print("\t\tIR: %.4e (%.2f%%)" %(self.cu_ir_energy_total, self.cu_ir_energy_total/self.cu_energy_total*100))
         print("\t\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
