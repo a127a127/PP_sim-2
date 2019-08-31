@@ -2,75 +2,77 @@ from configparser import ConfigParser
 
 class HardwareMetaData(object):
     def __init__(self):
+        # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
+
         cfg = ConfigParser()
         cfg.read('./configs/hardware.ini')
         
-        self.Router_num_y = int(cfg['general']['Router_num_y'])
-        self.Router_num_x = int(cfg['general']['Router_num_x'])
+        self.Router_num_y = 2
+        self.Router_num_x = 2
         self.Router_num = self.Router_num_y * self.Router_num_x
-        self.PE_num_y = int(cfg['general']['PE_num_y'])
-        self.PE_num_x = int(cfg['general']['PE_num_x'])
+        self.PE_num_y = 2
+        self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num_y = int(cfg['general']['CU_num_y'])
-        self.CU_num_x = int(cfg['general']['CU_num_x'])
+        self.CU_num_y = 2
+        self.CU_num_x = 2
         self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = int(cfg['general']['Xbar_num_y'])
-        self.Xbar_num_x = int(cfg['general']['Xbar_num_x'])
+        self.Xbar_num_y = 2
+        self.Xbar_num_x = 2
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = int(cfg['general']['Xbar_h'])
-        self.Xbar_w = int(cfg['general']['Xbar_w'])
-        self.OU_h = int(cfg['general']['OU_h'])
-        self.OU_w = int(cfg['general']['OU_w'])
+        self.Xbar_h = 10
+        self.Xbar_w = 10
+        self.OU_h = 5
+        self.OU_w = 5
         
-        self.Frequency = float(cfg['general']['Frequency'])
-        self.ADC_resolution = float(cfg['general']['ADC_resolution'])
-        self.Router_flit_size = float(cfg['general']['Router_flit_size'])
+        self.Frequency = 1.2 # Ghz
+        self.ADC_resolution = 3 # bits
+        self.Router_flit_size = 32 # bits
         self.cycle_time = 1 / self.Frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
 
 
-        self.eDRAM_buffer_size = float(cfg['general']['eDRAM_buffer_size'])
-        self.Output_Reg_size = int(cfg['general']['Output_Reg_size'])
-        self.CU_Input_Reg_size = int(cfg['general']['CU_Input_Reg_size'])
-        self.CU_Output_Reg_size = int(cfg['general']['CU_Output_Reg_size'])
+        self.eDRAM_buffer_size = 1.6 # nKB
+        self.Output_Reg_size = 3 # nKB
+        self.CU_Input_Reg_size = 2 # nKB
+        self.CU_Output_Reg_size = 256 # nKB
         
         self.eDRAM_buffer_rd_per_cycle = self.Xbar_h * self.Xbar_num
-        self.CU_Shift_and_add_per_cycle = int(cfg['general']['CU_Shift_and_add_per_cycle'])
-        self.PE_Shift_and_add_per_cycle = int(cfg['general']['PE_Shift_and_add_per_cycle'])
-        self.Activation_per_cycle = int(cfg['general']['Activation_per_cycle'])
-        self.Pooling_per_cycle = int(cfg['general']['Pooling_per_cycle'])
+        self.CU_Shift_and_add_per_cycle = 4
+        self.PE_Shift_and_add_per_cycle = 4
+        self.Activation_per_cycle = 100
+        self.Pooling_per_cycle = 100
 
 
         # Leakage
-        self.eDRAM_buffer_leakage = float(cfg['leakage']['eDRAM_buffer_leakage'])
-        self.Router_leakage = float(cfg['leakage']['Router_leakage'])
-        self.Act_leakage = float(cfg['leakage']['Act_leakage'])
-        self.PE_SAA_leakage = float(cfg['leakage']['PE_SAA_leakage'])
-        self.Pool_leakage = float(cfg['leakage']['Pool_leakage'])
-        self.DAC_leakage = float(cfg['leakage']['DAC_leakage'])
-        self.MUX_leakage = float(cfg['leakage']['MUX_leakage'])
-        self.SA_leakage = float(cfg['leakage']['SA_leakage'])
-        self.Crossbar_leakage = float(cfg['leakage']['Crossbar_leakage'])
-        self.CU_SAA_leakage = float(cfg['leakage']['CU_SAA_leakage'])
+        self.eDRAM_buffer_leakage = 0
+        self.Router_leakage = 0
+        self.Act_leakage = 0
+        self.PE_SAA_leakage = 0
+        self.Pool_leakage = 0
+        self.DAC_leakage = 0
+        self.MUX_leakage = 0
+        self.SA_leakage = 0
+        self.Crossbar_leakage = 0
+        self.CU_SAA_leakage = 0
 
-        # Dynamic Energy
-        self.edram_rd_ir_energy = float(cfg['dynamic_energy']['edram_rd_ir_energy'])
-        self.ou_operation_energy = float(cfg['dynamic_energy']['ou_operation_energy'])
-        self.cu_saa_energy = float(cfg['dynamic_energy']['cu_saa_energy'])
-        self.pe_saa_energy = float(cfg['dynamic_energy']['pe_saa_energy'])
-        self.activation_energy = float(cfg['dynamic_energy']['activation_energy'])
-        self.edram_wr_energy = float(cfg['dynamic_energy']['edram_wr_energy'])
-        self.edram_rd_pool_energy = float(cfg['dynamic_energy']['edram_rd_pool_energy'])
-        self.pooling_energy = float(cfg['dynamic_energy']['pooling_energy'])
-        self.router_energy = float(cfg['dynamic_energy']['router_energy'])
-        self.pe_or_energy = float(cfg['dynamic_energy']['pe_or_energy'])
-        self.cu_ir_energy = float(cfg['dynamic_energy']['cu_ir_energy'])
-        self.cu_or_energy = float(cfg['dynamic_energy']['cu_or_energy'])
-        self.dac_energy = float(cfg['dynamic_energy']['dac_energy'])
-        self.xb_energy = float(cfg['dynamic_energy']['xb_energy'])
-        self.adc_energy = float(cfg['dynamic_energy']['adc_energy'])
+        # Dynamic Energy (nJ)
+        self.Energy_edram_buffer = 20.7 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_bus = 7 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_router = 42 * 0.01 / 32 / 1.2 # per bit
+        self.Energy_activation = 0.26 * 0.01 / 1.2 # per data doing acivation function
+        self.Energy_shift_and_add = 0.05 * 0.01 / 2 / 1.2 # per data doing shift and add
+        self.Energy_pooling = 0.4 * 0.01 / 1.2 # nxn data doing pooling
+        self.Energy_or = 1.68 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_adc = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
+                          (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1)) \
+                          # per ou 
+        self.Energy_dac = 4 * 0.01 / 1.2 / 8 * self.OU_h / 128 # per ou
+        self.Energy_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128)) # per ou
+        self.Energy_ir_in_cu = 1.24 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_or_in_cu = 0.23 * 0.01 / 1.2 / 256 # per bit
 
-
+        # Off chip fetch
         self.Fetch_cycle = 1
+
     def __str__(self):
         return str(self.__dict__)
 

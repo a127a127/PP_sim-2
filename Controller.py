@@ -25,20 +25,22 @@ class Controller(object):
 
         self.cycle_ctr = 0
 
-        # Energ
-        self.cycle_energy = 0
-        self.edram_rd_ir_energy_total = 0
-        self.edram_rd_pool_energy_total = 0
-        self.ou_operation_energy_total = 0
-        self.pe_saa_energy_total = 0
-        self.cu_saa_energy_total = 0
-        self.activation_energy_total = 0
-        self.pooling_energy_total = 0
-        self.edram_wr_energy_total = 0
-        self.interconnect_energy_total = 0
-        self.pe_or_energy_total = 0
-        self.cu_ir_energy_total = 0
-        self.cu_or_energy_total = 0
+        # Energy
+        self.Total_energy_cycle = 0
+        self.Total_energy_edram_buffer = 0
+        self.Total_energy_bus = 0
+        self.Total_energy_router = 0
+        self.Total_energy_activation = 0
+        self.Total_energy_pe_shift_and_add = 0
+        self.Total_energy_cu_shift_and_add = 0
+        self.Total_energy_pooling = 0
+        self.Total_energy_or = 0
+        self.Total_energy_adc = 0
+        self.Total_energy_dac = 0
+        self.Total_energy_crossbar = 0
+        self.Total_energy_ir_in_cu = 0
+        self.Total_energy_or_in_cu = 0
+        self.Total_energy_interconnect = 0
 
         self.input_bit = self.ordergenerator.model_info.input_bit
         self.PE_array = []
@@ -71,6 +73,7 @@ class Controller(object):
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x)
         self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
         self.interconnect_step = floor(self.interconnect_step)
+        self.interconnect_step = 4000
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         
@@ -103,7 +106,7 @@ class Controller(object):
 
         isDone = False
         while not isDone:
-            self.cycle_energy = 0
+            self.Total_energy_cycle = 0
             self.cycle_ctr += 1
             self.this_layer_cycle_ctr += 1
             self.act_xb_ctr = 0
@@ -114,9 +117,9 @@ class Controller(object):
             ### Interconnect 
             for s in range(self.interconnect_step):
                 self.interconnect.step()
-                self.interconnect_energy_total += self.interconnect.step_energy_consumption
+                self.Total_energy_interconnect += self.interconnect.step_energy_consumption
 
-            # Store data, trigger event
+            # Packets arrive: Store data, trigger event
             arrived_packet = self.interconnect.get_arrived_packet()
             for pk in arrived_packet:
                 if self.trace:
@@ -167,6 +170,7 @@ class Controller(object):
                         if self.trace:
                             pass
                             #print("\t\tProceeding event is triggered.", pro_event.event_type)
+                        
                         pe.pe_saa_trigger.append([pro_event, []])
 
             # Event: data_transfer
@@ -205,7 +209,7 @@ class Controller(object):
                             self.interconnect.input_packet(packet)
 
                     elif FE.event.event_type == "edram_rd_pool":
-                        if not self.isPipeLine: # o
+                        if not self.isPipeLine:
                             self.this_layer_event_ctr -= len(FE.event.inputs)
                         FE.event.preceding_event_count += len(FE.event.inputs)
 
@@ -250,9 +254,10 @@ class Controller(object):
                                     print("\t\tread data:", event.inputs)
                                 if not self.isPipeLine:
                                     self.this_layer_event_ctr += 1
-                                
-                                self.edram_rd_ir_energy_total += self.hd_info.edram_rd_ir_energy
-                                self.cycle_energy += self.hd_info.edram_rd_ir_energy
+
+                                num_data = len(event.outputs)
+                                self.Total_energy_edram_buffer += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * num_data
+                                self.Total_energy_cycle += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * num_data
 
                                 cu.state = True
                                 cu.state_edram_rd_ir = True
@@ -288,14 +293,18 @@ class Controller(object):
                                     
                                     if not self.isPipeLine:
                                         self.this_layer_event_ctr += 1
+                                    
+                                    self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
+                                    self.Total_energy_dac += self.hd_info.Energy_dac
+                                    self.Total_energy_crossbar += self.hd_info.Energy_crossbar
+                                    self.Total_energy_adc += self.hd_info.Energy_adc
+                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit * self.hd_info.OU_w
 
-                                    self.ou_operation_energy_total += self.hd_info.ou_operation_energy
-                                    self.cu_ir_energy_total += self.hd_info.cu_ir_energy
-                                    self.cu_or_energy_total += self.hd_info.cu_or_energy
-
-                                    self.cycle_energy += self.hd_info.ou_operation_energy
-                                    self.cycle_energy += self.hd_info.cu_ir_energy
-                                    self.cycle_energy += self.hd_info.cu_or_energy
+                                    self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
+                                                                self.hd_info.Energy_dac + \
+                                                                self.hd_info.Energy_crossbar + \
+                                                                self.hd_info.Energy_adc + \
+                                                                self.hd_info.Energy_or_in_cu * self.input_bit * self.hd_info.OU_w
 
                                     self.act_xb_ctr += 1
 
@@ -334,10 +343,11 @@ class Controller(object):
                             need_saa += 1
                             for idx in range(len(cu.state_cu_saa)):
                                 if not cu.state_cu_saa[idx]:
-                                    self.cu_saa_energy_total += self.hd_info.cu_saa_energy
-                                    self.cu_or_energy_total += self.hd_info.cu_or_energy
-                                    self.cycle_energy += self.hd_info.cu_saa_energy
-                                    self.cycle_energy += self.hd_info.cu_or_energy
+                                    self.Total_energy_cu_shift_and_add += self.hd_info.Energy_shift_and_add
+                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit
+
+                                    self.Total_energy_cycle += self.hd_info.Energy_shift_and_add + \
+                                                                self.hd_info.Energy_or_in_cu * self.input_bit
 
                                     cu.state_cu_saa[idx] = True
                                     break
@@ -364,8 +374,8 @@ class Controller(object):
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
                     if self.trace:
-                        pass
-                        #print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        #pass
+                        print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
@@ -376,11 +386,11 @@ class Controller(object):
                         need_saa += 1
                         for idx in range(len(pe.state_pe_saa)):
                             if not pe.state_pe_saa[idx]:
-                                self.pe_saa_energy_total += self.hd_info.pe_saa_energy
-                                self.pe_or_energy_total += self.hd_info.pe_or_energy
-                                self.cycle_energy += self.hd_info.pe_saa_energy
-                                self.cycle_energy += self.hd_info.pe_or_energy
+                                self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
+                                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
 
+                                self.Total_energy_cycle += self.hd_info.Energy_shift_and_add + \
+                                                            self.hd_info.Energy_or * self.input_bit
                                 pe.state_pe_saa[idx] = True
                                 break
                         if need_saa > len(pe.state_pe_saa):
@@ -408,8 +418,8 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
-                            self.activation_energy_total += self.hd_info.activation_energy
-                            self.cycle_energy += self.hd_info.activation_energy
+                            self.Total_energy_activation += self.hd_info.Energy_activation
+                            self.Total_energy_cycle += self.hd_info.Energy_activation
                             
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
@@ -437,8 +447,14 @@ class Controller(object):
                             if not self.isPipeLine:    
                                 self.this_layer_event_ctr += 1
 
-                            self.edram_wr_energy_total += self.hd_info.edram_wr_energy
-                            self.cycle_energy += self.hd_info.edram_wr_energy
+                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
+                            self.Total_energy_bus += self.hd_info.Energy_bus
+                            self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                            
+                            self.Total_energy_cycle += self.hd_info.Energy_or * self.input_bit + \
+                                                        self.hd_info.Energy_bus + \
+                                                        self.hd_info.Energy_edram_buffer * self.input_bit
+
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
 
@@ -493,9 +509,11 @@ class Controller(object):
                             print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
-
-                        self.edram_rd_pool_energy_total += self.hd_info.edram_rd_pool_energy
-                        self.cycle_energy += self.hd_info.edram_rd_pool_energy
+                        num_data = len(event.outputs)
+                        self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
+                        self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * num_data
+                        self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit * num_data + \
+                                                    self.hd_info.Energy_bus * self.input_bit * num_data
                         
                         pe.state_edram_rd_pool = True
                         pe.edram_rd_pool_erp.remove(event)
@@ -522,8 +540,8 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
-                            self.pooling_energy_total += self.hd_info.pooling_energy
-                            self.cycle_energy += self.hd_info.pooling_energy
+                            self.Total_energy_pooling += self.hd_info.Energy_pooling
+                            self.Total_energy_cycle += self.hd_info.Energy_pooling
                             
                             pe.state_pooling[idx] = True
                             pe.pooling_erp.remove(event)
@@ -539,6 +557,15 @@ class Controller(object):
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
+
+            ### Pipeline stage control ###
+            if not self.isPipeLine:
+                self.pipeline_stage_record.append(self.pipeline_layer_stage)
+                if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
+                    self.pipeline_layer_stage += 1
+                    self.cycles_each_layer.append(self.this_layer_cycle_ctr)
+                    self.this_layer_event_ctr = 0
+                    self.this_layer_cycle_ctr = 0
 
             ### Trigger events ###
             ## Trigger interconnect
@@ -695,7 +722,7 @@ class Controller(object):
                             continue
                         cu.state = False
                         
-            self.energy_utilization.append(self.cycle_energy*1e09)
+            self.energy_utilization.append(self.Total_energy_cycle*1e09)
             self.xbar_utilization.append(self.act_xb_ctr)
             
             ### Finish?
@@ -729,13 +756,6 @@ class Controller(object):
                 if not isDone:
                     break
 
-            if not self.isPipeLine:
-                self.pipeline_stage_record.append(self.pipeline_layer_stage)
-                if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
-                    self.pipeline_layer_stage += 1
-                    self.cycles_each_layer.append(self.this_layer_cycle_ctr)
-                    self.this_layer_event_ctr = 0
-                    self.this_layer_cycle_ctr = 0
 
             # Buffer size utilization
             for pe_idx in range(len(self.PE_array)):
@@ -758,42 +778,46 @@ class Controller(object):
         print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
         print("Avg buffer size:", self.avg_buffer_size)
         print()
-
-        self.edram_rd_energy_total = self.edram_rd_ir_energy_total + self.edram_rd_pool_energy_total
-        self.edram_energy_total = self.edram_rd_energy_total + self.edram_wr_energy_total
         
 
-        self.dac_energy_total = self.hd_info.dac_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
-        self.xb_energy_total = self.hd_info.xb_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
-        self.adc_energy_total = self.hd_info.adc_energy/self.hd_info.ou_operation_energy * self.ou_operation_energy_total
-
-        self.cu_energy_total = self.ou_operation_energy_total + self.cu_ir_energy_total + self.cu_or_energy_total + self.cu_saa_energy_total
-        self.pe_energy_total = self.cu_energy_total + self.edram_energy_total +  + self.pe_saa_energy_total + \
-                               self.activation_energy_total+ self.pooling_energy_total + self.pe_or_energy_total
-        self.energy_total = self.pe_energy_total + self.interconnect_energy_total
-
+        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
+                                self.Total_energy_adc + \
+                                self.Total_energy_dac + \
+                                self.Total_energy_crossbar + \
+                                self.Total_energy_ir_in_cu + \
+                                self.Total_energy_or_in_cu
+        self.Total_energy_pe = self.Total_energy_cu + \
+                                self.Total_energy_edram_buffer + \
+                                self.Total_energy_bus + \
+                                self.Total_energy_activation + \
+                                self.Total_energy_pe_shift_and_add + \
+                                self.Total_energy_pooling + \
+                                self.Total_energy_or
+        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
+        
         print("Power breakdown:")
 
-        print("\tTotal:", self.energy_total, "J")
+        print("\tTotal:", self.Total_energy, "nJ")
         print("\tChip level")
-        print("\t\tPE: %.4e (%.2f%%)" %(self.pe_energy_total, self.pe_energy_total/self.energy_total*100))
-        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.interconnect_energy_total, self.interconnect_energy_total/self.energy_total*100))
+        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
+        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
         print()
         print("\tPE level")
-        print("\t\tCU: %.4e (%.2f%%)" %(self.cu_energy_total, self.cu_energy_total/self.pe_energy_total*100))
-        print("\t\tBuffer: %.4e (%.2f%%)" %(self.edram_energy_total, self.edram_energy_total/self.pe_energy_total*100))
-        print("\t\tShift Add: %.4e (%.2f%%)" %(self.pe_saa_energy_total, self.pe_saa_energy_total/self.pe_energy_total*100))
-        print("\t\tActivation: %.4e (%.2f%%)" %(self.activation_energy_total, self.activation_energy_total/self.pe_energy_total*100))
-        print("\t\tPooling: %.4e (%.2f%%)" %(self.pooling_energy_total, self.pooling_energy_total/self.pe_energy_total*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.pe_or_energy_total, self.pe_or_energy_total/self.pe_energy_total*100))
+        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
+        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
+        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
+        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
+        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
         print()
         print("\tCU level")
-        print("\t\tDAC: %.4e (%.2f%%)" %(self.dac_energy_total, self.dac_energy_total/self.cu_energy_total*100))
-        print("\t\tCrossbar: %.4e (%.2f%%)" %(self.xb_energy_total, self.xb_energy_total/self.cu_energy_total*100))
-        print("\t\tSA: %.4e (%.2f%%)" %(self.adc_energy_total, self.adc_energy_total/self.cu_energy_total*100))
-        print("\t\tShift Add: %.4e (%.2f%%)" %(self.cu_saa_energy_total, self.cu_saa_energy_total/self.cu_energy_total*100))
-        print("\t\tIR: %.4e (%.2f%%)" %(self.cu_ir_energy_total, self.cu_ir_energy_total/self.cu_energy_total*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.cu_or_energy_total, self.cu_or_energy_total/self.cu_energy_total*100))
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
+        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
+        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
+        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
+        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
         print()
 
         if self.isPipeLine:
@@ -827,11 +851,11 @@ class Controller(object):
         
         ### Power breakdown
         # chip
-        labels = "PE", "Interconnect"
-        value = [self.pe_energy_total, self.interconnect_energy_total]
-        plt.title(self.mapping_str+", "+pipe_str)
-        plt.pie(value , labels = labels,autopct='%1.1f%%')
+        labels = 'PE', 'Interconnect'
+        value = [self.Total_energy_pe, self.Total_energy_interconnect]
+        plt.pie(value , labels = labels, autopct='%1.1f%%')
         plt.axis('equal')
+        plt.title(self.mapping_str+", "+pipe_str)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Power_breakdown_chip.png')
         plt.clf()
 
