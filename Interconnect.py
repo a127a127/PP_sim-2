@@ -3,7 +3,7 @@ import numpy as np
 from HardwareMetaData import HardwareMetaData
 
 class Interconnect(object):
-    def __init__(self, rt_h, rt_w):
+    def __init__(self, rt_h, rt_w, data_bit_width):
         self.router_array = []
         for h in range(rt_h):
             for w in range(rt_w):
@@ -12,7 +12,7 @@ class Interconnect(object):
         self.router_array = np.array(self.router_array)
         self.router_array = self.router_array.reshape(rt_h, rt_w)
         self.step_energy_consumption = 0
-        self.router_step_energy = HardwareMetaData().Energy_router
+        self.router_step_energy = HardwareMetaData().Energy_router * data_bit_width
 
         self.arrived_list = []
 

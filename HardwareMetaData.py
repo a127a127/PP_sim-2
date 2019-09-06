@@ -57,18 +57,18 @@ class HardwareMetaData(object):
         # Dynamic Energy (nJ)
         self.Energy_edram_buffer = 20.7 * 0.01 / 1.2 / 256 # per bit
         self.Energy_bus = 7 * 0.01 / 1.2 / 256 # per bit
-        self.Energy_router = 42 * 0.01 / 32 / 1.2 # per bit
+        self.Energy_router = 42 * 0.01 / 1.2 / 32 / 4 # per bit
         self.Energy_activation = 0.26 * 0.01 / 1.2 # per data doing acivation function
         self.Energy_shift_and_add = 0.05 * 0.01 / 2 / 1.2 # per data doing shift and add
         self.Energy_pooling = 0.4 * 0.01 / 1.2 # nxn data doing pooling
-        self.Energy_or = 1.68 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_or = 1.68 * 0.01 / 1.2 / 128 # per bit
         self.Energy_adc = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
                           (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1)) \
                           # per ou 
         self.Energy_dac = 4 * 0.01 / 1.2 / 8 * self.OU_h / 128 # per ou
         self.Energy_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128)) # per ou
         self.Energy_ir_in_cu = 1.24 * 0.01 / 1.2 / 256 # per bit
-        self.Energy_or_in_cu = 0.23 * 0.01 / 1.2 / 256 # per bit
+        self.Energy_or_in_cu = 0.23 * 0.01 / 1.2 / 128 # per bit
 
         # Off chip fetch
         self.Fetch_cycle = 1

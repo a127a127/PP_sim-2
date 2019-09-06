@@ -70,7 +70,7 @@ class Controller(object):
             self.buffer_size.append([])
 
         self.fetch_array = []
-        self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x)
+        self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x, self.input_bit)
         self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
         self.interconnect_step = floor(self.interconnect_step)
         self.interconnect_step = 4000
@@ -132,8 +132,10 @@ class Controller(object):
                 pe_idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.PE_num * self.hd_info.Router_num_x
                 pe = self.PE_array[pe_idx]
                 
+                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
+
                 pro_event = self.Computation_order[pk.pro_event_idx]
-                
                 if pro_event.event_type == "edram_rd_ir":
                     # store data
                     if self.trace:
@@ -191,6 +193,9 @@ class Controller(object):
                 else:
                     packet = Packet(src, des, [], pro_event_idx)
                 self.interconnect.input_packet(packet)
+
+                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
 
             ### Fetch data from off-chip memory
             for FE in self.fetch_array.copy():
@@ -256,7 +261,9 @@ class Controller(object):
                                     self.this_layer_event_ctr += 1
 
                                 num_data = len(event.outputs)
-                                self.Total_energy_edram_buffer += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * num_data
+                                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
+                                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * num_data
+                                self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
                                 self.Total_energy_cycle += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * num_data
 
                                 cu.state = True
@@ -298,14 +305,10 @@ class Controller(object):
                                     self.Total_energy_dac += self.hd_info.Energy_dac
                                     self.Total_energy_crossbar += self.hd_info.Energy_crossbar
                                     self.Total_energy_adc += self.hd_info.Energy_adc
-                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit * self.hd_info.OU_w
-
                                     self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
                                                                 self.hd_info.Energy_dac + \
                                                                 self.hd_info.Energy_crossbar + \
-                                                                self.hd_info.Energy_adc + \
-                                                                self.hd_info.Energy_or_in_cu * self.input_bit * self.hd_info.OU_w
-
+                                                                self.hd_info.Energy_adc
                                     self.act_xb_ctr += 1
 
                                     xb.state_ou_operation[idx] = True
@@ -343,10 +346,11 @@ class Controller(object):
                             need_saa += 1
                             for idx in range(len(cu.state_cu_saa)):
                                 if not cu.state_cu_saa[idx]:
+                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit # read
                                     self.Total_energy_cu_shift_and_add += self.hd_info.Energy_shift_and_add
-                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit
-
-                                    self.Total_energy_cycle += self.hd_info.Energy_shift_and_add + \
+                                    self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit # write
+                                    self.Total_energy_cycle += self.hd_info.Energy_or_in_cu * self.input_bit + \
+                                                                self.hd_info.Energy_shift_and_add + \
                                                                 self.hd_info.Energy_or_in_cu * self.input_bit
 
                                     cu.state_cu_saa[idx] = True
@@ -381,21 +385,27 @@ class Controller(object):
                     
                     pe.pe_saa_erp.remove(event)
                     
-                    need_saa = 0
-                    for saa_amount in range(event.preceding_event_count): # amounts of saa
-                        need_saa += 1
+
+                    saa_amount = len(event.inputs)
+                    if saa_amount > len(pe.state_pe_saa):
+                        print("Not enough pe_saa per cycle")
+                        exit()
+
+                    for s in range(saa_amount):
                         for idx in range(len(pe.state_pe_saa)):
                             if not pe.state_pe_saa[idx]:
-                                self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
                                 self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-
-                                self.Total_energy_cycle += self.hd_info.Energy_shift_and_add + \
+                                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
+                                self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
+                                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
+                                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
+                                self.Total_energy_cycle += self.hd_info.Energy_or * self.input_bit + \
+                                                            self.hd_info.Energy_bus * self.input_bit + \
+                                                            self.hd_info.Energy_shift_and_add + \
+                                                            self.hd_info.Energy_bus * self.input_bit + \
                                                             self.hd_info.Energy_or * self.input_bit
                                 pe.state_pe_saa[idx] = True
                                 break
-                        if need_saa > len(pe.state_pe_saa):
-                            print("no enough pe saa per cycle..")
-                            exit()
 
                         ### add next event counter: activation
                         for proceeding_index in event.proceeding_event:
@@ -418,8 +428,10 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
+                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
+                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
                             self.Total_energy_activation += self.hd_info.Energy_activation
-                            self.Total_energy_cycle += self.hd_info.Energy_activation
+                            self.Total_energy_cycle += self.hd_info.Energy_bus * self.input_bit + self.hd_info.Energy_activation
                             
                             pe.state_activation[idx] = True
                             pe.activation_erp.remove(event)
@@ -447,12 +459,11 @@ class Controller(object):
                             if not self.isPipeLine:    
                                 self.this_layer_event_ctr += 1
 
-                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-                            self.Total_energy_bus += self.hd_info.Energy_bus
-                            self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                            #self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
                             
-                            self.Total_energy_cycle += self.hd_info.Energy_or * self.input_bit + \
-                                                        self.hd_info.Energy_bus + \
+                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
+                            self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                            self.Total_energy_cycle += self.hd_info.Energy_bus * self.input_bit + \
                                                         self.hd_info.Energy_edram_buffer * self.input_bit
 
                             pe.state_edram_wr[idx] = True
@@ -509,6 +520,7 @@ class Controller(object):
                             print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
+
                         num_data = len(event.outputs)
                         self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
                         self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * num_data
@@ -721,7 +733,7 @@ class Controller(object):
                         if isCUBusy:
                             continue
                         cu.state = False
-                        
+
             self.energy_utilization.append(self.Total_energy_cycle*1e09)
             self.xbar_utilization.append(self.act_xb_ctr)
             
