@@ -6,7 +6,7 @@ from EventMetaData import EventMetaData
 import numpy as np 
 
 class OrderGenerator(object):
-    def __init__(self, model_config, mapping_information):
+    def __init__(self, model_config, mapping_information, trace):
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
@@ -65,6 +65,8 @@ class OrderGenerator(object):
         
         self.Computation_order = []
         self.generate_order()
+        if trace:
+            self.trace_order()
 
     def generate_order(self):
         for nlayer in range(self.model_info.layer_length):
@@ -295,31 +297,37 @@ class OrderGenerator(object):
 
                                 edram_wr_pe_pos  = pe_idx
                                 edram_wr_inputs  = [[window_h, window_w, nfilter]]
-                                edram_wr_outputs = [[window_h, window_w, nfilter]]
+                                #edram_wr_outputs = [[window_h, window_w, nfilter]]
+                                edram_wr_outputs = [[]]
                                 edram_wr_preceding_count = len(preceding_pe[pe_idx])
                                 event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                                 self.Computation_order.append(event)
 
                                 source_pe_idx = pe_idx
                                 transfer_inputs = [[window_h, window_w, nfilter]]
-                                transfer_ouputs = [[window_h, window_w, nfilter]]
-                                event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_ouputs)
+                                #transfer_outputs = [[window_h, window_w, nfilter]]
+                                transfer_outputs = [[]]
+                                event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                                 self.Computation_order.append(event)
                                     
                                 pe_saa_preceding_count += 1
                 
                 ### Event: pe_saa
                             pe_saa_event_idx = len(self.Computation_order)
+                            preceding_cu_idx = list()
                             for pre_event_idx in preceding_list:
                                 if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                                     self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
                                     pe_saa_preceding_count += 1
+                                if self.Computation_order[pre_event_idx].position_idx not in preceding_cu_idx:
+                                    preceding_cu_idx.append(self.Computation_order[pre_event_idx].position_idx)
 
                             ### add dependency
                             for idx in range(start_append_idx+1, pe_saa_event_idx, 2):
                                 self.Computation_order[idx].proceeding_event.append(pe_saa_event_idx)
                             
-                            pe_saa_inputs  = [[window_h, window_w, nfilter]]
+                            #pe_saa_inputs  = [[window_h, window_w, nfilter]]
+                            pe_saa_inputs  = preceding_cu_idx
                             pe_saa_outputs = [[window_h, window_w, nfilter]]
                             event = EventMetaData("pe_saa", do_pe_saa_pos, pe_saa_preceding_count, [], nlayer, pe_saa_inputs, pe_saa_outputs)
                             self.Computation_order.append(event)
@@ -586,31 +594,37 @@ class OrderGenerator(object):
 
                         edram_wr_pe_pos  = pe_idx
                         edram_wr_inputs  = [[0, 0, nfilter]]
-                        edram_wr_outputs = [[0, 0, nfilter]]
+                        #edram_wr_outputs = [[0, 0, nfilter]]
+                        edram_wr_outputs = [[]]
                         edram_wr_preceding_count = len(preceding_pe[pe_idx])
                         event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                         self.Computation_order.append(event)
 
                         source_pe_idx = pe_idx
                         transfer_inputs = [[0, 0, nfilter]]
-                        transfer_ouputs = [[0, 0, nfilter]]
-                        event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_ouputs)
+                        #transfer_outputs = [[0, 0, nfilter]]
+                        transfer_outputs = [[]]
+                        event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                         self.Computation_order.append(event)
                             
                         pe_saa_preceding_count += 1
         
                 ### Event: pe_saa
                     pe_saa_event_idx = len(self.Computation_order)
+                    preceding_cu_idx = list()
                     for pre_event_idx in preceding_list:
                         if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                             self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
                             pe_saa_preceding_count += 1
+                        if self.Computation_order[pre_event_idx].position_idx not in preceding_cu_idx:
+                            preceding_cu_idx.append(self.Computation_order[pre_event_idx].position_idx)
 
                     ### add dependency
                     for idx in range(start_append_idx+1, pe_saa_event_idx, 2):
                         self.Computation_order[idx].proceeding_event.append(pe_saa_event_idx)
                     
-                    pe_saa_inputs  = [[0, 0, nfilter]]
+                    #pe_saa_inputs  = [[0, 0, nfilter]]
+                    pe_saa_inputs  = preceding_cu_idx
                     pe_saa_outputs = [[0, 0, nfilter]]
                     event = EventMetaData("pe_saa", do_pe_saa_pos, pe_saa_preceding_count, [], nlayer, pe_saa_inputs, pe_saa_outputs)
                     self.Computation_order.append(event)
@@ -742,5 +756,49 @@ class OrderGenerator(object):
                                             self.Computation_order.append(event)
         print('Order generated!')
      
+    def trace_order(self):
+        edram_rd_ir_ctr = 0
+        ou_operation_ctr = 0
+        cu_saa_ctr = 0
+        pe_saa_ctr = 0
+        activation_ctr = 0
+        pooling_ctr = 0
+        edram_wr_ctr = 0
+        edram_rd_pool_ctr = 0
+        data_transfer_ctr = 0
+        for e in self.Computation_order:
+            t = e.event_type
+            if t == "edram_rd_ir":
+                edram_rd_ir_ctr += 1
+            elif t == "ou_operation":
+                ou_operation_ctr += 1
+            elif t == "cu_saa":
+                cu_saa_ctr += 1
+            elif t == "pe_saa":
+                pe_saa_ctr += 1
+            elif t == "activation":
+                activation_ctr += 1
+            elif t == "edram_wr":
+                edram_wr_ctr += 1
+            elif t == "edram_rd_pool":
+                edram_rd_pool_ctr += 1
+            elif t == "pooling":
+                pooling_ctr += 1
+            elif t == "data_transfer":
+                data_transfer_ctr += 1
+            else:
+                print("event type error..")
+
+        print("edram_rd_ir_ctr", edram_rd_ir_ctr)
+        print("ou_operation_ctr", ou_operation_ctr)
+        print("cu_saa_ctr", cu_saa_ctr)
+        print("pe_saa_ctr", pe_saa_ctr)
+        print("activation_ctr", activation_ctr)
+        print("edram_wr_ctr", edram_wr_ctr)
+        print("edram_rd_pool_ctr", edram_rd_pool_ctr)
+        print("data_transfer_ctr", data_transfer_ctr)
+
+        for e in self.Computation_order:
+            print(self.Computation_order.index(e), e)
     def __str__(self):
         return str(self.__dict__)

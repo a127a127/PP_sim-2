@@ -15,9 +15,10 @@ class PE(object):
         self.Pooling = []
         
         ### events per cycle
-        self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
+        #self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
+        self.pe_saa_epc = 400
         self.activation_epc = 16
-        self.edram_wr_epc = 16 # 一個cycle可寫幾筆資料
+        self.edram_wr_epc = 8 # 一個cycle可寫幾筆資料
         self.pooling_epc = 16
 
         ### event ready pool
