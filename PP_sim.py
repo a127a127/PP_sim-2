@@ -92,41 +92,63 @@ def main():
     input_bit = model_config.input_bit
     filter_bit = model_config.filter_bit
 
+
+
+    router = 0
+    edram_rd = 0
+    edram_wr = 0
+
+    edram_rd_bus = 0
+    pe_saa_bus = 0
+    act_bus = 0
+    edram_wr_bus = 0
+
+    act = 0
+    pe_saa = 0
+    pe_or = 0
+    cu_saa = 0
+    adc = 0
+    dac = 0
+    crossbar = 0
+    cu_ir = 0
+    cu_or = 0
+
     # layer1
     window = 1
     filter_size = 40
     filter_num = 2
     num_ou = 8
+    ou_per_filter = 4
     
-    router = window * input_bit * filter_size * HardwareMetaData().Energy_router
-    edram_wr = window * input_bit * filter_size * HardwareMetaData().Energy_edram_buffer # off chip transfer
-    edram_rd = window * filter_size * input_bit * HardwareMetaData().Energy_edram_buffer
+    # off chip transfer
+    router += window * filter_size * input_bit * HardwareMetaData().Energy_router
+    edram_wr += window * filter_size * input_bit * HardwareMetaData().Energy_edram_buffer 
+    
+    edram_rd += window * filter_size * input_bit * HardwareMetaData().Energy_edram_buffer
     edram_wr += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer
+    
     # transfer between layer
-    edram_rd += window * input_bit * filter_num * HardwareMetaData().Energy_edram_buffer 
-    edram_wr += window * input_bit * filter_num * HardwareMetaData().Energy_edram_buffer
-    router += window * input_bit * filter_num * HardwareMetaData().Energy_router 
+    router += window * filter_num * input_bit * HardwareMetaData().Energy_router 
+    edram_rd += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer 
+    edram_wr += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer
 
     # bus
-    edram_rd_bus = window * filter_size * input_bit * HardwareMetaData().Energy_bus
-    pe_saa_bus = window * filter_num * input_bit * HardwareMetaData().Energy_bus * 2 * 2 # read + write
-    act_bus = window * filter_num * input_bit * HardwareMetaData().Energy_bus
-    edram_wr_bus = window * filter_num * input_bit * HardwareMetaData().Energy_bus
-    # transfer between layer
-    edram_wr_bus += window * input_bit * filter_num * HardwareMetaData().Energy_bus ## ??? 這邊不會有bus
+    edram_rd_bus += window * filter_size * input_bit * HardwareMetaData().Energy_bus
+    pe_saa_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus * 2 * 2 # read + write
+    act_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus
+    edram_wr_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus
 
-    act = window * filter_num * HardwareMetaData().Energy_activation
-    pe_saa = window * filter_num * HardwareMetaData().Energy_shift_and_add * 2 # 會分配到兩個CU
-    pe_or = window * filter_num * input_bit * HardwareMetaData().Energy_or * filter_num * 2
-    ou_per_filter = 1
-    cu_saa = window * filter_num * input_bit * HardwareMetaData().Energy_shift_and_add * filter_bit * ou_per_filter
-    adc = num_ou * HardwareMetaData().Energy_adc
-    dac = num_ou * HardwareMetaData().Energy_dac
-    crossbar = num_ou * HardwareMetaData().Energy_crossbar
-    cu_ir = window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu 
-    ####
-    cu_ir += num_ou * HardwareMetaData().Energy_ir_in_cu * HardwareMetaData().OU_h # 與ou寬無關
-    cu_or = window * filter_num * input_bit * HardwareMetaData().Energy_or_in_cu * input_bit * filter_bit * 2
+    act += window * filter_num * HardwareMetaData().Energy_activation
+    pe_saa += window * filter_num * HardwareMetaData().Energy_shift_and_add * 2 # 會分配到2個CU
+    pe_or += window * filter_num * input_bit * HardwareMetaData().Energy_or * 2 * 2 # saa: read + write
+    pe_or += window * filter_num * input_bit * HardwareMetaData().Energy_or # act
+    cu_saa += window * filter_num * filter_bit * HardwareMetaData().Energy_shift_and_add * input_bit * ou_per_filter
+    adc += num_ou * HardwareMetaData().Energy_adc
+    dac += num_ou * HardwareMetaData().Energy_dac
+    crossbar += num_ou * HardwareMetaData().Energy_crossbar
+    cu_ir += window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu # write to ir
+    cu_ir += window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu # 分到多CU不能reuse input才會變多
+    cu_or += input_bit * window * filter_num * filter_bit * HardwareMetaData().Energy_or_in_cu * input_bit * ou_per_filter * 2 # read+write
 
 
     # layer2
@@ -134,30 +156,43 @@ def main():
     filter_size = 2
     filter_num = 2
     num_ou = 2
+    ou_per_filter = 1
 
+    # off chip transfer
+    #router += window * filter_size * input_bit * HardwareMetaData().Energy_router
+    #edram_wr += window * filter_size * input_bit * HardwareMetaData().Energy_edram_buffer 
+    
     edram_rd += window * filter_size * input_bit * HardwareMetaData().Energy_edram_buffer
     edram_wr += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer
     
+    # transfer between layer
+    #router += window * filter_num * input_bit * HardwareMetaData().Energy_router 
+    #edram_rd += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer 
+    #edram_wr += window * filter_num * input_bit * HardwareMetaData().Energy_edram_buffer
+
+    # bus
     edram_rd_bus += window * filter_size * input_bit * HardwareMetaData().Energy_bus
-    pe_saa_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus * 1 * 2 # read + write
+    pe_saa_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus * 1 * 2 # 會分配到1個CU, read + write
     act_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus
     edram_wr_bus += window * filter_num * input_bit * HardwareMetaData().Energy_bus
-
+    
     act += window * filter_num * HardwareMetaData().Energy_activation
-    pe_saa += window * filter_num * HardwareMetaData().Energy_shift_and_add * 1 # preceding event
-    pe_or += window * filter_num * input_bit * HardwareMetaData().Energy_or * 4 * 2
-    ou_per_filter = 2
-    cu_saa += window * filter_num * input_bit * HardwareMetaData().Energy_shift_and_add * filter_bit * ou_per_filter
+    pe_saa += window * filter_num * HardwareMetaData().Energy_shift_and_add * 1 # 會分配到1個CU
+    pe_or += window * filter_num * input_bit * HardwareMetaData().Energy_or * 1 * 2 # saa: read + write
+    pe_or += window * filter_num * input_bit * HardwareMetaData().Energy_or # act
+    cu_saa += window * filter_num * filter_bit * HardwareMetaData().Energy_shift_and_add * input_bit * ou_per_filter
     adc += num_ou * HardwareMetaData().Energy_adc
     dac += num_ou * HardwareMetaData().Energy_dac
     crossbar += num_ou * HardwareMetaData().Energy_crossbar
-    cu_ir += window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu 
-    cu_ir += num_ou * HardwareMetaData().Energy_ir_in_cu * HardwareMetaData().OU_h
-    cu_or += window * filter_num * input_bit * HardwareMetaData().Energy_or_in_cu * input_bit * filter_bit * 2 * 2 # 一個filter分成兩個ou
+    cu_ir += window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu # write to ir
+    cu_ir += window * filter_size * input_bit * HardwareMetaData().Energy_ir_in_cu # 分到多CU不能reuse input才會變多
+    cu_or += input_bit * window * filter_num * filter_bit * HardwareMetaData().Energy_or_in_cu * input_bit * ou_per_filter * 2 # read+write
 
     edram = edram_wr + edram_rd
     bus = edram_rd_bus + pe_saa_bus + act_bus + edram_wr_bus
 
+
+    print("router: %.4e" %(router))
     print("edram: %.4e" %(edram))
     print("bus: %.4e" %(bus))
     print("act: %.4e" %(act))
@@ -169,7 +204,6 @@ def main():
     print("crossbar: %.4e" %(crossbar))
     print("cu_ir: %.4e" %(cu_ir))
     print("cu_or: %.4e" %(cu_or))
-    print("router: %.4e" %(router))
 
 if __name__ == '__main__':
     main()

@@ -132,7 +132,7 @@ class Controller(object):
                 pe_idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.PE_num * self.hd_info.Router_num_x
                 pe = self.PE_array[pe_idx]
                 
-                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # write
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
 
                 pro_event = self.Computation_order[pk.pro_event_idx]
@@ -194,7 +194,7 @@ class Controller(object):
                     packet = Packet(src, des, [], pro_event_idx)
                 self.interconnect.input_packet(packet)
 
-                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
+                self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # read
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
 
             ### Fetch data from off-chip memory
