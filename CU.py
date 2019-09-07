@@ -10,16 +10,19 @@ class CU(object):
         self.edram_rd_event = None
         self.edram_rd_cycle_ctr = 0
 
-        ### saa amount per cycle
+        ### per cycle
         self.cu_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
+        self.adc_epc = HardwareMetaData().Xbar_num
 
         ### event ready pool
         self.edram_rd_ir_erp = []
         self.cu_saa_erp = []
+        self.adc_erp = []
 
         ### trigger event list
-        self.ou_operation_trigger = [] # [pro_event, [cu_idx, xb_idx]]
+        self.ou_trigger = [] # [pro_event, [cu_idx, xb_idx]]
         self.pe_saa_trigger = []
+        self.cu_saa_trigger = []
         
         ### generate XB
         self.XB_array = []
@@ -30,6 +33,7 @@ class CU(object):
         
     def reset(self):
         self.state_cu_saa = [False] * self.cu_saa_epc
+        self.state_adc = [False] * self.adc_epc
 
     def gen_xb(self):
         rty, rtx, pey, pex, cuy, cux = self.position[0], self.position[1], self.position[2], self.position[3] , self.position[4], self.position[5] 
