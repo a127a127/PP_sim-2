@@ -164,7 +164,7 @@ class OrderGenerator(object):
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
 
-                ### Event: ou_operation
+                ### Event: ou
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
@@ -231,7 +231,7 @@ class OrderGenerator(object):
                                         
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
-                                            event = EventMetaData("ou_operation", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
+                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
                                             self.Computation_order.append(event)              
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
@@ -473,7 +473,7 @@ class OrderGenerator(object):
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
 
-                ### Event: ou_operation
+                ### Event: ou
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
@@ -541,7 +541,7 @@ class OrderGenerator(object):
                                         
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
-                                            event = EventMetaData("ou_operation", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
+                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
                                             self.Computation_order.append(event)              
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
@@ -780,7 +780,7 @@ class OrderGenerator(object):
      
     def trace_order(self):
         edram_rd_ir_ctr = 0
-        ou_operation_ctr = 0
+        ou_ctr = 0
         cu_saa_ctr = 0
         pe_saa_ctr = 0
         activation_ctr = 0
@@ -792,8 +792,8 @@ class OrderGenerator(object):
             t = e.event_type
             if t == "edram_rd_ir":
                 edram_rd_ir_ctr += 1
-            elif t == "ou_operation":
-                ou_operation_ctr += 1
+            elif t == "ou":
+                ou_ctr += 1
             elif t == "cu_saa":
                 cu_saa_ctr += 1
             elif t == "pe_saa":
@@ -812,7 +812,7 @@ class OrderGenerator(object):
                 print("event type error..")
 
         print("edram_rd_ir_ctr", edram_rd_ir_ctr)
-        print("ou_operation_ctr", ou_operation_ctr)
+        print("ou_ctr", ou_ctr)
         print("cu_saa_ctr", cu_saa_ctr)
         print("pe_saa_ctr", pe_saa_ctr)
         print("activation_ctr", activation_ctr)

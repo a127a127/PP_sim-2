@@ -17,7 +17,7 @@ class CU(object):
         self.adc_erp = []
 
         ### trigger event list
-        self.ou_operation_trigger = [] # [pro_event, [cu_idx, xb_idx]]
+        self.ou_trigger = [] # [pro_event, [cu_idx, xb_idx]]
         self.pe_saa_trigger = []
         self.cu_saa_trigger = []
         
