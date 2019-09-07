@@ -22,9 +22,12 @@ class Controller(object):
         self.mapping_str = mapping_str
         self.Computation_order = self.ordergenerator.Computation_order
         self.hd_info = HardwareMetaData()
-
+        self.input_bit = self.ordergenerator.model_info.input_bit
         self.cycle_ctr = 0
-
+        self.edram_read_cycles = \
+            ceil(self.hd_info.Xbar_num * self.hd_info.Xbar_h * \
+            self.input_bit * self.hd_info.eDRAM_read_latency / \
+            self.hd_info.cycle_time)
         # Energy
         self.Total_energy_cycle = 0
         self.Total_energy_edram_buffer = 0
@@ -41,8 +44,7 @@ class Controller(object):
         self.Total_energy_ir_in_cu = 0
         self.Total_energy_or_in_cu = 0
         self.Total_energy_interconnect = 0
-
-        self.input_bit = self.ordergenerator.model_info.input_bit
+        # PE object
         self.PE_array = []
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
@@ -51,15 +53,13 @@ class Controller(object):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
                         pe = PE(pe_pos, self.input_bit)
                         self.PE_array.append(pe)
-
-        ### Statistics
+        # Statistics
         self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
         self.mem_acc_ctr = 0
         self.data_transfer_ctr = 0 
         self.act_xb_ctr = 0
         self.pe_saa_stall_cycle = 0
-        
-        # Utilization
+        ## Utilization
         self.energy_utilization = []
         self.xbar_utilization = []
         self.pe_state_for_plot = [[], []]
@@ -68,7 +68,7 @@ class Controller(object):
         self.buffer_size = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
-
+        # Interconnect
         self.fetch_array = []
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x, self.input_bit)
         self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
@@ -76,8 +76,7 @@ class Controller(object):
         self.interconnect_step = 4000
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
-        
-        ### Pipeline control
+        # Pipeline control
         if not self.isPipeLine:
             self.pipeline_layer_stage = 0
             self.pipeline_stage_record = []
@@ -227,8 +226,10 @@ class Controller(object):
             ### Event: edram_rd_ir
             for pe in self.PE_array:
                 for cu in pe.CU_array:
-                    for event in cu.edram_rd_ir_erp.copy():
-                        if not cu.state and not cu.state_edram_rd_ir: 
+                    if not cu.state and not cu.state_edram_rd_ir: # 這個條件才能消耗一個edram read event
+                        if cu.edram_rd_ir_erp: # 也要有read event才能做事
+                            event = cu.edram_rd_ir_erp[0]
+
                             ## Is Data in eDRAM buffer
                             isData_ready = True
                             # inputs: [[num_input, fm_h, fm_w, fm_c]]
@@ -251,9 +252,8 @@ class Controller(object):
                                 pe_idx = self.PE_array.index(pe)
                                 cu_idx = pe.CU_array.index(cu)
                                 self.fetch_array.append(FetchEvent(event, [pe_idx, cu_idx]))
-
                             else:
-                                ## Check how many event can be done in a cycle
+                                # 開始執行edram read event
                                 if self.trace:
                                     print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
                                     print("\t\tread data:", event.inputs)
@@ -269,24 +269,47 @@ class Controller(object):
                                 cu.state = True
                                 cu.state_edram_rd_ir = True
                                 cu.edram_rd_ir_erp.remove(event)
+                                cu.edram_rd_event = event
+                                cu.edram_rd_cycle_ctr += 1
 
-                                ### add next event counter: ou_operation
-                                for proceeding_index in event.proceeding_event:
-                                    pro_event = self.Computation_order[proceeding_index]
-                                    pro_event.current_number_of_preceding_event += 1
+                                if cu.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
+                                    cu.edram_rd_cycle_ctr = 0
+                                    ### add next event counter: ou_operation
+                                    for proceeding_index in event.proceeding_event:
+                                        pro_event = self.Computation_order[proceeding_index]
+                                        pro_event.current_number_of_preceding_event += 1
 
-                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                        if self.trace:
-                                            pass
-                                            #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                        pos = pro_event.position_idx
-                                        cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
-                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                        xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
-                                        cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
-                        else:
-                            break
-            
+                                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                            if self.trace:
+                                                pass
+                                                #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                            pos = pro_event.position_idx
+                                            cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
+                                            cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                            xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
+                                            cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+
+                    elif cu.state and cu.state_edram_rd_ir:
+                        cu.edram_rd_cycle_ctr += 1
+                        if cu.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
+                            cu.edram_rd_cycle_ctr = 0
+                            cu.state_edram_rd_ir = False
+                            event = cu.edram_rd_event
+                            ### add next event counter: ou_operation
+                            for proceeding_index in event.proceeding_event:
+                                pro_event = self.Computation_order[proceeding_index]
+                                pro_event.current_number_of_preceding_event += 1
+
+                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                    if self.trace:
+                                        pass
+                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                    pos = pro_event.position_idx
+                                    cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
+                                    cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                    xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
+                                    cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+
             ### Event: ou_operation 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -515,7 +538,6 @@ class Controller(object):
                         self.fetch_array.append(FetchEvent(event, [pe_idx]))
 
                     else:
-                        ## Check how many event can be done in a cycle
                         if self.trace:
                             print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
@@ -722,6 +744,8 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if cu.state:
+                        if cu.state_edram_rd_ir:
+                            continue
                         if cu.cu_saa_erp:
                             continue
 

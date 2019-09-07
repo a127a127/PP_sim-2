@@ -7,6 +7,9 @@ class CU(object):
 
         self.state = False # CU busy
 
+        self.edram_rd_event = None
+        self.edram_rd_cycle_ctr = 0
+
         ### saa amount per cycle
         self.cu_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
 
@@ -22,11 +25,10 @@ class CU(object):
         self.XB_array = []
         self.gen_xb()
         
-        self.reset()
+        self.state_edram_rd_ir = False
+        self.state_cu_saa = [False] * self.cu_saa_epc
         
     def reset(self):
-        # state
-        self.state_edram_rd_ir = False
         self.state_cu_saa = [False] * self.cu_saa_epc
 
     def gen_xb(self):
