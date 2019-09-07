@@ -296,7 +296,7 @@ class Controller(object):
                                 if not xb.state_ou_operation[idx]:
                                     if self.trace:
                                         pass
-                                        #print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                        print("\tdo ou_operation, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                                     
                                     if not self.isPipeLine:
                                         self.this_layer_event_ctr += 1
@@ -304,17 +304,15 @@ class Controller(object):
                                     self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
                                     self.Total_energy_dac += self.hd_info.Energy_dac
                                     self.Total_energy_crossbar += self.hd_info.Energy_crossbar
-                                    self.Total_energy_adc += self.hd_info.Energy_adc
                                     self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
                                                                 self.hd_info.Energy_dac + \
-                                                                self.hd_info.Energy_crossbar + \
-                                                                self.hd_info.Energy_adc
+                                                                self.hd_info.Energy_crossbar
                                     self.act_xb_ctr += 1
 
                                     xb.state_ou_operation[idx] = True
                                     xb.ou_operation_erp.remove(event)
 
-                                    ### add next event counter: cu_saa
+                                    ### add next event counter: adc
                                     for proceeding_index in event.proceeding_event:
                                         pro_event = self.Computation_order[proceeding_index]
                                         pro_event.current_number_of_preceding_event += 1
@@ -322,12 +320,42 @@ class Controller(object):
                                         if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                             if self.trace:
                                                 pass
-                                                #print("\t\tProceeding event is triggered.", pro_event.event_type)
+                                                print("\t\tProceeding event is triggered.", pro_event.event_type)
+
                                             pos = pro_event.position_idx
                                             cu_y, cu_x = pos[4], pos[5]
                                             cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                            xb.cu_saa_trigger.append([pro_event, [cu_idx]])
+                                            xb.adc_trigger.append([pro_event, [cu_idx]])
                                     break
+            ### Event: adc
+            for pe in self.PE_array:
+                for cu in pe.CU_array:
+                    for event in cu.adc_erp.copy():
+                        for idx in range(len(cu.state_adc)):
+                            if not cu.state_adc[idx]:
+                                if self.trace:
+                                    pass
+                                    print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                if not self.isPipeLine:
+                                    self.this_layer_event_ctr += 1
+
+                                self.Total_energy_adc += self.hd_info.Energy_adc
+                                self.Total_energy_cycle += self.hd_info.Energy_adc
+
+                                cu.adc_erp.remove(event)
+                                cu.state_adc[idx] = True
+
+                                ### add next event counter: cu_saa
+                                for proceeding_index in event.proceeding_event:
+                                    pro_event = self.Computation_order[proceeding_index]
+                                    pro_event.current_number_of_preceding_event += 1
+
+                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                        if self.trace:
+                                            pass
+                                            print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
+                                        cu.cu_saa_trigger.append([pro_event, []])
+                                break
 
             ### Event: cu_saa 
             for pe in self.PE_array:
@@ -335,7 +363,7 @@ class Controller(object):
                     for event in cu.cu_saa_erp.copy():
                         if self.trace:
                             pass
-                            #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
 
@@ -570,6 +598,8 @@ class Controller(object):
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
+
+
             ### Pipeline stage control ###
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
@@ -578,6 +608,8 @@ class Controller(object):
                     self.cycles_each_layer.append(self.this_layer_cycle_ctr)
                     self.this_layer_event_ctr = 0
                     self.this_layer_cycle_ctr = 0
+
+
 
             ### Trigger events ###
             ## Trigger interconnect
@@ -669,18 +701,28 @@ class Controller(object):
                         else:
                             pe.pe_saa_erp.append(pro_event) 
                             cu.pe_saa_trigger.remove(trigger)
-                    ### Trigger cu_saa 
+                    ### Trigger adc
                     for xb in cu.XB_array:
-                        for trigger in xb.cu_saa_trigger.copy():
+                        for trigger in xb.adc_trigger.copy():
                             pro_event = trigger[0]
                             cu_idx = trigger[1][0]
                             if not self.isPipeLine:
                                 if pro_event.nlayer == self.pipeline_layer_stage:
-                                    pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
-                                    xb.cu_saa_trigger.remove(trigger)
+                                    pe.CU_array[cu_idx].adc_erp.append(pro_event)
+                                    xb.adc_trigger.remove(trigger)
                             else:
-                                pe.CU_array[cu_idx].cu_saa_erp.append(pro_event)
-                                xb.cu_saa_trigger.remove(trigger)
+                                pe.CU_array[cu_idx].adc_erp.append(pro_event)
+                                xb.adc_trigger.remove(trigger)
+                    ### Trigger cu_saa
+                    for trigger in cu.cu_saa_trigger.copy():
+                        pro_event = trigger[0]
+                        if not self.isPipeLine:
+                            if pro_event.nlayer == self.pipeline_layer_stage:
+                                cu.cu_saa_erp.append(pro_event)
+                                cu.cu_saa_trigger.remove(trigger)
+                        else:
+                            cu.cu_saa_erp.append(pro_event)
+                            cu.cu_saa_trigger.remove(trigger)
 
                 ### Trigger pe saa (for data transfer) 
                 for trigger in pe.pe_saa_trigger.copy():
@@ -722,7 +764,7 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if cu.state:
-                        if cu.cu_saa_erp:
+                        if cu.cu_saa_erp or cu.adc_erp:
                             continue
 
                         isCUBusy = False
@@ -753,14 +795,14 @@ class Controller(object):
                     isDone = False
                     break
                 for cu in pe.CU_array:
-                    if cu.state or cu.edram_rd_ir_erp:
+                    if cu.state or cu.edram_rd_ir_erp or cu.cu_saa_erp or cu.adc_erp:
                         isDone = False
                         break
-                    elif cu.ou_operation_trigger or cu.pe_saa_trigger:
+                    elif cu.ou_operation_trigger or cu.pe_saa_trigger or cu.cu_saa_trigger:
                         isDone = False
                         break
                     for xb in cu.XB_array:
-                        if xb.cu_saa_trigger:
+                        if xb.adc_trigger:
                             isDone = False
                             break
                     if not isDone:

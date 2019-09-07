@@ -233,7 +233,18 @@ class OrderGenerator(object):
                                             preceding_count = 1
                                             event = EventMetaData("ou_operation", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
                                             self.Computation_order.append(event)              
+                ### Event: adc
+                                            position_idx = self.XB_array[xbar_array_idx].position
+                                            preceding_count = 1
+                                            adc_inputs = []
+                                            adc_outputs = []
 
+                                            ### add dependency
+                                            adc_event_idx = len(self.Computation_order)
+                                            self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+
+                                            event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                            self.Computation_order.append(event)
                 ### Event: cu_saa                      
                                             filter_list = []                            
                                             for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
@@ -251,7 +262,7 @@ class OrderGenerator(object):
 
                                                 ### add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
-                                                self.Computation_order[ou_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                                self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
 
                                                 grid = self.pe_saa_mat[nlayer][num_input][nfilter]
                                                 if grid == 0.0:
@@ -532,7 +543,18 @@ class OrderGenerator(object):
                                             preceding_count = 1
                                             event = EventMetaData("ou_operation", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
                                             self.Computation_order.append(event)              
-    
+                ### Event: adc
+                                            position_idx = self.XB_array[xbar_array_idx].position
+                                            preceding_count = 1
+                                            adc_inputs = []
+                                            adc_outputs = []
+
+                                            ### add dependency
+                                            adc_event_idx = len(self.Computation_order)
+                                            self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+
+                                            event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                            self.Computation_order.append(event)
                 ### Event: cu_saa                      
                                             filter_list = []               
                                             for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
@@ -550,7 +572,7 @@ class OrderGenerator(object):
 
                                                 ### add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
-                                                self.Computation_order[ou_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                                self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
 
                                                 grid = self.pe_saa_mat[nlayer][num_input][nfilter]
                                                 if grid == 0.0:

@@ -5,7 +5,7 @@ class XB(object):
         self.ou_operation_epc = 1
 
         ## trigger event list
-        self.cu_saa_trigger = [] # [pro_event, [cu_idx]]
+        self.adc_trigger = []
         
         ## event ready pool
         self.ou_operation_erp = []
