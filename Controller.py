@@ -274,7 +274,7 @@ class Controller(object):
 
                                 if cu.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
                                     cu.edram_rd_cycle_ctr = 0
-                                    ### add next event counter: ou_operation
+                                    ### add next event counter: ou
                                     for proceeding_index in event.proceeding_event:
                                         pro_event = self.Computation_order[proceeding_index]
                                         pro_event.current_number_of_preceding_event += 1
@@ -287,7 +287,7 @@ class Controller(object):
                                             cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
                                             cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
-                                            cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+                                            cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
 
                     elif cu.state and cu.state_edram_rd_ir:
                         cu.edram_rd_cycle_ctr += 1
@@ -295,7 +295,7 @@ class Controller(object):
                             cu.edram_rd_cycle_ctr = 0
                             cu.state_edram_rd_ir = False
                             event = cu.edram_rd_event
-                            ### add next event counter: ou_operation
+                            ### add next event counter: ou
                             for proceeding_index in event.proceeding_event:
                                 pro_event = self.Computation_order[proceeding_index]
                                 pro_event.current_number_of_preceding_event += 1
@@ -308,7 +308,7 @@ class Controller(object):
                                     cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
                                     cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                     xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
-                                    cu.ou_operation_trigger.append([pro_event, [cu_idx, xb_idx]])
+                                    cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
 
                                 ### add next event counter: ou
                                 for proceeding_index in event.proceeding_event:
