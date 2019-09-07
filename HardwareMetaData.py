@@ -24,18 +24,18 @@ class HardwareMetaData(object):
         self.OU_h = 5
         self.OU_w = 5
         
-        self.Frequency = 1.2 # Ghz
+        self.Frequency = 1.2 # GHz
         self.ADC_resolution = 3 # bits
         self.Router_flit_size = 32 # bits
-        self.cycle_time = 1 / self.Frequency * self.OU_w * self.ADC_resolution / 8 # scaling from ISAAC
-
+        
+        self.cycle_time = 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper
+        self.eDRAM_read_latency = 1 / 1.2 / 256 # scaling from ISAAC (ns/per bit)
 
         self.eDRAM_buffer_size = 1.6 # nKB
         self.Output_Reg_size = 3 # nKB
         self.CU_Input_Reg_size = 2 # nKB
         self.CU_Output_Reg_size = 256 # nKB
         
-        self.eDRAM_buffer_rd_per_cycle = self.Xbar_h * self.Xbar_num
         self.CU_Shift_and_add_per_cycle = 4
         self.PE_Shift_and_add_per_cycle = 4
         self.Activation_per_cycle = 100
