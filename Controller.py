@@ -227,9 +227,7 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if not cu.state and not cu.state_edram_rd_ir: # 這個條件才能消耗一個edram read event
-                        if cu.edram_rd_ir_erp: # 也要有read event才能做事
-                            event = cu.edram_rd_ir_erp[0]
-
+                        for event in cu.edram_rd_ir_erp.copy():
                             ## Is Data in eDRAM buffer
                             isData_ready = True
                             # inputs: [[num_input, fm_h, fm_w, fm_c]]
@@ -288,6 +286,7 @@ class Controller(object):
                                             cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
+                                break
 
                     elif cu.state and cu.state_edram_rd_ir:
                         cu.edram_rd_cycle_ctr += 1
