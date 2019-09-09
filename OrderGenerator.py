@@ -160,7 +160,7 @@ class OrderGenerator(object):
 
                         eri_event_idx = len(self.Computation_order)
                         eri_position_idx = cu_pos
-                        eri_input_sequence = data_feed_to_cu # [[[num_input, h, w, c]]]
+                        eri_input_sequence = data_feed_to_cu # [[num_input, h, w, c]]
                         eri_output_sequence = data_feed_to_cu
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
@@ -208,28 +208,34 @@ class OrderGenerator(object):
                                         for xw in xbar_block_w:
                                             # OU block
                                             ou_inputs = []
-                                            ou_outputs = []  # [[(input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
-                                            idx = 0
-                                            for h in xh:
-                                                for w in xw:
-                                                    hinput = this_input.inputs[idx][0]
-                                                    winput = this_input.inputs[idx][1]
-                                                    cinput = this_input.inputs[idx][2]
+                                            ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
+                                            # idx = 0
+                                            # for h in xh:
+                                            #     for w in xw:
+                                            #         hinput = this_input.inputs[idx][0]
+                                            #         winput = this_input.inputs[idx][1]
+                                            #         cinput = this_input.inputs[idx][2]
                                                     
-                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    filter_nfilter = crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid.ngrid
-                                                    filter_nbit = crossbar_grid.nbit
+                                            #         crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                            #         filter_nfilter = crossbar_grid.nfilter
+                                            #         filter_ngrid = crossbar_grid.ngrid
+                                            #         filter_nbit = crossbar_grid.nbit
 
-                                                    ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
-                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
-                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
-                                                idx += 1
+                                            #         ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
+                                            #         ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
+                                            #                                 (filter_nfilter, filter_ngrid, filter_nbit)])
+                                            #     idx += 1
 
                                             ### add dependency
                                             ou_event_idx = len(self.Computation_order)
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
-                                        
+
+                                            ou_inputs.append([(num_input, input_bit)])
+                                            for w in xw:
+                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[0][w]
+                                                filter_nfilter = crossbar_grid.nfilter
+                                                filter_nbit = crossbar_grid.nbit
+                                                ou_outputs.append([(num_input, input_bit), (filter_nfilter, filter_nbit)])
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
                                             event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
@@ -257,8 +263,8 @@ class OrderGenerator(object):
                                                 cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
                                                 for column in range(len(xw)):
                                                     if nfilter == ou_outputs[column][1][0]:
-                                                        input_nbit = ou_outputs[0][0][4]
-                                                        filter_nbit = ou_outputs[column][1][2]
+                                                        input_nbit = ou_outputs[0][0][1]
+                                                        filter_nbit = ou_outputs[column][1][1]
                                                         cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
 
                                                 ### add dependency
@@ -310,7 +316,7 @@ class OrderGenerator(object):
                                 edram_wr_pe_pos  = pe_idx
                                 edram_wr_inputs  = [[window_h, window_w, nfilter]]
                                 #edram_wr_outputs = [[window_h, window_w, nfilter]]
-                                edram_wr_outputs = [[]]
+                                edram_wr_outputs = []
                                 edram_wr_preceding_count = len(preceding_pe[pe_idx])
                                 event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                                 self.Computation_order.append(event)
@@ -318,7 +324,7 @@ class OrderGenerator(object):
                                 source_pe_idx = pe_idx
                                 transfer_inputs = [[window_h, window_w, nfilter]]
                                 #transfer_outputs = [[window_h, window_w, nfilter]]
-                                transfer_outputs = [[]]
+                                transfer_outputs = []
                                 event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                                 self.Computation_order.append(event)
                                     
@@ -520,26 +526,29 @@ class OrderGenerator(object):
                                             ou_inputs = []
                                             ou_outputs = []  # [[(input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
                                             idx = 0
-                                            for h in xh:
-                                                for w in xw:
-                                                    hinput = this_input.inputs[idx][0]
-                                                    winput = this_input.inputs[idx][1]
-                                                    cinput = this_input.inputs[idx][2]
-                                                    
-                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    filter_nfilter = crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid.ngrid
-                                                    filter_nbit = crossbar_grid.nbit
 
-                                                    ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
-                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
-                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
-                                                idx += 1
-                                        
+                                            # for h in xh:
+                                            #     for w in xw:
+                                            #         hinput = this_input.inputs[idx][0]
+                                            #         winput = this_input.inputs[idx][1]
+                                            #         cinput = this_input.inputs[idx][2]
+                                                    
+                                            #         crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                            #         filter_nfilter = crossbar_grid.nfilter
+                                            #         filter_ngrid = crossbar_grid.ngrid
+                                            #         filter_nbit = crossbar_grid.nbit
+                                            #     idx += 1
+
                                             ### add dependency
                                             ou_event_idx = len(self.Computation_order)
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
-                                        
+
+                                            ou_inputs.append([(num_input, input_bit)])
+                                            for w in xw:
+                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[0][w]
+                                                filter_nfilter = crossbar_grid.nfilter
+                                                filter_nbit = crossbar_grid.nbit
+                                                ou_outputs.append([(num_input, input_bit), (filter_nfilter, filter_nbit)])
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
                                             event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
@@ -567,8 +576,8 @@ class OrderGenerator(object):
                                                 cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
                                                 for column in range(len(xw)):
                                                     if nfilter == ou_outputs[column][1][0]:
-                                                        input_nbit = ou_outputs[0][0][4]
-                                                        filter_nbit = ou_outputs[column][1][2]
+                                                        input_nbit = ou_outputs[0][0][1]
+                                                        filter_nbit = ou_outputs[column][1][1]
                                                         cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
 
                                                 ### add dependency
@@ -618,7 +627,7 @@ class OrderGenerator(object):
                         edram_wr_pe_pos  = pe_idx
                         edram_wr_inputs  = [[0, 0, nfilter]]
                         #edram_wr_outputs = [[0, 0, nfilter]]
-                        edram_wr_outputs = [[]]
+                        edram_wr_outputs = []
                         edram_wr_preceding_count = len(preceding_pe[pe_idx])
                         event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                         self.Computation_order.append(event)
@@ -626,7 +635,7 @@ class OrderGenerator(object):
                         source_pe_idx = pe_idx
                         transfer_inputs = [[0, 0, nfilter]]
                         #transfer_outputs = [[0, 0, nfilter]]
-                        transfer_outputs = [[]]
+                        transfer_outputs = []
                         event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                         self.Computation_order.append(event)
                             
@@ -672,7 +681,6 @@ class OrderGenerator(object):
                     edram_wr_preceding_count = 1
                     edram_wr_inputs  = [[nfilter, 0, 0]]
                     edram_wr_outputs = [[nfilter, 0, 0]]
-                    
                     event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
                     self.Computation_order.append(event) 
 

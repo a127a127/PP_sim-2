@@ -10,6 +10,8 @@ from HardwareMetaData import HardwareMetaData
 from Interconnect import Interconnect
 from Packet import Packet
 
+from IdleAnalysis import IdleAnalysis
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -53,21 +55,6 @@ class Controller(object):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
                         pe = PE(pe_pos, self.input_bit)
                         self.PE_array.append(pe)
-        # Statistics
-        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        self.mem_acc_ctr = 0
-        self.data_transfer_ctr = 0 
-        self.act_xb_ctr = 0
-        self.pe_saa_stall_cycle = 0
-        ## Utilization
-        self.energy_utilization = []
-        self.xbar_utilization = []
-        self.pe_state_for_plot = [[], []]
-        self.cu_state_for_plot = [[], []]
-        self.xb_state_for_plot = [[], []]
-        self.buffer_size = []
-        for i in range(len(self.PE_array)):
-            self.buffer_size.append([])
         # Interconnect
         self.fetch_array = []
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x, self.input_bit)
@@ -89,6 +76,25 @@ class Controller(object):
             self.this_layer_cycle_ctr = 0
             self.cycles_each_layer = []
 
+        # Statistics
+        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        self.mem_acc_ctr = 0
+        self.data_transfer_ctr = 0
+        self.act_xb_ctr = 0
+        self.pe_saa_stall_cycle = 0
+        ## Utilization
+        self.energy_utilization = []
+        self.xbar_utilization = []
+        self.pe_state_for_plot = [[], []]
+        self.cu_state_for_plot = [[], []]
+        self.xb_state_for_plot = [[], []]
+        self.buffer_size = []
+        for i in range(len(self.PE_array)):
+            self.buffer_size.append([])
+
+        # Idle Analysis
+        self.idle_analysis = IdleAnalysis(self.ordergenerator.model_config)
+
     def run(self):
         for e in self.Computation_order:
             if e.preceding_event_count == e.current_number_of_preceding_event:
@@ -107,8 +113,10 @@ class Controller(object):
         while not isDone:
             self.Total_energy_cycle = 0
             self.cycle_ctr += 1
-            self.this_layer_cycle_ctr += 1
             self.act_xb_ctr = 0
+
+            if not self.isPipeLine:
+                self.this_layer_cycle_ctr += 1
 
             if self.trace:
                 print("cycle:", self.cycle_ctr)
@@ -152,6 +160,8 @@ class Controller(object):
                             print("\t\tProceeding event is triggered.", \
                                pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
                         pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
+                        # idle analysis
+                        pro_event.last_arrived_data = pk.data           
                 elif pro_event.event_type == "edram_rd_pool":
                     # store data
                     if self.trace:
@@ -286,6 +296,9 @@ class Controller(object):
                                             cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
+                                        # idle analysis
+                                        pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
+                                #print("last_arrived_data", event.last_arrived_data)
                                 break
 
                     elif cu.state and cu.state_edram_rd_ir:
@@ -331,41 +344,83 @@ class Controller(object):
                 for cu in pe.CU_array:
                     for xb in cu.XB_array:
                         for event in xb.ou_erp.copy():
-                            for idx in range(len(xb.state_ou)):
-                                if not xb.state_ou[idx]:
-                                    if self.trace:
-                                        pass
-                                        print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            if not xb.state_ou:
+                                if self.trace:
+                                    pass
+                                    print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                                if not self.isPipeLine:
+                                    self.this_layer_event_ctr += 1
+                                self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
+                                self.Total_energy_dac += self.hd_info.Energy_dac
+                                self.Total_energy_crossbar += self.hd_info.Energy_crossbar
+                                self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
+                                                            self.hd_info.Energy_dac + \
+                                                            self.hd_info.Energy_crossbar
+                                self.act_xb_ctr += 1
+
+                                xb.state_ou = True
+                                xb.ou_erp.remove(event)
+
+                                ### add next event counter: adc
+                                for proceeding_index in event.proceeding_event:
+                                    pro_event = self.Computation_order[proceeding_index]
+                                    pro_event.current_number_of_preceding_event += 1
                                     
-                                    if not self.isPipeLine:
-                                        self.this_layer_event_ctr += 1
-                                    
-                                    self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
-                                    self.Total_energy_dac += self.hd_info.Energy_dac
-                                    self.Total_energy_crossbar += self.hd_info.Energy_crossbar
-                                    self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
-                                                                self.hd_info.Energy_dac + \
-                                                                self.hd_info.Energy_crossbar
-                                    self.act_xb_ctr += 1
+                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                        if self.trace:
+                                            pass
+                                            print("\t\tProceeding event is triggered.", pro_event.event_type)
 
-                                    xb.state_ou[idx] = True
-                                    xb.ou_erp.remove(event)
+                                        pos = pro_event.position_idx
+                                        cu_y, cu_x = pos[4], pos[5]
+                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                        xb.adc_trigger.append([pro_event, [cu_idx]])
 
-                                    ### add next event counter: adc
-                                    for proceeding_index in event.proceeding_event:
-                                        pro_event = self.Computation_order[proceeding_index]
-                                        pro_event.current_number_of_preceding_event += 1
-                                        
-                                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                            if self.trace:
-                                                pass
-                                                print("\t\tProceeding event is triggered.", pro_event.event_type)
+                                # idle analysis
+                                self.idle_analysis.process(event, self.cycle_ctr)
+                                if not xb.last_cycle_state: # idle to busy
+                                    xb.idle_to_busy.append(self.cycle_ctr)
 
-                                            pos = pro_event.position_idx
-                                            cu_y, cu_x = pos[4], pos[5]
-                                            cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                            xb.adc_trigger.append([pro_event, [cu_idx]])
-                                    break
+                                    last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
+                                    critical_data =  last_edram_rd_ir_event.last_arrived_data
+                                    if critical_data == 0:
+                                        print("critical data error")
+                                        exit(0)
+                                    else:
+                                        #print("critical_data:", critical_data)
+                                        nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
+                                        if nlayer == 0:
+                                            # 第一層資料都ready了，只需考慮transfer跟other
+                                            xb.transfer += self.cycle_ctr - xb.busy_to_idle[-1]
+                                        else:
+                                            # 第二層開始要查詢上一層的資料
+                                            idle_meta_data = self.idle_analysis.feature_mat[nlayer-1][h][w][c]
+                                            idle_time = xb.idle_to_busy[-1] - xb.busy_to_idle[-1]
+                                            print("xb.busy_to_idle", xb.busy_to_idle[-1])
+                                            print("xb.idle_to_busy", xb.idle_to_busy[-1])
+                                            print("start_compute", idle_meta_data.start_compute)
+                                            print("finish_compute", idle_meta_data.finish_compute)
+
+                                            compute_time = idle_meta_data.finish_compute - idle_meta_data.start_compute + 1
+                                            transfer_time = xb.idle_to_busy[-1] - idle_meta_data.finish_compute - 1
+                                            if idle_time < transfer_time:
+                                                transfer_time = idle_time
+                                                compute_time = 0
+                                                other_time = 0
+                                            elif idle_time < (transfer_time + compute_time):
+                                                compute_time = idle_time - transfer_time
+                                                other_time = 0
+                                            else:
+                                                other_time = idle_time - compute_time - transfer_time
+                                            print("idle_time", idle_time)
+                                            print("compute_time", compute_time)
+                                            print("transfer_time", transfer_time)
+                                            xb.compute += compute_time
+                                            xb.transfer += transfer_time
+                                            xb.other += other_time
+                                        print("xb compute:", xb.compute)
+                                        print("xb transfer:", xb.transfer)
+                                        print("xb other:", xb.other)
             ### Event: adc
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -556,6 +611,8 @@ class Controller(object):
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
+                            # idle analysis
+                            self.idle_analysis.process(event, self.cycle_ctr)
                             break
             
             ### Event: edram_rd_pool
@@ -797,7 +854,7 @@ class Controller(object):
                 for cu in pe.CU_array:
                     cu.reset()
                     for xb in cu.XB_array:
-                        xb.reset()
+                        xb.reset(self.cycle_ctr)
 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -865,7 +922,8 @@ class Controller(object):
 
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
-        print("Cycles each layer:", self.cycles_each_layer)
+        if not self.isPipeLine:
+            print("Cycles each layer:", self.cycles_each_layer)
         print("Cycles time:", self.hd_info.cycle_time, "ns\n")
         
         print('memory accesss times:', self.mem_acc_ctr)
@@ -982,7 +1040,7 @@ class Controller(object):
         plt.ylabel('CU number')
         #plt.ylim([-1, 64])
         #plt.xlim([1, 250])  ### @@
-        plt.yticks(np.arange(0,64, 2), fontsize=6)
+        plt.yticks(np.arange(-1,64, 2), fontsize=6)
         plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
         plt.clf()
@@ -993,12 +1051,14 @@ class Controller(object):
             for row in range(0, len(self.xb_state_for_plot[0]), fre):
                 writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
 
-        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=1, c='blue')
+        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('XB number')
-        plt.yticks(np.arange(0,64, 2), fontsize=6)
-        plt.xticks(np.arange(0,250, 20), fontsize=8)
+        #plt.yticks(np.arange(-1,64, 2), fontsize=6)
+        plt.yticks(np.arange(-1, 12, 1), fontsize=6)
+        plt.xticks(np.arange(0, 100, 2), fontsize=6)
+        #plt.xticks(np.arange(0,250, 20), fontsize=8)
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png')
         plt.clf()
   
@@ -1019,3 +1079,11 @@ class Controller(object):
         plt.ylim([0, self.max_buffer_size+5])
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
+
+        idx = 0
+        for pe in self.PE_array:
+            for cu in pe.CU_array:
+                for xb in cu.XB_array:
+                    idx += 1
+                    if len(xb.idle_to_busy)>1 or  len(xb.busy_to_idle)>1:
+                        print("xb idx:", idx, xb.idle_to_busy, xb.busy_to_idle)
