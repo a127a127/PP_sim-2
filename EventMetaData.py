@@ -14,6 +14,10 @@ class EventMetaData:
 
         self.finished = False
 
+        # for idle analysis
+        self.last_arrived_data = 0 # for edram read event
+        self.pre_edram_rd_idx = -1 # for ou event
+
     def __str__(self):
         return str(self.__dict__)
         
