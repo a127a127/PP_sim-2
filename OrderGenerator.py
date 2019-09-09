@@ -7,6 +7,7 @@ import numpy as np
 
 class OrderGenerator(object):
     def __init__(self, model_config, mapping_information, trace):
+        self.model_config = model_config
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
@@ -159,7 +160,7 @@ class OrderGenerator(object):
 
                         eri_event_idx = len(self.Computation_order)
                         eri_position_idx = cu_pos
-                        eri_input_sequence = data_feed_to_cu
+                        eri_input_sequence = data_feed_to_cu # [[[num_input, h, w, c]]]
                         eri_output_sequence = data_feed_to_cu
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
@@ -781,6 +782,7 @@ class OrderGenerator(object):
     def trace_order(self):
         edram_rd_ir_ctr = 0
         ou_ctr = 0
+        adc_ctr = 0
         cu_saa_ctr = 0
         pe_saa_ctr = 0
         activation_ctr = 0
@@ -794,6 +796,8 @@ class OrderGenerator(object):
                 edram_rd_ir_ctr += 1
             elif t == "ou":
                 ou_ctr += 1
+            elif t == "adc":
+                adc_ctr += 1
             elif t == "cu_saa":
                 cu_saa_ctr += 1
             elif t == "pe_saa":
@@ -809,10 +813,11 @@ class OrderGenerator(object):
             elif t == "data_transfer":
                 data_transfer_ctr += 1
             else:
-                print("event type error..")
+                print("event type error:", t)
 
         print("edram_rd_ir_ctr", edram_rd_ir_ctr)
         print("ou_ctr", ou_ctr)
+        print("adc_ctr", adc_ctr)
         print("cu_saa_ctr", cu_saa_ctr)
         print("pe_saa_ctr", pe_saa_ctr)
         print("activation_ctr", activation_ctr)
