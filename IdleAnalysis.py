@@ -70,7 +70,7 @@ class IdleAnalysis(object):
                     self.feature_mat[nlayer][h][w][c] = IdleMetaData(cycle, -1)
         
         elif event.event_type == "edram_wr":
-            if not event.outputs:
+            if event.outputs == [[-1,-1,-1]]:
                 # saa edram write
                 return
             else:

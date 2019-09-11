@@ -114,10 +114,8 @@ class Controller(object):
             self.Total_energy_cycle = 0
             self.cycle_ctr += 1
             self.act_xb_ctr = 0
-
             if not self.isPipeLine:
                 self.this_layer_cycle_ctr += 1
-
             if self.trace:
                 print("cycle:", self.cycle_ctr)
 
@@ -125,7 +123,6 @@ class Controller(object):
             for s in range(self.interconnect_step):
                 self.interconnect.step()
                 self.Total_energy_interconnect += self.interconnect.step_energy_consumption
-
             # Packets arrive: Store data, trigger event
             arrived_packet = self.interconnect.get_arrived_packet()
             for pk in arrived_packet:
@@ -183,7 +180,6 @@ class Controller(object):
                             #print("\t\tProceeding event is triggered.", pro_event.event_type)
                         
                         pe.pe_saa_trigger.append([pro_event, []])
-
             # Event: data_transfer
             for event in self.data_transfer_erp.copy():
                 if self.trace:
@@ -205,7 +201,6 @@ class Controller(object):
 
                 self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # read
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
-
             ### Fetch data from off-chip memory
             for FE in self.fetch_array.copy():
                 FE.cycles_counter += 1
@@ -232,7 +227,6 @@ class Controller(object):
                             packet = Packet(src, des, [FE.event.nlayer, data], pro_event_idx)
                             self.interconnect.input_packet(packet)
                     self.fetch_array.remove(FE)
-
             ### Event: edram_rd_ir
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -338,7 +332,6 @@ class Controller(object):
                                         cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
                         else:
                             break
-            
             ### Event: ou
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -396,10 +389,10 @@ class Controller(object):
                                             # 第二層開始要查詢上一層的資料
                                             idle_meta_data = self.idle_analysis.feature_mat[nlayer-1][h][w][c]
                                             idle_time = xb.idle_to_busy[-1] - xb.busy_to_idle[-1]
-                                            print("xb.busy_to_idle", xb.busy_to_idle[-1])
-                                            print("xb.idle_to_busy", xb.idle_to_busy[-1])
-                                            print("start_compute", idle_meta_data.start_compute)
-                                            print("finish_compute", idle_meta_data.finish_compute)
+                                            # print("xb.busy_to_idle", xb.busy_to_idle[-1])
+                                            # print("xb.idle_to_busy", xb.idle_to_busy[-1])
+                                            # print("start_compute", idle_meta_data.start_compute)
+                                            # print("finish_compute", idle_meta_data.finish_compute)
 
                                             compute_time = idle_meta_data.finish_compute - idle_meta_data.start_compute + 1
                                             transfer_time = xb.idle_to_busy[-1] - idle_meta_data.finish_compute - 1
@@ -412,15 +405,15 @@ class Controller(object):
                                                 other_time = 0
                                             else:
                                                 other_time = idle_time - compute_time - transfer_time
-                                            print("idle_time", idle_time)
-                                            print("compute_time", compute_time)
-                                            print("transfer_time", transfer_time)
+                                            # print("idle_time", idle_time)
+                                            # print("compute_time", compute_time)
+                                            # print("transfer_time", transfer_time)
                                             xb.compute += compute_time
                                             xb.transfer += transfer_time
                                             xb.other += other_time
-                                        print("xb compute:", xb.compute)
-                                        print("xb transfer:", xb.transfer)
-                                        print("xb other:", xb.other)
+                                        # print("xb compute:", xb.compute)
+                                        # print("xb transfer:", xb.transfer)
+                                        # print("xb other:", xb.other)
             ### Event: adc
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -450,7 +443,6 @@ class Controller(object):
                                             print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
                                         cu.cu_saa_trigger.append([pro_event, []])
                                 break
-
             ### Event: cu_saa 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -495,7 +487,6 @@ class Controller(object):
 
                                 elif pro_event.event_type == "edram_wr":
                                     pe.edram_wr_trigger.append([pro_event, []])
-
             ### Event: pe_saa 
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
@@ -539,7 +530,6 @@ class Controller(object):
                                     pass
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pe.activation_trigger.append([pro_event, []])
-
             ### Event: activation 
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
@@ -569,7 +559,6 @@ class Controller(object):
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
-
             ### Event: edram write 
             for pe in self.PE_array:
                 for event in pe.edram_wr_erp.copy():
@@ -590,7 +579,6 @@ class Controller(object):
 
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
-
                             pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
 
                             ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
@@ -614,7 +602,6 @@ class Controller(object):
                             # idle analysis
                             self.idle_analysis.process(event, self.cycle_ctr)
                             break
-            
             ### Event: edram_rd_pool
             for pe in self.PE_array:
                 if pe.edram_rd_pool_erp:
@@ -663,8 +650,7 @@ class Controller(object):
                                     pass
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pos = pro_event.position_idx
-                                pe.pooling_trigger.append([pro_event, []])                                
-                    
+                                pe.pooling_trigger.append([pro_event, []])
             ### Event: pooling 
             for pe in self.PE_array:
                 for event in pe.pooling_erp.copy():
@@ -693,8 +679,6 @@ class Controller(object):
                                     pe.edram_wr_trigger.append([pro_event, []])
                             break
 
-
-
             ### Pipeline stage control ###
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
@@ -703,8 +687,6 @@ class Controller(object):
                     self.cycles_each_layer.append(self.this_layer_cycle_ctr)
                     self.this_layer_event_ctr = 0
                     self.this_layer_cycle_ctr = 0
-
-
 
             ### Trigger events ###
             ## Trigger interconnect
@@ -717,7 +699,6 @@ class Controller(object):
                 else:
                     self.data_transfer_erp.append(pro_event)
                     self.data_transfer_trigger.remove(trigger)
-
             for pe in self.PE_array:
                 ## Trigger activation 
                 for trigger in pe.activation_trigger.copy():
@@ -855,7 +836,6 @@ class Controller(object):
                     cu.reset()
                     for xb in cu.XB_array:
                         xb.reset(self.cycle_ctr)
-
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if cu.state:
@@ -882,7 +862,6 @@ class Controller(object):
                 isDone = False
             if self.interconnect.busy():
                 isDone = False
-
             for pe in self.PE_array:
                 if pe.pe_saa_erp or pe.activation_erp or pe.pooling_erp or pe.edram_wr_erp or pe.edram_rd_pool_erp:
                     isDone = False
@@ -907,7 +886,6 @@ class Controller(object):
                 if not isDone:
                     break
 
-
             # Buffer size utilization
             for pe_idx in range(len(self.PE_array)):
                 self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
@@ -931,7 +909,6 @@ class Controller(object):
         print("Avg buffer size:", self.avg_buffer_size)
         print()
         
-
         self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
                                 self.Total_energy_adc + \
                                 self.Total_energy_dac + \
@@ -948,7 +925,6 @@ class Controller(object):
         self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
         
         print("Power breakdown:")
-
         print("\tTotal:", self.Total_energy, "nJ")
         print("\tChip level")
         print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
@@ -1011,7 +987,6 @@ class Controller(object):
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Power_breakdown_chip.png')
         plt.clf()
 
-
         ### PE usage
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -1072,18 +1047,20 @@ class Controller(object):
                 writer.writerow(c)
 
         for i in range(len(self.PE_array)):
-            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i]) #, c=self.color[i])
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label=str(i)) #, c=self.color[i])
         plt.title(self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('Buffer size (number of data)')
+        plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
+        plt.legend(loc='upper left')
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
 
-        idx = 0
-        for pe in self.PE_array:
-            for cu in pe.CU_array:
-                for xb in cu.XB_array:
-                    idx += 1
-                    if len(xb.idle_to_busy)>1 or  len(xb.busy_to_idle)>1:
-                        print("xb idx:", idx, xb.idle_to_busy, xb.busy_to_idle)
+        # idx = 0
+        # for pe in self.PE_array:
+        #     for cu in pe.CU_array:
+        #         for xb in cu.XB_array:
+        #             idx += 1
+        #             if len(xb.idle_to_busy)>1 or  len(xb.busy_to_idle)>1:
+        #                 print("xb idx:", idx, xb.idle_to_busy, xb.busy_to_idle)
