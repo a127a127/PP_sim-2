@@ -321,7 +321,7 @@ class OrderGenerator(object):
                                 source_pe_idx = pe_idx
                                 transfer_inputs = [[window_h, window_w, nfilter]]
                                 #transfer_outputs = [[window_h, window_w, nfilter]]
-                                transfer_outputs = []
+                                transfer_outputs = [[-1,-1,-1]]
                                 event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                                 self.Computation_order.append(event)
                                     
