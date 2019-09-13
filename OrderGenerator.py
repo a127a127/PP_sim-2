@@ -1,4 +1,5 @@
 from HardwareMetaData import HardwareMetaData
+from configs.ModelConfig import ModelConfig
 from Model import Model
 from PE import PE
 from XB import XB
@@ -6,9 +7,9 @@ from EventMetaData import EventMetaData
 import numpy as np 
 
 class OrderGenerator(object):
-    def __init__(self, model_config, mapping_information, trace):
-        self.model_config = model_config
-        self.model_info = Model(model_config)
+    def __init__(self, mapping_information, trace):
+        self.model_config = ModelConfig()
+        self.model_info = Model(self.model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
         

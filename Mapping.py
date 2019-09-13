@@ -1,4 +1,5 @@
 from HardwareMetaData import HardwareMetaData
+from configs.ModelConfig import ModelConfig
 from Model import Model
 from MappingMetaData import MappingMetaData
 from CrossbarGridMetaData import CrossbarGridMetaData
@@ -7,7 +8,8 @@ from math import ceil
 import numpy as np
 
 class DefaultMapping(object):
-    def __init__(self, model_config):
+    def __init__(self):
+        model_config = ModelConfig()
         self.model_info =  Model(model_config)
         self.hd_info = HardwareMetaData()
 
@@ -271,7 +273,8 @@ class DefaultMapping(object):
         return str(self.__dict__)
 
 class ParallelismMapping(object):
-    def __init__(self, model_config):
+    def __init__(self):
+        model_config = ModelConfig()
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
 
@@ -503,7 +506,8 @@ class ParallelismMapping(object):
         return str(self.__dict__)
 
 class TransferMapping(object):
-    def __init__(self, model_config):
+    def __init__(self):
+        model_config = ModelConfig()
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
 

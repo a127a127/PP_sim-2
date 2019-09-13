@@ -10,7 +10,7 @@ class OnChipBuffer():
 
         self.buffer = []
 
-    def check(self, data): 
+    def check(self, data):
         for d in self.buffer:
             if d == data:
                 return True

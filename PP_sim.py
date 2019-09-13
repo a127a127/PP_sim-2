@@ -1,10 +1,3 @@
-
-from configs.TestModelConfig import TestModelConfig
-from configs.TestModelConfig2 import TestModelConfig2
-from configs.LenetConfig import LenetConfig
-from configs.Cifar10Config import Cifar10Config
-from configs.CaffenetConfig import CaffenetConfig
-
 from Mapping import DefaultMapping
 from Mapping import ParallelismMapping
 from Mapping import TransferMapping
@@ -14,44 +7,23 @@ from Controller import Controller
 
 import time, sys
 
-from HardwareMetaData import HardwareMetaData
-
 def main():
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
 
-    ### Model ###
-    model_type = 1
-    print("Model type:  ", end="")
-    if model_type == 0: # TestModelConfig
-        print("TestModelConfig")
-        model_config = TestModelConfig()
-    elif model_type == 1: # TestModelConfig2
-        print("TestModelConfig2")
-        model_config = TestModelConfig2()
-    elif model_type == 2: # Cifar10Config
-        print("Cifar10Config")
-        model_config = Cifar10Config()
-    elif model_type == 3: # CaffenetConfig
-        print("CaffenetConfig")
-        model_config = CaffenetConfig()
-    elif model_type == 4: # LenetConfig
-        print("LenetConfig")
-        model_config = LenetConfig()
-    
     ### Mapping ##
     print("Mapping policy:  ", end="")
     if mapping == 0: # DefaultMapping
         print("DefaultMapping")
-        mapping_information = DefaultMapping(model_config)
+        mapping_information = DefaultMapping()
         mapping_str = "DefaultMapping"
     elif mapping == 1: # ParallelismMapping
         print("ParallelismMapping")
-        mapping_information = ParallelismMapping(model_config)
+        mapping_information = ParallelismMapping()
         mapping_str = "ParallelismMapping"
     elif mapping == 2: # TransferMapping
         print("TransferMapping") 
-        mapping_information = TransferMapping(model_config)
+        mapping_information = TransferMapping()
         mapping_str = "TransferMapping"
     
     ### Scheduling ###
@@ -65,14 +37,14 @@ def main():
     print()
 
     ### Trace ###
-    isTrace_order = True
+    isTrace_order = False
     isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
 
-    order_generator = OrderGenerator(model_config, mapping_information, isTrace_order)
+    order_generator = OrderGenerator(mapping_information, isTrace_order)
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
@@ -89,29 +61,31 @@ def main():
 
     controller.print_statistics_result()
 
-    input_bit = model_config.input_bit
-    filter_bit = model_config.filter_bit
 
+    # ### Energy估算
+    # from configs.ModelConfig import ModelConfig
+    # from HardwareMetaData import HardwareMetaData
+    # input_bit = ModelConfig().input_bit
+    # filter_bit = ModelConfig().filter_bit
 
-    ### Energy估算
-    router = 0
-    edram_rd = 0
-    edram_wr = 0
+    # router = 0
+    # edram_rd = 0
+    # edram_wr = 0
 
-    edram_rd_bus = 0
-    pe_saa_bus = 0
-    act_bus = 0
-    edram_wr_bus = 0
+    # edram_rd_bus = 0
+    # pe_saa_bus = 0
+    # act_bus = 0
+    # edram_wr_bus = 0
 
-    act = 0
-    pe_saa = 0
-    pe_or = 0
-    cu_saa = 0
-    adc = 0
-    dac = 0
-    crossbar = 0
-    cu_ir = 0
-    cu_or = 0
+    # act = 0
+    # pe_saa = 0
+    # pe_or = 0
+    # cu_saa = 0
+    # adc = 0
+    # dac = 0
+    # crossbar = 0
+    # cu_ir = 0
+    # cu_or = 0
 
     # # layer1
     # window = 9 #(7-5+1)**2

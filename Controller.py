@@ -6,6 +6,7 @@ from math import ceil, floor
 from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
 from HardwareMetaData import HardwareMetaData
+from configs.ModelConfig import ModelConfig
 
 from Interconnect import Interconnect
 from Packet import Packet
@@ -46,14 +47,13 @@ class Controller(object):
         self.Total_energy_ir_in_cu = 0
         self.Total_energy_or_in_cu = 0
         self.Total_energy_interconnect = 0
-        # PE object
         self.PE_array = []
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
                 for pey_idx in range(self.hd_info.PE_num_y):
                     for pex_idx in range(self.hd_info.PE_num_x):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                        pe = PE(pe_pos, self.input_bit)
+                        pe = PE(pe_pos, ModelConfig().input_bit)
                         self.PE_array.append(pe)
         # Interconnect
         self.fetch_array = []
