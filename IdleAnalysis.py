@@ -21,7 +21,7 @@ class IdleAnalysis(object):
                 else:
                     self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "fully":
-                    self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
+                self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
 
     def process(self, event, cycle):
         #print(event.event_type)
