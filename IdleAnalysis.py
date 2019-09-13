@@ -1,10 +1,11 @@
+from configs.ModelConfig import ModelConfig
 from Model import Model
 from IdleMetaData import IdleMetaData
 import numpy as np
 
 class IdleAnalysis(object):
-    def __init__(self, model_config):
-        self.model_info = Model(model_config)
+    def __init__(self):
+        self.model_info = Model(ModelConfig())
         self.feature_mat = [] # layer n input_feature map
         #self.feature_mat.append(np.zeros((self.model_info.input_h[0], self.model_info.input_w[0], self.model_info.input_c[0])).tolist())
 

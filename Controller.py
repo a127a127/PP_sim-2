@@ -1,18 +1,17 @@
-import os
-import csv
-from PE import PE
-import numpy as np
-from math import ceil, floor
-from EventMetaData import EventMetaData
-from FetchEvent import FetchEvent
 from HardwareMetaData import HardwareMetaData
 from configs.ModelConfig import ModelConfig
+from PE import PE
 
+from EventMetaData import EventMetaData
+from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
 
 from IdleAnalysis import IdleAnalysis
 
+import numpy as np
+from math import ceil, floor
+import os, csv
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -93,7 +92,7 @@ class Controller(object):
             self.buffer_size.append([])
 
         # Idle Analysis
-        self.idle_analysis = IdleAnalysis(self.ordergenerator.model_config)
+        self.idle_analysis = IdleAnalysis()
 
     def run(self):
         for e in self.Computation_order:
