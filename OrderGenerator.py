@@ -144,18 +144,17 @@ class OrderGenerator(object):
                                             data_transfer_event_idx = len(self.Computation_order)
                                             edram_wr_event.proceeding_event.append(data_transfer_event_idx)
                                             data_transfer_preceding_count = 1
-                                            data_transfer_inputs  = edram_wr_event.outputs # [[h, w, c]]
+                                            data_transfer_inputs  = edram_wr_event.inputs # [[h, w, c]]
                                             data_transfer_outputs = edram_wr_event.outputs
                                             event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                             self.Computation_order.append(event)
 
                                             if self.isFreeBuffer:
                                                 # input require
-                                                if data_transfer_inputs[0][1] != [-1,-1,-1]: #TODO:目前先不處理saa transfer
-                                                    pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                    for d in data_transfer_inputs:
-                                                        pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                                pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                                for d in data_transfer_outputs:
+                                                    pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                    self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
 
                             # dependency
                             eri_event_idx = len(self.Computation_order)
@@ -183,7 +182,7 @@ class OrderGenerator(object):
                             # input require
                             pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
                                     cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                            for d in eri_input_sequence:
+                            for d in eri_output_sequence:
                                 pos = d[2] + d[1]*self.model_info.input_w[nlayer] + d[3]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
                                 self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: ou
@@ -310,32 +309,28 @@ class OrderGenerator(object):
                     for window_h in range(windowlen_h):
                         for window_w in range(windowlen_w):
                             num_input = window_h * windowlen_w + window_w
-                            
                             preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter] 
-                            
                             pe_saa_preceding_count = 0 # append pe_saa前有幾個event先append了
                             first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event
-                            do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2] # 5的pe position
-                            
+                            do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2]
                             start_append_idx = len(self.Computation_order)
                 ### Event: edram_wr, data_transfer (for pe_saa)
-                            preceding_pe = dict()
+                            preceding_cu = dict()
                             for pre_event_idx in preceding_list:
-                                if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: 
-                                    if self.Computation_order[pre_event_idx].position_idx[:-2] not in preceding_pe:
-                                        preceding_pe[self.Computation_order[pre_event_idx].position_idx[:-2]] = [pre_event_idx]
+                                if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: # data in other pe
+                                    if self.Computation_order[pre_event_idx].position_idx not in preceding_cu:
+                                        preceding_cu[self.Computation_order[pre_event_idx].position_idx] = [pre_event_idx]
                                     else:
-                                        preceding_pe[self.Computation_order[pre_event_idx].position_idx[:-2]].append(pre_event_idx)
-
-                            for pe_idx in preceding_pe:        
+                                        preceding_cu[self.Computation_order[pre_event_idx].position_idx].append(pre_event_idx)
+                            for cu_idx in preceding_cu:
                                 edram_wr_event_idx = len(self.Computation_order)
-                                for pre_event_idx in preceding_pe[pe_idx]:
+                                for pre_event_idx in preceding_cu[cu_idx]:
                                     self.Computation_order[pre_event_idx].proceeding_event.append(edram_wr_event_idx)
-
+                                pe_idx = cu_idx[0:4]
                                 edram_wr_pe_pos  = pe_idx
                                 edram_wr_inputs  = [[window_h, window_w, nfilter, "u"]]
                                 edram_wr_outputs = [[window_h, window_w, nfilter, "u"]]
-                                edram_wr_preceding_count = len(preceding_pe[pe_idx])
+                                edram_wr_preceding_count = len(preceding_cu[cu_idx])
                                 event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                                 self.Computation_order.append(event)
 
@@ -394,7 +389,7 @@ class OrderGenerator(object):
                                 else:
                                     seq = window_w + window_h * windowlen_w + nfilter * windowlen_w * windowlen_h
                                     edram_wr_inputs  = [[seq, 0, 0]]
-                                    edram_wr_outputs = [[seq, 0, 0]]
+                                    #edram_wr_outputs = [[seq, 0, 0]]
                                     if self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                         self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
                                     self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
@@ -467,19 +462,22 @@ class OrderGenerator(object):
                                             data_transfer_event_idx = len(self.Computation_order)
                                             edram_wr_event.proceeding_event.append(data_transfer_event_idx)
                                             data_transfer_preceding_count = 1
-                                            data_transfer_inputs  = edram_wr_event.outputs
+                                            data_transfer_inputs  = edram_wr_event.inputs
                                             data_transfer_outputs = edram_wr_event.outputs
                                             event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                             self.Computation_order.append(event)
 
                                             if self.isFreeBuffer:
                                                 # input require
-                                                if data_transfer_inputs[0][1] != [-1,-1,-1]: #TODO:目前先不處理saa transfer
-                                                    pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                    for d in data_transfer_inputs:
+                                                pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                                if nlayer-1 >= 0 and self.model_info.layer_list[nlayer-1].layer_type != "fully":
+                                                    for d in data_transfer_outputs:
+                                                        pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                                else:
+                                                    for d in data_transfer_outputs:
                                                         pos = d[1]
                                                         self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
-
                             # dependency
                             eri_event_idx = len(self.Computation_order)
                             for input_data in data_feed_to_cu:
@@ -506,7 +504,7 @@ class OrderGenerator(object):
                             # input require
                             pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
                                     cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                            for d in eri_input_sequence:
+                            for d in eri_output_sequence:
                                 pos = d[1]
                                 self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: ou
@@ -555,33 +553,28 @@ class OrderGenerator(object):
                                             ou_inputs = []
                                             ou_outputs = []  # [[(input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
                                             idx = 0
-
-                                            # for h in xh:
-                                            #     for w in xw:
-                                            #         hinput = this_input.inputs[idx][0]
-                                            #         winput = this_input.inputs[idx][1]
-                                            #         cinput = this_input.inputs[idx][2]
+                                            for h in xh:
+                                                for w in xw:
+                                                    hinput = this_input.inputs[idx][0]
+                                                    winput = this_input.inputs[idx][1]
+                                                    cinput = this_input.inputs[idx][2]
                                                     
-                                            #         crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                            #         filter_nfilter = crossbar_grid.nfilter
-                                            #         filter_ngrid = crossbar_grid.ngrid
-                                            #         filter_nbit = crossbar_grid.nbit
-                                            #     idx += 1
+                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                                    filter_nfilter = crossbar_grid.nfilter
+                                                    filter_ngrid = crossbar_grid.ngrid
+                                                    filter_nbit = crossbar_grid.nbit
 
+                                                    ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
+                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
+                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
+                                                idx += 1
                                             ### add dependency
                                             ou_event_idx = len(self.Computation_order)
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
-
-                                            ou_inputs.append([(num_input, input_bit)])
-                                            for w in xw:
-                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[0][w]
-                                                filter_nfilter = crossbar_grid.nfilter
-                                                filter_nbit = crossbar_grid.nbit
-                                                ou_outputs.append([(num_input, input_bit), (filter_nfilter, filter_nbit)])
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
                                             event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
-                                            self.Computation_order.append(event)              
+                                            self.Computation_order.append(event)
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
@@ -595,7 +588,7 @@ class OrderGenerator(object):
                                             event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
                                             self.Computation_order.append(event)
                 ### Event: cu_saa
-                                            filter_list = []               
+                                            filter_list = []
                                             for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
                                                 filter_nfilter = ou_outputs[column][1][0]
                                                 if filter_nfilter not in filter_list:
@@ -776,7 +769,7 @@ class OrderGenerator(object):
                                                 # input require
                                                 pe_id = pe_pos[3] + pe_pos[2]*self.hd_info.PE_num_x + \
                                                         pe_pos[1]*self.hd_info.PE_num + pe_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                for d in erp_input_sequence:
+                                                for d in erp_output_sequence:
                                                     pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
                                                     self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: pooling
@@ -808,22 +801,14 @@ class OrderGenerator(object):
                                                 else:
                                                     o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                                                     o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
-                                                    edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
-                                                    edram_wr_output_sequence = edram_wr_input_sequence
+                                                    #edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
+                                                    #edram_wr_output_sequence = edram_wr_input_sequence
                                                     if self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                                         self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
                                                     self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
                                             event = EventMetaData("edram_wr", edram_wr_position_idx, edram_wr_preceding_count, [], nlayer, edram_wr_input_sequence, edram_wr_output_sequence)
                                             self.Computation_order.append(event)
         print('Order generated!')
-        print(self.free_buffer_controller.input_require[0][0]) # conv-1
-        print(self.free_buffer_controller.input_require[1][0]) # conv-2
-        print(self.free_buffer_controller.input_require[0][1]) # pooling
-        print(self.free_buffer_controller.input_require[1][1]) # pooling
-        print(self.free_buffer_controller.input_require[2][2]) # fully
-
-        print()
-        print(self.free_buffer_controller.input_require[0][2]) # fully transfer
 
     def trace_order(self):
         edram_rd_ir_ctr = 0

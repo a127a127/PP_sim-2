@@ -193,11 +193,11 @@ class Controller(object):
                 
                 pro_event_list = [event.proceeding_event[0]]
                 if self.Computation_order[pro_event_list[0]].event_type == "edram_rd_ir":
-                    packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_list)
+                    packet = Packet(src, des, [event.nlayer+1, event.inputs[0]], pro_event_list)
                 elif self.Computation_order[pro_event_list[0]].event_type == "edram_rd_pool":
-                    packet = Packet(src, des, [event.nlayer+1, event.outputs[0]], pro_event_list)
+                    packet = Packet(src, des, [event.nlayer+1, event.inputs[0]], pro_event_list)
                 elif self.Computation_order[pro_event_list[0]].event_type == "pe_saa":
-                    packet = Packet(src, des, [event.nlayer, event.outputs[0]], pro_event_list)
+                    packet = Packet(src, des, [event.nlayer, event.inputs[0]], pro_event_list)
                 else:
                     print("transfer proceeding event type error.\n exit.")
                     exit(0)
@@ -210,32 +210,24 @@ class Controller(object):
                     # free buffer
                     pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
                             src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                    if len(event.inputs[0]) == 4 and event.inputs[0][3] == "u": # same layer data transfer
-                        data = event.inputs[0]
-                        self.PE_array[pe_id].edram_buffer.buffer.remove([event.nlayer, data])
+                    if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer data transfer
+                        data = event.outputs[0]
+                        if [event.nlayer, data] in self.PE_array[pe_id].edram_buffer.buffer:
+                            self.PE_array[pe_id].edram_buffer.buffer.remove([event.nlayer, data])
                     else:
                         nlayer = event.nlayer+1
-                        if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
-                            for d in event.inputs:
-                                pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
-                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
-                            for d in event.inputs:
-                                pos = d[1]
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
-                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
-                            for d in event.inputs:
+                        if self.ordergenerator.model_info.layer_list[nlayer-1].layer_type != "fully":
+                            for d in event.outputs:
                                 pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                                 self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                 if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                     self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
                         else:
-                            print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
-                            exit(0)
+                            for d in event.outputs:
+                                pos = d[1]
+                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
             ### Fetch data from off-chip memory
             des_dict = dict()
             for FE in self.fetch_array.copy():
@@ -296,7 +288,6 @@ class Controller(object):
                             # inputs: [[num_input, fm_h, fm_w, fm_c]]
                             for inp in event.inputs:
                                 data = inp[1:]
-                                #print(event.nlayer, data)
                                 if not pe.edram_buffer.check([event.nlayer, data]):
                                     # Data not in buffer
                                     if self.trace:
@@ -353,14 +344,14 @@ class Controller(object):
                                         pe_id = self.PE_array.index(pe)
                                         nlayer = event.nlayer
                                         if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
-                                            for d in event.inputs:
+                                            for d in event.outputs:
                                                 pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                                                 self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                                 if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                                     data = d[1:]
                                                     self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
                                         elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
-                                            for d in event.inputs:
+                                            for d in event.outputs:
                                                 pos = d[1]
                                                 self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                                 if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
@@ -609,7 +600,8 @@ class Controller(object):
                     if self.isFreeBuffer:
                         # free buffer
                         for d in rm_data_list:
-                            pe.edram_buffer.buffer.remove([event.nlayer, d])
+                            if [event.nlayer, d] in pe.edram_buffer.buffer:
+                                pe.edram_buffer.buffer.remove([event.nlayer, d])
             ### Event: activation 
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
@@ -738,7 +730,7 @@ class Controller(object):
                             pe_id = self.PE_array.index(pe)
                             nlayer = event.nlayer
                             if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
-                                for d in event.inputs:
+                                for d in event.outputs:
                                     pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                                     self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
@@ -980,7 +972,6 @@ class Controller(object):
             for pe_idx in range(len(self.PE_array)):
                 self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
                 self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
-
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
@@ -1135,7 +1126,7 @@ class Controller(object):
         plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
         plt.xlim([0, self.cycle_ctr])
-        plt.legend(loc='best', prop={'size': 6})
+        plt.legend(loc='best', prop={'size': 5})
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
 
