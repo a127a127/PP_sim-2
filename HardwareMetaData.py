@@ -13,15 +13,15 @@ class HardwareMetaData(object):
         self.PE_num_y = 2
         self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num_y = 2
+        self.CU_num_y = 1
         self.CU_num_x = 2
         self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = 2
+        self.Xbar_num_y = 1
         self.Xbar_num_x = 2
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = 10
+        self.Xbar_h = 2
         self.Xbar_w = 10
-        self.OU_h = 5
+        self.OU_h = 2
         self.OU_w = 5
         
         self.Frequency = 1.2 # GHz

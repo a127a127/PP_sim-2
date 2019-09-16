@@ -51,7 +51,7 @@ class IdleAnalysis(object):
                         w = 0
                         c = 0
                     else:
-                        print("layer type error:", )
+                        print("layer type error:", self.model_info.layer_list[nlayer+1].layer_type)
                         exit(0)
                 else:
                     if self.model_info.layer_list[nlayer].layer_type == "convolution":
@@ -63,7 +63,7 @@ class IdleAnalysis(object):
                         w = 0
                         c = 0
                     else:
-                        print("layer type error:", )
+                        print("layer type error:", self.model_info.layer_list[nlayer].layer_type)
                         exit(0)
 
                 if self.feature_mat[nlayer][h][w][c] == 0: 

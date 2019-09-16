@@ -17,8 +17,6 @@ class OnChipBuffer():
         return False
     
     def put(self, data): # put a data to buffer
-        if data[1] == [-1,-1,-1]:
-            return
         if data in self.buffer:
             ### TODO: FIFO switch
             return

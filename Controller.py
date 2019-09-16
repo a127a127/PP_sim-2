@@ -17,11 +17,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class Controller(object):
-    def __init__(self, ordergenerator, isPipeLine, trace, mapping_str):
+    def __init__(self, ordergenerator, isPipeLine, trace, mapping_str, isFreeBuffer):
         self.ordergenerator = ordergenerator
         self.isPipeLine = isPipeLine
         self.trace = trace
         self.mapping_str = mapping_str
+        self.isFreeBuffer = isFreeBuffer
         self.Computation_order = self.ordergenerator.Computation_order
         self.hd_info = HardwareMetaData()
         self.input_bit = self.ordergenerator.model_info.input_bit
@@ -92,7 +93,9 @@ class Controller(object):
             self.buffer_size.append([])
 
         # Idle Analysis
-        self.idle_analysis = IdleAnalysis()
+        # self.idle_analysis = IdleAnalysis()
+
+        self.max_buffer_size = 0 # num of data
 
     def run(self):
         for e in self.Computation_order:
@@ -157,7 +160,7 @@ class Controller(object):
                                 pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
                             pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                             # idle analysis
-                            pro_event.last_arrived_data = pk.data
+                            #pro_event.last_arrived_data = pk.data
                     elif pro_event.event_type == "edram_rd_pool":
                         # store data
                         if self.trace:
@@ -202,6 +205,37 @@ class Controller(object):
 
                 self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # read
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
+
+                if self.isFreeBuffer:
+                    # free buffer
+                    pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
+                            src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                    if len(event.inputs[0]) == 4 and event.inputs[0][3] == "u": # same layer data transfer
+                        data = event.inputs[0]
+                        self.PE_array[pe_id].edram_buffer.buffer.remove([event.nlayer, data])
+                    else:
+                        nlayer = event.nlayer+1
+                        if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
+                            for d in event.inputs:
+                                pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
+                            for d in event.inputs:
+                                pos = d[1]
+                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
+                            for d in event.inputs:
+                                pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                        else:
+                            print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
+                            exit(0)
             ### Fetch data from off-chip memory
             des_dict = dict()
             for FE in self.fetch_array.copy():
@@ -294,6 +328,7 @@ class Controller(object):
                                 cu.edram_rd_ir_erp.remove(event)
                                 cu.edram_rd_event = event
                                 cu.edram_rd_cycle_ctr += 1
+
                                 if cu.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
                                     cu.edram_rd_cycle_ctr = 0
                                     ### add next event counter: ou
@@ -311,7 +346,29 @@ class Controller(object):
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
                                         # idle analysis
-                                        pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
+                                        #pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
+
+                                    if self.isFreeBuffer:
+                                        # free buffer
+                                        pe_id = self.PE_array.index(pe)
+                                        nlayer = event.nlayer
+                                        if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
+                                            for d in event.inputs:
+                                                pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                                    data = d[1:]
+                                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
+                                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
+                                            for d in event.inputs:
+                                                pos = d[1]
+                                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                                    data = d[1:]
+                                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
+                                        else:
+                                            print("layer type error.")
+                                            exit(0)
                                 #print("last_arrived_data", event.last_arrived_data)
                                 break
                     elif cu.state and cu.state_edram_rd_ir:
@@ -389,50 +446,50 @@ class Controller(object):
                                         xb.adc_trigger.append([pro_event, [cu_idx]])
 
                                 # idle analysis
-                                self.idle_analysis.process(event, self.cycle_ctr)
-                                if not xb.last_cycle_state: # idle to busy
-                                    xb.idle_to_busy.append(self.cycle_ctr)
+                                # self.idle_analysis.process(event, self.cycle_ctr)
+                                # if not xb.last_cycle_state: # idle to busy
+                                    # xb.idle_to_busy.append(self.cycle_ctr)
 
-                                    last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
-                                    critical_data =  last_edram_rd_ir_event.last_arrived_data
-                                    if critical_data == 0:
-                                        print("critical data")
-                                        exit(0)
-                                    else:
-                                        #print("critical_data:", critical_data)
-                                        nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
-                                        if nlayer == 0:
-                                            # 第一層資料都ready了，只需考慮transfer跟other
-                                            xb.transfer += self.cycle_ctr - xb.busy_to_idle[-1]
-                                        else:
-                                            # 第二層開始要查詢上一層的資料
-                                            idle_meta_data = self.idle_analysis.feature_mat[nlayer-1][h][w][c]
-                                            idle_time = xb.idle_to_busy[-1] - xb.busy_to_idle[-1]
-                                            # print("xb.busy_to_idle", xb.busy_to_idle[-1])
-                                            # print("xb.idle_to_busy", xb.idle_to_busy[-1])
-                                            # print("start_compute", idle_meta_data.start_compute)
-                                            # print("finish_compute", idle_meta_data.finish_compute)
+                                    # last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
+                                    # critical_data =  last_edram_rd_ir_event.last_arrived_data
+                                    # if critical_data == 0:
+                                    #     print("critical data")
+                                    #     exit(0)
+                                    # else:
+                                    #     #print("critical_data:", critical_data)
+                                    #     nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
+                                    #     if nlayer == 0:
+                                    #         # 第一層資料都ready了，只需考慮transfer跟other
+                                    #         xb.transfer += self.cycle_ctr - xb.busy_to_idle[-1]
+                                    #     else:
+                                    #         # 第二層開始要查詢上一層的資料
+                                    #         idle_meta_data = self.idle_analysis.feature_mat[nlayer-1][h][w][c]
+                                    #         idle_time = xb.idle_to_busy[-1] - xb.busy_to_idle[-1]
+                                    #         # print("xb.busy_to_idle", xb.busy_to_idle[-1])
+                                    #         # print("xb.idle_to_busy", xb.idle_to_busy[-1])
+                                    #         # print("start_compute", idle_meta_data.start_compute)
+                                    #         # print("finish_compute", idle_meta_data.finish_compute)
 
-                                            compute_time = idle_meta_data.finish_compute - idle_meta_data.start_compute + 1
-                                            transfer_time = xb.idle_to_busy[-1] - idle_meta_data.finish_compute - 1
-                                            if idle_time < transfer_time:
-                                                transfer_time = idle_time
-                                                compute_time = 0
-                                                other_time = 0
-                                            elif idle_time < (transfer_time + compute_time):
-                                                compute_time = idle_time - transfer_time
-                                                other_time = 0
-                                            else:
-                                                other_time = idle_time - compute_time - transfer_time
-                                            # print("idle_time", idle_time)
-                                            # print("compute_time", compute_time)
-                                            # print("transfer_time", transfer_time)
-                                            xb.compute += compute_time
-                                            xb.transfer += transfer_time
-                                            xb.other += other_time
-                                        # print("xb compute:", xb.compute)
-                                        # print("xb transfer:", xb.transfer)
-                                        # print("xb other:", xb.other)
+                                    #         compute_time = idle_meta_data.finish_compute - idle_meta_data.start_compute + 1
+                                    #         transfer_time = xb.idle_to_busy[-1] - idle_meta_data.finish_compute - 1
+                                    #         if idle_time < transfer_time:
+                                    #             transfer_time = idle_time
+                                    #             compute_time = 0
+                                    #             other_time = 0
+                                    #         elif idle_time < (transfer_time + compute_time):
+                                    #             compute_time = idle_time - transfer_time
+                                    #             other_time = 0
+                                    #         else:
+                                    #             other_time = idle_time - compute_time - transfer_time
+                                    #         # print("idle_time", idle_time)
+                                    #         # print("compute_time", compute_time)
+                                    #         # print("transfer_time", transfer_time)
+                                    #         xb.compute += compute_time
+                                    #         xb.transfer += transfer_time
+                                    #         xb.other += other_time
+                                    #     # print("xb compute:", xb.compute)
+                                    #     # print("xb transfer:", xb.transfer)
+                                    #     # print("xb other:", xb.other)
             ### Event: adc
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -517,8 +574,8 @@ class Controller(object):
                     
                     pe.pe_saa_erp.remove(event)
                     
-
-                    saa_amount = len(event.inputs)
+                    saa_amount = len(event.inputs[0])
+                    rm_data_list = event.inputs[1]
                     if saa_amount > len(pe.state_pe_saa):
                         print("Not enough pe_saa per cycle")
                         exit()
@@ -549,6 +606,10 @@ class Controller(object):
                                     pass
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pe.activation_trigger.append([pro_event, []])
+                    if self.isFreeBuffer:
+                        # free buffer
+                        for d in rm_data_list:
+                            pe.edram_buffer.buffer.remove([event.nlayer, d])
             ### Event: activation 
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
@@ -598,7 +659,11 @@ class Controller(object):
 
                             pe.state_edram_wr[idx] = True
                             pe.edram_wr_erp.remove(event)
-                            pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
+
+                            if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer transfer
+                                pe.edram_buffer.put([event.nlayer, event.outputs[0]])
+                            else:
+                                pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
 
                             ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
                             for proceeding_index in event.proceeding_event:
@@ -619,7 +684,7 @@ class Controller(object):
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
                             # idle analysis
-                            self.idle_analysis.process(event, self.cycle_ctr)
+                            #self.idle_analysis.process(event, self.cycle_ctr)
                             break
             ### Event: edram_rd_pool
             for pe in self.PE_array:
@@ -668,6 +733,19 @@ class Controller(object):
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pos = pro_event.position_idx
                                 pe.pooling_trigger.append([pro_event, []])
+                        if self.isFreeBuffer:
+                            # free buffer
+                            pe_id = self.PE_array.index(pe)
+                            nlayer = event.nlayer
+                            if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
+                                for d in event.inputs:
+                                    pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                    self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                    if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                        self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                            else:
+                                print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
+                                exit(0)
             ### Event: pooling 
             for pe in self.PE_array:
                 for event in pe.pooling_erp.copy():
@@ -727,7 +805,6 @@ class Controller(object):
                     else:
                         pe.activation_erp.append(pro_event)
                         pe.activation_trigger.remove(trigger)
-
                 ## Trigger edram_wr 
                 for trigger in pe.edram_wr_trigger.copy():
                     pro_event = trigger[0]
@@ -738,7 +815,6 @@ class Controller(object):
                     else:
                         pe.edram_wr_erp.append(pro_event)
                         pe.edram_wr_trigger.remove(trigger)
-
                 ## Trigger edram_rd_ir
                 for trigger in pe.edram_rd_ir_trigger.copy():
                     pro_event = trigger[0]
@@ -750,7 +826,6 @@ class Controller(object):
                     else:
                         pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
                         pe.edram_rd_ir_trigger.remove(trigger)
-                
                 ## Trigger pooling 
                 for trigger in pe.pooling_trigger.copy():
                     pro_event = trigger[0]
@@ -761,7 +836,6 @@ class Controller(object):
                     else:
                         pe.pooling_erp.append(pro_event)
                         pe.pooling_trigger.remove(trigger)
-
                 ## Trigger edram_rd_ir_pool 
                 for trigger in pe.edram_rd_pool_trigger.copy():
                     pro_event = trigger[0]
@@ -784,7 +858,7 @@ class Controller(object):
                         else:
                             cu.XB_array[xb_idx].ou_erp.append(pro_event)
                             cu.ou_trigger.remove(trigger)
-                    ## Trigger pe saa 
+                    ## Trigger pe saa
                     for trigger in cu.pe_saa_trigger.copy():
                         pro_event = trigger[0]
                         if not self.isPipeLine:
@@ -816,8 +890,7 @@ class Controller(object):
                         else:
                             cu.cu_saa_erp.append(pro_event)
                             cu.cu_saa_trigger.remove(trigger)
-
-                ### Trigger pe saa (for data transfer) 
+                ## Trigger pe saa (for data transfer) 
                 for trigger in pe.pe_saa_trigger.copy():
                     pro_event = trigger[0]
                     if not self.isPipeLine:
@@ -906,14 +979,7 @@ class Controller(object):
             # Buffer size utilization
             for pe_idx in range(len(self.PE_array)):
                 self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
-        
-        ### Buffer size ###
-        self.max_buffer_size = 0 # num of data
-        self.total_buffer_size = 0 
-        for pe in self.PE_array:
-            self.total_buffer_size += len(pe.edram_buffer.buffer)
-            self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
-        self.avg_buffer_size = self.total_buffer_size / len(self.PE_array)
+                self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
 
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
@@ -922,8 +988,6 @@ class Controller(object):
         print("Cycles time:", self.hd_info.cycle_time, "ns\n")
         
         print('memory accesss times:', self.mem_acc_ctr)
-        print('max_buffer_size', self.max_buffer_size, "(", self.max_buffer_size*2, "B)")
-        print("Avg buffer size:", self.avg_buffer_size)
         print()
         
         self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
@@ -1070,7 +1134,8 @@ class Controller(object):
         plt.ylabel('Buffer size (number of data)')
         plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
-        plt.legend(loc='upper left')
+        plt.xlim([0, self.cycle_ctr])
+        plt.legend(loc='best', prop={'size': 6})
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
 
