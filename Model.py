@@ -52,8 +52,8 @@ class Model(object):
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
                 self.input_h.append(self.layer_list[nlayer].neuron_n)
-                self.input_w.append(1)
-                self.input_c.append(1)
+                self.input_w.append(0)
+                self.input_c.append(0)
                 self.input_number.append(self.layer_list[nlayer].neuron_n)
 
     def __str__(self):

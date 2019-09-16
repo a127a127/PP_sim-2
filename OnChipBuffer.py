@@ -10,15 +10,13 @@ class OnChipBuffer():
 
         self.buffer = []
 
-    def check(self, data): 
+    def check(self, data):
         for d in self.buffer:
             if d == data:
                 return True
         return False
     
     def put(self, data): # put a data to buffer
-        if data[1] == [-1,-1,-1]:
-            return
         if data in self.buffer:
             ### TODO: FIFO switch
             return

@@ -1,10 +1,11 @@
+from configs.ModelConfig import ModelConfig
 from Model import Model
 from IdleMetaData import IdleMetaData
 import numpy as np
 
 class IdleAnalysis(object):
-    def __init__(self, model_config):
-        self.model_info = Model(model_config)
+    def __init__(self):
+        self.model_info = Model(ModelConfig())
         self.feature_mat = [] # layer n input_feature map
         #self.feature_mat.append(np.zeros((self.model_info.input_h[0], self.model_info.input_w[0], self.model_info.input_c[0])).tolist())
 
@@ -20,7 +21,7 @@ class IdleAnalysis(object):
                 else:
                     self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "fully":
-                    self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
+                self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
 
     def process(self, event, cycle):
         #print(event.event_type)
@@ -50,7 +51,7 @@ class IdleAnalysis(object):
                         w = 0
                         c = 0
                     else:
-                        print("layer type error:", )
+                        print("layer type error:", self.model_info.layer_list[nlayer+1].layer_type)
                         exit(0)
                 else:
                     if self.model_info.layer_list[nlayer].layer_type == "convolution":
@@ -62,7 +63,7 @@ class IdleAnalysis(object):
                         w = 0
                         c = 0
                     else:
-                        print("layer type error:", )
+                        print("layer type error:", self.model_info.layer_list[nlayer].layer_type)
                         exit(0)
 
                 if self.feature_mat[nlayer][h][w][c] == 0: 
