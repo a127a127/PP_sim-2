@@ -463,7 +463,6 @@ class ParallelismMapping(object):
                                 cell_w = xbar_width_start_idx + b_w
 
                                 self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
-                            
                         ## Input
                         start = ou_idx_y * self.hd_info.OU_h
                         xbar_inputs = inputs[:, start:(start+block_h)].tolist()
@@ -501,7 +500,6 @@ class ParallelismMapping(object):
                 xbar_row = [-1]
 
                 self.layer_mapping_to_pe[rty][rtx][pey][pex].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, inputs))
-
     def __str__(self):
         return str(self.__dict__)
 
