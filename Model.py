@@ -23,17 +23,20 @@ class Model(object):
                 self.filter_h.append(self.layer_list[nlayer].filter_h)
                 self.filter_w.append(self.layer_list[nlayer].filter_w)
                 self.filter_c.append(self.layer_list[nlayer].filter_c)
-                self.filter_length.append(self.layer_list[nlayer].filter_h * \
-                                          self.layer_list[nlayer].filter_w * \
-                                          self.layer_list[nlayer].filter_c)
+                self.filter_length.append(
+                    self.layer_list[nlayer].filter_h *
+                    self.layer_list[nlayer].filter_w *
+                    self.layer_list[nlayer].filter_c
+                    )
                 self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1, no padding
                 self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1, no padding
                 self.input_c.append(self.layer_list[nlayer].filter_n)
-                self.input_number.append((self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) * \
-                                         (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1)) # stride = 1, no padding
+                self.input_number.append(
+                    (self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) *
+                    (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1)
+                    ) # stride = 1, no padding
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
-
             elif self.layer_list[nlayer].layer_type == "pooling":
                 self.filter_n.append(0)
                 self.filter_h.append(0)
@@ -43,12 +46,13 @@ class Model(object):
                 self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) # no padding
                 self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) # no padding
                 self.input_c.append(self.input_c[nlayer])
-                self.input_number.append((self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) * \
-                                         (self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) * \
-                                         (self.input_c[nlayer])) # no padding
+                self.input_number.append(
+                    (self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) *
+                    (self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) *
+                    (self.input_c[nlayer])
+                    ) # no padding
                 self.pooling_h.append(self.layer_list[nlayer].pooling_h)
                 self.pooling_w.append(self.layer_list[nlayer].pooling_w)
-
             elif self.layer_list[nlayer].layer_type == "fully":
                 self.filter_n.append(self.layer_list[nlayer].neuron_n)
                 self.filter_h.append(1)

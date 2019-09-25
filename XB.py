@@ -15,12 +15,12 @@ class XB(object):
         self.Fully = []
 
         ## for idle analysis
-        self.other = 0
-        self.compute = 0
-        self.transfer = 0
-        self.last_cycle_state = False
-        self.idle_to_busy = [1]
-        self.busy_to_idle = [1]
+        # self.compute = 0
+        # self.transfer = 0
+        # self.wait_resource = 0
+        # self.last_cycle_state = False
+        # self.idle_to_busy = [1]
+        # self.busy_to_idle = [1]
 
     def reset(self, cycle):
         ## state

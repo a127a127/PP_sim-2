@@ -229,33 +229,25 @@ class OrderGenerator(object):
                                             # OU block
                                             ou_inputs = []
                                             ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
-                                            # idx = 0
-                                            # for h in xh:
-                                            #     for w in xw:
-                                            #         hinput = this_input.inputs[idx][0]
-                                            #         winput = this_input.inputs[idx][1]
-                                            #         cinput = this_input.inputs[idx][2]
+                                            idx = 0
+                                            for h in xh:
+                                                for w in xw:
+                                                    hinput = this_input.inputs[idx][0]
+                                                    winput = this_input.inputs[idx][1]
+                                                    cinput = this_input.inputs[idx][2]
                                                     
-                                            #         crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                            #         filter_nfilter = crossbar_grid.nfilter
-                                            #         filter_ngrid = crossbar_grid.ngrid
-                                            #         filter_nbit = crossbar_grid.nbit
+                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                                    filter_nfilter = crossbar_grid.nfilter
+                                                    filter_ngrid = crossbar_grid.ngrid
+                                                    filter_nbit = crossbar_grid.nbit
 
-                                            #         ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
-                                            #         ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
-                                            #                                 (filter_nfilter, filter_ngrid, filter_nbit)])
-                                            #     idx += 1
-
+                                                    ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
+                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
+                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
+                                                idx += 1
                                             ### add dependency
                                             ou_event_idx = len(self.Computation_order)
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
-
-                                            ou_inputs.append([(num_input, input_bit)])
-                                            for w in xw:
-                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[0][w]
-                                                filter_nfilter = crossbar_grid.nfilter
-                                                filter_nbit = crossbar_grid.nbit
-                                                ou_outputs.append([(num_input, input_bit), (filter_nfilter, filter_nbit)])
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
                                             event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
@@ -784,7 +776,6 @@ class OrderGenerator(object):
                                             event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
                                             self.Computation_order.append(event)
                 ### Event: edram_wr
-
                                             edram_wr_event_idx = len(self.Computation_order)
                                             self.Computation_order[pool_event_index].proceeding_event.append(edram_wr_event_idx)
 
@@ -801,7 +792,7 @@ class OrderGenerator(object):
                                                 else:
                                                     o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                                                     o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
-                                                    #edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
+                                                    edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
                                                     #edram_wr_output_sequence = edram_wr_input_sequence
                                                     if self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                                         self.feature_mat[nlayer][pool_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + pool_input_sequence[0][1] + pool_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []

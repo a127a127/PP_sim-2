@@ -7,7 +7,7 @@ from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
 
-from IdleAnalysis import IdleAnalysis
+# from FeatureMapRecord import FeatureMapRecord # Idle Analysis
 
 import numpy as np
 from math import ceil, floor
@@ -82,7 +82,8 @@ class Controller(object):
         self.data_transfer_ctr = 0
         self.act_xb_ctr = 0
         self.pe_saa_stall_cycle = 0
-        ## Utilization
+
+        # Utilization
         self.energy_utilization = []
         self.xbar_utilization = []
         self.pe_state_for_plot = [[], []]
@@ -93,7 +94,7 @@ class Controller(object):
             self.buffer_size.append([])
 
         # Idle Analysis
-        # self.idle_analysis = IdleAnalysis()
+        # self.fm_record = FeatureMapRecord()
 
         self.max_buffer_size = 0 # num of data
 
@@ -160,7 +161,9 @@ class Controller(object):
                                 pro_event.event_type, pro_event.position_idx, "index:", self.Computation_order.index(pro_event))
                             pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                             # idle analysis
-                            #pro_event.last_arrived_data = pk.data
+                            # pro_event.last_arrived_data = pk.data
+                            # self.fm_record.process(pro_event, self.cycle_ctr, pe.position)
+
                     elif pro_event.event_type == "edram_rd_pool":
                         # store data
                         if self.trace:
@@ -337,7 +340,7 @@ class Controller(object):
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
                                         # idle analysis
-                                        #pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
+                                        # pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
 
                                     if self.isFreeBuffer:
                                         # free buffer
@@ -437,50 +440,10 @@ class Controller(object):
                                         xb.adc_trigger.append([pro_event, [cu_idx]])
 
                                 # idle analysis
-                                # self.idle_analysis.process(event, self.cycle_ctr)
+                                # self.fm_record.process(event, self.cycle_ctr, xb.position)
                                 # if not xb.last_cycle_state: # idle to busy
-                                    # xb.idle_to_busy.append(self.cycle_ctr)
-
-                                    # last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
-                                    # critical_data =  last_edram_rd_ir_event.last_arrived_data
-                                    # if critical_data == 0:
-                                    #     print("critical data")
-                                    #     exit(0)
-                                    # else:
-                                    #     #print("critical_data:", critical_data)
-                                    #     nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
-                                    #     if nlayer == 0:
-                                    #         # 第一層資料都ready了，只需考慮transfer跟other
-                                    #         xb.transfer += self.cycle_ctr - xb.busy_to_idle[-1]
-                                    #     else:
-                                    #         # 第二層開始要查詢上一層的資料
-                                    #         idle_meta_data = self.idle_analysis.feature_mat[nlayer-1][h][w][c]
-                                    #         idle_time = xb.idle_to_busy[-1] - xb.busy_to_idle[-1]
-                                    #         # print("xb.busy_to_idle", xb.busy_to_idle[-1])
-                                    #         # print("xb.idle_to_busy", xb.idle_to_busy[-1])
-                                    #         # print("start_compute", idle_meta_data.start_compute)
-                                    #         # print("finish_compute", idle_meta_data.finish_compute)
-
-                                    #         compute_time = idle_meta_data.finish_compute - idle_meta_data.start_compute + 1
-                                    #         transfer_time = xb.idle_to_busy[-1] - idle_meta_data.finish_compute - 1
-                                    #         if idle_time < transfer_time:
-                                    #             transfer_time = idle_time
-                                    #             compute_time = 0
-                                    #             other_time = 0
-                                    #         elif idle_time < (transfer_time + compute_time):
-                                    #             compute_time = idle_time - transfer_time
-                                    #             other_time = 0
-                                    #         else:
-                                    #             other_time = idle_time - compute_time - transfer_time
-                                    #         # print("idle_time", idle_time)
-                                    #         # print("compute_time", compute_time)
-                                    #         # print("transfer_time", transfer_time)
-                                    #         xb.compute += compute_time
-                                    #         xb.transfer += transfer_time
-                                    #         xb.other += other_time
-                                    #     # print("xb compute:", xb.compute)
-                                    #     # print("xb transfer:", xb.transfer)
-                                    #     # print("xb other:", xb.other)
+                                #     xb.idle_to_busy.append(self.cycle_ctr)
+                                #     self.idle_analysis(event, xb)
             ### Event: adc
             for pe in self.PE_array:
                 for cu in pe.CU_array:
@@ -676,7 +639,7 @@ class Controller(object):
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
                             # idle analysis
-                            #self.idle_analysis.process(event, self.cycle_ctr)
+                            # self.fm_record.process(event, self.cycle_ctr, pe.position)
                             break
             ### Event: edram_rd_pool
             for pe in self.PE_array:
@@ -764,6 +727,9 @@ class Controller(object):
                                         pass
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pe.edram_wr_trigger.append([pro_event, []])
+
+                            # idle analysis
+                            # self.fm_record.process(event, self.cycle_ctr, pe.position)
                             break
 
             ### Pipeline stage control ###
@@ -972,6 +938,7 @@ class Controller(object):
             for pe_idx in range(len(self.PE_array)):
                 self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
                 self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
+
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
@@ -1130,10 +1097,48 @@ class Controller(object):
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
         plt.clf()
 
-        # idx = 0
-        # for pe in self.PE_array:
-        #     for cu in pe.CU_array:
-        #         for xb in cu.XB_array:
-        #             idx += 1
-        #             if len(xb.idle_to_busy)>1 or  len(xb.busy_to_idle)>1:
-        #                 print("xb idx:", idx, xb.idle_to_busy, xb.busy_to_idle)
+    def idle_analysis(self, event, xb):
+        ### 暫時放棄這個function
+        last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
+        critical_data =  last_edram_rd_ir_event.last_arrived_data
+        nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
+        # if nlayer == 0:
+        #     # 第一層資料都ready了，只有transfer 或是 wait resource
+        #     idle_to_busy_time = xb.idle_to_busy[-1]
+        #     arrived_buffer_time = self.fm_record.feature_mat[nlayer][h][w][c].arrived_buffer[xb.position[:4]]
+        #     wait_resource_time = idle_to_busy_time - arrived_buffer_time - 2 # 抵達的那個cycle, 與edram read的cycle
+        #     transfer_time = arrived_buffer_time - 1 # 第一層所以直接-1即可
+        #     print("idle_to_busy_time", idle_to_busy_time)
+        #     print("arrived_buffer_time", arrived_buffer_time)
+        #     print("wait_resource_time", wait_resource_time)
+        #     print("transfer_time", transfer_time)
+        #     xb.transfer += transfer_time
+        #     xb.wait_resource += wait_resource_time
+
+        # else:
+        #     # 第二層開始要查詢上一層的資料
+        #     idle_to_busy_time = xb.idle_to_busy[-1]
+        #     arrived_buffer_time = self.fm_record.feature_mat[nlayer][h][w][c].arrived_buffer[xb.position[:4]]
+        #     finish_compute_time = self.fm_record.feature_mat[nlayer][h][w][c].finish_compute
+        #     start_compute_time = self.fm_record.feature_mat[nlayer][h][w][c].start_compute
+
+        #     wait_resource_time = idle_to_busy_time - arrived_buffer_time - 2 # 抵達的那個cycle, 與edram read的cycle
+        #     transfer_time = arrived_buffer_time - finish_compute_time
+        #     compute_time = finish_compute_time - start_compute_time
+
+        #     print("wait_resource_time", wait_resource_time)
+        #     print("arrived buffer", arrived_buffer_time)
+        #     print("finish_compute", finish_compute_time)
+        #     print("transfer_time", transfer_time)
+        #     print("compute_time ", compute_time)
+
+        #     xb.compute += compute_time
+        #     xb.transfer += transfer_time
+        #     xb.wait_resource += wait_resource_time
+
+        #     # 找更上一層的critical
+        #     start_compute_pos = self.fm_record.feature_mat[nlayer][h][w][c].start_compute_pos
+        #     print("start_xb_pos", start_compute_pos)
+
+        #     nlayer = nlayer - 1
+        #     layer_type = self.ordergenerator.model_info.layer_list[nlayer].layer_type
