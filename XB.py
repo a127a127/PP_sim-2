@@ -24,12 +24,12 @@ class XB(object):
 
     def reset(self, cycle):
         ## state
-        if self.state_ou:
-            self.last_cycle_state = True
-        else:
-            if self.last_cycle_state:
-                self.busy_to_idle.append(cycle)
-            self.last_cycle_state = False
+        # if self.state_ou:
+        #     self.last_cycle_state = True
+        # else:
+        #     if self.last_cycle_state:
+        #         self.busy_to_idle.append(cycle)
+        #     self.last_cycle_state = False
         self.state_ou = False
 
     def check_state(self):
