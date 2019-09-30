@@ -848,7 +848,7 @@ class OrderGenerator(object):
         print("data_transfer_ctr", data_transfer_ctr)
 
         for e in self.Computation_order:
-           print(self.Computation_order.index(e), e)
+            print(self.Computation_order.index(e), e)
 
     def __str__(self):
         return str(self.__dict__)

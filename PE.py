@@ -44,6 +44,12 @@ class PE(object):
         self.gen_cu()
 
         self.reset()
+
+        ### bottleneck analysis
+        self.saa_wait_transfer = 0
+        self.saa_wait_resource = 0
+        self.pool_wait_transfer = 0
+        self.pool_wait_resource = 0
     
     def reset(self):
         ### state

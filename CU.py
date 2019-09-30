@@ -32,8 +32,8 @@ class CU(object):
         self.state_cu_saa = [False] * self.cu_saa_epc
         
         ### bottleneck analysis
-        self.transfer = 0
-        self.resource = 0
+        self.wait_transfer = 0
+        self.wait_resource = 0
 
     def reset(self):
         self.state_cu_saa = [False] * self.cu_saa_epc
