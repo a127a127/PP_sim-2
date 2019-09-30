@@ -160,7 +160,7 @@ class Controller(object):
                                 self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
                                 self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * num_data
                                 self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
-                                self.Total_energy_cycle += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * num_data
+                                self.Total_energy_cycle += (self.hd_info.Energy_edram_buffer + self.hd_info.Energy_bus + self.hd_info.Energy_ir_in_cu) * self.input_bit * num_data
 
                                 cu.state = True
                                 cu.state_edram_rd_ir = True
@@ -1021,19 +1021,21 @@ class Controller(object):
         print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
         print()
 
-        print("Bottleneck analysis")
-        for pe in self.PE_array:
-            print("pe", self.PE_array.index(pe))
-            print("\tpe.saa_wait_transfer", pe.saa_wait_transfer)
-            print("\tpe.saa_wait_resource", pe.saa_wait_resource)
-            print("\tpe.pool_wait_transfer", pe.pool_wait_transfer)
-            print("\tpe.pool_wait_resource", pe.pool_wait_resource)
-        for pe in self.PE_array:
-            print("pe", self.PE_array.index(pe))
-            for cu in pe.CU_array:
-                print("\tcu", pe.CU_array.index(cu))
-                print("\t\tcu.wait_transfer", cu.wait_transfer)
-                print("\t\tcu.wait_resource", cu.wait_resource)
+        isBottleneckAnalysis = False
+        if isBottleneckAnalysis:
+            print("Bottleneck analysis")
+            for pe in self.PE_array:
+                print("pe", self.PE_array.index(pe))
+                print("\tpe.saa_wait_transfer", pe.saa_wait_transfer)
+                print("\tpe.saa_wait_resource", pe.saa_wait_resource)
+                print("\tpe.pool_wait_transfer", pe.pool_wait_transfer)
+                print("\tpe.pool_wait_resource", pe.pool_wait_resource)
+            for pe in self.PE_array:
+                print("pe", self.PE_array.index(pe))
+                for cu in pe.CU_array:
+                    print("\tcu", pe.CU_array.index(cu))
+                    print("\t\tcu.wait_transfer", cu.wait_transfer)
+                    print("\t\tcu.wait_resource", cu.wait_resource)
 
 
         if self.isPipeLine:
