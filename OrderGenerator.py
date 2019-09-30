@@ -623,23 +623,23 @@ class OrderGenerator(object):
                     
                     start_append_idx = len(self.Computation_order)
                 ### Event: edram_wr, data_transfer (for pe_saa)
-                    preceding_pe = dict()
+                    preceding_cu = dict()
                     for pre_event_idx in preceding_list:
-                        if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: 
-                            if self.Computation_order[pre_event_idx].position_idx[:-2] not in preceding_pe:
-                                preceding_pe[self.Computation_order[pre_event_idx].position_idx[:-2]] = [pre_event_idx]
+                        if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: # data in other pe
+                            if self.Computation_order[pre_event_idx].position_idx not in preceding_cu:
+                                preceding_cu[self.Computation_order[pre_event_idx].position_idx] = [pre_event_idx]
                             else:
-                                preceding_pe[self.Computation_order[pre_event_idx].position_idx[:-2]].append(pre_event_idx)
+                                preceding_cu[self.Computation_order[pre_event_idx].position_idx].append(pre_event_idx)
                                 
-                    for pe_idx in preceding_pe:        
+                    for cu_idx in preceding_cu:
                         edram_wr_event_idx = len(self.Computation_order)
-                        for pre_event_idx in preceding_pe[pe_idx]:
+                        for pre_event_idx in preceding_cu[cu_idx]:
                             self.Computation_order[pre_event_idx].proceeding_event.append(edram_wr_event_idx)
-
+                        pe_idx = cu_idx[0:4]
                         edram_wr_pe_pos  = pe_idx
                         edram_wr_inputs  = [[nfilter, 0, 0, "u"]]
                         edram_wr_outputs = [[nfilter, 0, 0, "u"]]
-                        edram_wr_preceding_count = len(preceding_pe[pe_idx])
+                        edram_wr_preceding_count = len(preceding_cu[cu_idx])
                         event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                         self.Computation_order.append(event)
 
