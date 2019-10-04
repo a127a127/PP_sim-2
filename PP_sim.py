@@ -37,7 +37,7 @@ def main():
     print()
 
     ### Free buffer ###
-    isFreeBuffer = True
+    isFreeBuffer = False
 
     ### Trace ###
     isTrace_order = False
