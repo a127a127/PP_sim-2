@@ -319,6 +319,7 @@ class OrderGenerator(object):
                                 for pre_event_idx in preceding_cu[cu_idx]:
                                     self.Computation_order[pre_event_idx].proceeding_event.append(edram_wr_event_idx)
                                 pe_idx = cu_idx[0:4]
+
                                 edram_wr_pe_pos  = pe_idx
                                 edram_wr_inputs  = [[window_h, window_w, nfilter, "u"]]
                                 edram_wr_outputs = [[window_h, window_w, nfilter, "u"]]

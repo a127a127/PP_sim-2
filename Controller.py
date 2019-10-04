@@ -489,7 +489,8 @@ class Controller(object):
                             pe.edram_wr_erp.remove(event)
 
                             if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer transfer
-                                pe.edram_buffer.put([event.nlayer, event.outputs[0]])
+                                pass
+                                #pe.edram_buffer.put([event.nlayer, event.outputs[0]])
                             else:
                                 pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
 
@@ -633,7 +634,14 @@ class Controller(object):
                 self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # write
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
 
-                pe.edram_buffer.put(pk.data)
+                if len(pk.data[1]) == 4 and pk.data[1][3] == "u":
+                    # same layer transfer
+                    pass
+                else:
+                    pe.edram_buffer.put(pk.data)
+                    if self.trace:
+                        print("put packet data:", pk)
+
                 for pro_event_idx in pk.pro_event_list:
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
@@ -1127,7 +1135,7 @@ class Controller(object):
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/XB_utilization.png')
         plt.clf()
   
-        ### On chip Buffer
+        ### Buffer utilization
         with open('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(self.cycle_ctr):
@@ -1137,19 +1145,19 @@ class Controller(object):
                 writer.writerow(c)
 
         for i in range(len(self.PE_array)):
-            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label=str(i)) #, c=self.color[i])
-        plt.title(self.mapping_str+", "+pipe_str)
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label="PE"+str(i)) #, c=self.color[i])
+        plt.title("Buffer utilization:"+self.mapping_str+", "+pipe_str)
         plt.xlabel('Cycle')
-        plt.ylabel('Buffer size (number of data)')
+        plt.ylabel('Number of data')
         plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
         plt.xlim([0, self.cycle_ctr])
-        plt.legend(loc='best', prop={'size': 5})
-        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/OnChipBuffer_size_utilization.png')
+        plt.legend(loc='best', prop={'size': 6})
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Buffer_utilization.png')
         plt.clf()
 
     def idle_analysis(self, event, xb):
-        ### 暫時放棄這個function
+        ### Useless function
         last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
         critical_data =  last_edram_rd_ir_event.last_arrived_data
         nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
