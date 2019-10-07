@@ -72,7 +72,8 @@ class DefaultMapping(object):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
 
                 pe_y_num = ceil(matrix_height / (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y))      
                 pe_x_num = ceil(matrix_width / (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x))
@@ -80,6 +81,7 @@ class DefaultMapping(object):
                 
                 for w in range(matrix_width):
                     for h in range(matrix_height):
+                        # traverse all cells
                         cell_h = h % self.hd_info.Xbar_h 
                         cell_w = w % self.hd_info.Xbar_w
                         xb_h = h // self.hd_info.Xbar_h % self.hd_info.Xbar_num_y
@@ -95,16 +97,20 @@ class DefaultMapping(object):
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
                         
-                        nfilter = w // self.model_info.filter_bit
-                        nbit = w % self.model_info.filter_bit
+                        nfilter = w // cells_per_filter
+                        start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                        end_bit = start_bit + self.hd_info.cell_bit_width
+                        if end_bit >= self.model_info.filter_bit:
+                            end_bit = self.model_info.filter_bit
+                        nbit = [i for i in range(start_bit, end_bit)]
                         ngrid = h
 
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                 
                 ## Inputs
                 inputs = []
-                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
-                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
+                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height # padding, slide
+                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width # padding, slide
                 for oh in range(o_height): 
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -120,7 +126,8 @@ class DefaultMapping(object):
                 xb_x_num = ceil(matrix_width / self.hd_info.Xbar_w)
                 
                 for w in range(xb_x_num):
-                    for h in range(xb_y_num): # traverse all xbar
+                    for h in range(xb_y_num):
+                        # traverse all xbar
                         xb_h = h % self.hd_info.Xbar_num_y
                         xb_w = w % self.hd_info.Xbar_num_x
                         cu_h = h // self.hd_info.Xbar_num_y % self.hd_info.CU_num_y
@@ -158,7 +165,9 @@ class DefaultMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                #matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
                 
                 pe_y_num = ceil(matrix_height / (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y))      
                 pe_x_num = ceil(matrix_width / (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x))
@@ -166,6 +175,7 @@ class DefaultMapping(object):
 
                 for w in range(matrix_width):
                     for h in range(matrix_height):
+                        # traverse all cells
                         cell_h = h % self.hd_info.Xbar_h 
                         cell_w = w % self.hd_info.Xbar_w
                         xb_h = h // self.hd_info.Xbar_h % self.hd_info.Xbar_num_y
@@ -181,8 +191,14 @@ class DefaultMapping(object):
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
                         
-                        nfilter = w // self.model_info.filter_bit
-                        nbit = w % self.model_info.filter_bit
+                        # nfilter = w // self.model_info.filter_bit
+                        # nbit = w % self.model_info.filter_bit
+                        nfilter = w // cells_per_filter
+                        start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                        end_bit = start_bit + self.hd_info.cell_bit_width
+                        if end_bit >= self.model_info.filter_bit:
+                            end_bit = self.model_info.filter_bit
+                        nbit = [i for i in range(start_bit, end_bit)]
                         ngrid = h
 
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
@@ -200,7 +216,8 @@ class DefaultMapping(object):
                 xb_x_num = ceil(matrix_width / self.hd_info.Xbar_w)
 
                 for w in range(xb_x_num):
-                    for h in range(xb_y_num): # traverse all xbar
+                    for h in range(xb_y_num):
+                        # traverse all xbar
                         xb_h = h % self.hd_info.Xbar_num_y
                         xb_w = w % self.hd_info.Xbar_num_x
                         cu_h = h // self.hd_info.Xbar_num_y % self.hd_info.CU_num_y
@@ -351,8 +368,8 @@ class ParallelismMapping(object):
 
                 ## Inputs
                 inputs = []
-                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
-                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
+                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height, slide = 1
+                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width, slide = 1
                 for oh in range(o_height):
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -365,7 +382,10 @@ class ParallelismMapping(object):
                 inputs = np.array(inputs)
 
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                # matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
+
                 OU_num_y = ceil(matrix_height / self.hd_info.OU_h)
                 OU_num_x = ceil(matrix_width / self.hd_info.OU_w)
                 for ou_idx_x in range(OU_num_x):
@@ -392,8 +412,14 @@ class ParallelismMapping(object):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
                                 h = b_h + ou_idx_y * self.hd_info.OU_h
 
-                                nfilter = w // self.model_info.filter_bit
-                                nbit = w % self.model_info.filter_bit
+                                # nfilter = w // self.model_info.filter_bit
+                                # nbit = w % self.model_info.filter_bit
+                                nfilter = w // cells_per_filter
+                                start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                end_bit = start_bit + self.hd_info.cell_bit_width
+                                if end_bit >= self.model_info.filter_bit:
+                                    end_bit = self.model_info.filter_bit
+                                nbit = [i for i in range(start_bit, end_bit)]
                                 ngrid = h
 
                                 cell_h = xbar_height_start_idx + b_h
@@ -428,7 +454,9 @@ class ParallelismMapping(object):
                 inputs = np.array(inputs)
                
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                # matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
                 OU_num_y = ceil(matrix_height / self.hd_info.OU_h)
                 OU_num_x = ceil(matrix_width / self.hd_info.OU_w)
                 for ou_idx_x in range(OU_num_x):
@@ -455,9 +483,16 @@ class ParallelismMapping(object):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
                                 h = b_h + ou_idx_y * self.hd_info.OU_h
 
-                                nfilter = w // self.model_info.filter_bit
-                                nbit = w % self.model_info.filter_bit
+                                # nfilter = w // self.model_info.filter_bit
+                                # nbit = w % self.model_info.filter_bit
+                                nfilter = w // cells_per_filter
+                                start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                end_bit = start_bit + self.hd_info.cell_bit_width
+                                if end_bit >= self.model_info.filter_bit:
+                                    end_bit = self.model_info.filter_bit
+                                nbit = [i for i in range(start_bit, end_bit)]
                                 ngrid = h
+
 
                                 cell_h = xbar_height_start_idx + b_h
                                 cell_w = xbar_width_start_idx + b_w
@@ -591,8 +626,10 @@ class TransferMapping(object):
 
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
-                
+                # matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
+
                 mapping_height_num_xb_per_pe = ceil(matrix_height / self.hd_info.Xbar_h)
                 if mapping_height_num_xb_per_pe > self.num_of_xb_in_pe:
                     print("Mapping error: mapping_height_num_xb_per_pe > num_of_xb_in_pe.")
@@ -601,7 +638,8 @@ class TransferMapping(object):
                 if mapping_width_num_xb_per_pe * self.hd_info.Xbar_w > matrix_width:
                     mapping_width_num_xb_per_pe = ceil(matrix_width / self.hd_info.Xbar_w)
                 
-                num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
+                # num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
+                num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // cells_per_filter
                 if num_filter_per_pe > self.model_info.filter_n[nlayer]:
                     num_filter_per_pe = self.model_info.filter_n[nlayer]
                 this_layer_xb_mapping_idx = xbar_mapping_idx
@@ -621,17 +659,25 @@ class TransferMapping(object):
                                 block_height = self.hd_info.Xbar_h
 
                             if xb_w_idx + 1 == mapping_width_num_xb_per_pe:
-                                block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                                # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                                block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
                             else:
                                 block_width = self.hd_info.Xbar_w
                         
                             for bh in range(block_height):
                                 for bw in range(block_width):
-                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
+                                    # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
+                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * cells_per_filter
                                     h = bh + xb_h_idx * self.hd_info.Xbar_h
 
-                                    nfilter = w // self.model_info.filter_bit
-                                    nbit = w % self.model_info.filter_bit
+                                    # nfilter = w // self.model_info.filter_bit
+                                    # nbit = w % self.model_info.filter_bit
+                                    nfilter = w // cells_per_filter
+                                    start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                    end_bit = start_bit + self.hd_info.cell_bit_width
+                                    if end_bit >= self.model_info.filter_bit:
+                                        end_bit = self.model_info.filter_bit
+                                    nbit = [i for i in range(start_bit, end_bit)]
                                     ngrid = h
 
                                     cell_h = bh
@@ -663,8 +709,10 @@ class TransferMapping(object):
 
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
-                matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
-                
+                # matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
+                cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
+                matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
+
                 mapping_height_num_xb_per_pe = ceil(matrix_height / self.hd_info.Xbar_h)
                 if mapping_height_num_xb_per_pe > self.num_of_xb_in_pe:
                     print("Mapping error: mapping_height_num_xb_per_pe > num_of_xb_in_pe.")
@@ -673,7 +721,8 @@ class TransferMapping(object):
                 if mapping_width_num_xb_per_pe * self.hd_info.Xbar_w > matrix_width:
                     mapping_width_num_xb_per_pe = ceil(matrix_width / self.hd_info.Xbar_w)
                 
-                num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
+                # num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
+                num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // cells_per_filter
                 if num_filter_per_pe > self.model_info.filter_n[nlayer]:
                     num_filter_per_pe = self.model_info.filter_n[nlayer]
                 this_layer_xb_mapping_idx = xbar_mapping_idx
@@ -693,17 +742,25 @@ class TransferMapping(object):
                                 block_height = self.hd_info.Xbar_h
 
                             if xb_w_idx + 1 == mapping_width_num_xb_per_pe: 
-                                block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                                # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                                block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
                             else:
                                 block_width = self.hd_info.Xbar_w
 
                             for bh in range(block_height):
                                 for bw in range(block_width):
-                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
+                                    # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
+                                    w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * cells_per_filter
                                     h = bh + xb_h_idx * self.hd_info.Xbar_h
 
-                                    nfilter = w // self.model_info.filter_bit
-                                    nbit = w % self.model_info.filter_bit
+                                    # nfilter = w // self.model_info.filter_bit
+                                    # nbit = w % self.model_info.filter_bit
+                                    nfilter = w // cells_per_filter
+                                    start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                    end_bit = start_bit + self.hd_info.cell_bit_width
+                                    if end_bit >= self.model_info.filter_bit:
+                                        end_bit = self.model_info.filter_bit
+                                    nbit = [i for i in range(start_bit, end_bit)]
                                     ngrid = h
 
                                     cell_h = bh

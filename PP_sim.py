@@ -25,7 +25,7 @@ def main():
         print("TransferMapping") 
         mapping_information = TransferMapping()
         mapping_str = "TransferMapping"
-    
+
     ### Scheduling ###
     print("Scheduling policy: ", end="")
     if scheduling == 0: # Non-pipeline
@@ -51,7 +51,7 @@ def main():
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-    
+
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")

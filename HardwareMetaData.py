@@ -6,7 +6,9 @@ class HardwareMetaData(object):
 
         cfg = ConfigParser()
         cfg.read('./configs/hardware.ini')
-        
+
+        self.cell_bit_width = 1
+
         self.Router_num_y = 2
         self.Router_num_x = 2
         self.Router_num = self.Router_num_y * self.Router_num_x
@@ -75,7 +77,3 @@ class HardwareMetaData(object):
 
     def __str__(self):
         return str(self.__dict__)
-
-
-
-
