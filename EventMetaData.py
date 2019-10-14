@@ -14,7 +14,7 @@ class EventMetaData:
 
         self.finished = False
 
-        self.data_is_transfer = False
+        self.data_is_transfer = 0
 
         # idle analysis
         # self.last_arrived_data = 0 # for edram read event

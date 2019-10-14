@@ -128,7 +128,8 @@ class Controller(object):
                 for cu in pe.CU_array:
                     if not cu.state and not cu.state_edram_rd_ir: # 有無resource
                         for event in cu.edram_rd_ir_erp.copy(): # loop event
-                            if event.data_is_transfer: # 此event的資料正在傳輸
+                            if event.data_is_transfer != 0:
+                                # 此event的資料正在傳輸
                                 continue
                             ## Is Data in eDRAM buffer
                             isData_ready = True
@@ -147,8 +148,9 @@ class Controller(object):
                             if not isData_ready: # 無data
                                 self.mem_acc_ctr += 1
                                 #cu.edram_rd_ir_erp.remove(event)
-                                event.data_is_transfer = True
+                                event.data_is_transfer += len(event.inputs)
                                 self.fetch_array.append(FetchEvent(event))
+                                continue
                             else:
                                 if self.trace:
                                     print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
@@ -249,13 +251,26 @@ class Controller(object):
                             break
 
                     # bottleneck analysis
-                    for event in cu.edram_rd_ir_erp.copy():
-                        if event.data_is_transfer:
-                            cu.wait_transfer += 1
-                            #print("cu.wait_transfer", cu.wait_transfer)
+                    if not cu.state:
+                        # CU idle
+                        if not cu.edram_rd_ir_erp:
+                            # CU idle, 且event pool是空的
+                            cu.pure_idle_time += 1
                         else:
-                            cu.wait_resource += 1
-                            #print("cu.wait_resource", cu.wait_resource)
+                            # CU idle, 有event在event pool裡面, 這些event不能開始做, 肯定是資料沒到的拉
+                            cu.wait_transfer_time += 1
+                    else:
+                        # CU busy
+                        isEventWaiting = False
+                        for event in cu.edram_rd_ir_erp:
+                            if event.data_is_transfer == 0:
+                                # 有event資料已經ready但還不能做
+                                isEventWaiting = True
+                                break
+                        if isEventWaiting:
+                            cu.wait_resource_time += 1
+                        else:
+                            cu.pure_computation_time += 1
 
             ### Event: ou
             for pe in self.PE_array:
@@ -378,7 +393,7 @@ class Controller(object):
             ### Event: pe_saa 
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp.copy():
-                    if event.data_is_transfer: # 此event的資料正在傳輸
+                    if event.data_is_transfer != 0: # 此event的資料正在傳輸
                         continue
                     if self.trace:
                         pass
@@ -396,7 +411,7 @@ class Controller(object):
 
                     for s in range(saa_amount):
                         for idx in range(len(pe.state_pe_saa)):
-                            if not pe.state_pe_saa[idx]:
+                            if not pe.state_pe_saa[idx]: # 可能可以直接用s的idx, 不用判斷有沒有resource, 若沒有上面就會exit了
                                 self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
                                 self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
                                 self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
@@ -427,15 +442,29 @@ class Controller(object):
                                 pe.edram_buffer.buffer.remove([event.nlayer, d])
 
                 # bottleneck analysis
-                for event in pe.pe_saa_erp.copy():
-                    if event.data_is_transfer:
-                        pe.saa_wait_transfer += 1
-                        #print("pe.saa_wait_transfer", pe.saa_wait_transfer)
+                if not pe.state_pe_saa[0]:
+                    # 因為都是從0開使使用, 0 idle代表全部idle
+                    if not pe.pe_saa_erp:
+                        # pe saa idle, 且event pool是空的
+                        pe.saa_pure_idle_time += 1
                     else:
-                        pe.saa_wait_resource += 1
-                        #print("pe.saa_wait_resource", pe.saa_wait_resource)
+                        # pe saa idle, 有event在event pool裡面, 這些event不能開始做, 肯定是資料沒到的拉
+                        pe.saa_wait_transfer_time += 1
+                else:
+                    # SAA busy
+                    isEventWaiting = False
+                    for event in pe.pe_saa_erp:
+                        if event.data_is_transfer == 0:
+                            # 有event資料已經ready但還不能做
+                            isEventWaiting = True
+                            break
+                    if isEventWaiting:
+                        pe.saa_wait_resource_time += 1
+                    else:
+                        pe.saa_pure_computation_time += 1
 
-            ### Event: activation 
+
+            ### Event: activation
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
                     for idx in range(len(pe.state_activation)):
@@ -519,7 +548,7 @@ class Controller(object):
             for pe in self.PE_array:
                 if not pe.state_edram_rd_pool:
                     for event in pe.edram_rd_pool_erp:
-                        if event.data_is_transfer: # 此event的資料正在傳輸
+                        if event.data_is_transfer != 0: # 此event的資料正在傳輸
                             continue
                         isData_ready = True
                         for data in event.inputs:
@@ -533,7 +562,7 @@ class Controller(object):
                                 break
 
                         if not isData_ready:
-                            event.data_is_transfer = True
+                            event.data_is_transfer += len(event.inputs)
                             self.fetch_array.append(FetchEvent(event))
                         else:
                             if self.trace:
@@ -575,14 +604,27 @@ class Controller(object):
                                     print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
                                     exit(0)
 
-                    # bottleneck analysis
+                # bottleneck analysis
+                if not pe.state_edram_rd_pool:
+                    # Pooling unit idle
+                    if not pe.edram_rd_pool_erp:
+                        # Pooling unit idle, 且event pool是空的
+                        pe.pooling_pure_idle_time += 1
+                    else:
+                        # Pooling unit idle, 有event在event pool裡面, 這些event不能開始做, 因為資料沒到
+                        pe.pooling_wait_transfer_time += 1
+                else:
+                    # Pooling unit busy
+                    isEventWaiting = False
                     for event in pe.edram_rd_pool_erp:
-                        if event.data_is_transfer:
-                            pe.pool_wait_transfer += 1
-                            #print("pe.pool_wait_transfer", pe.pool_wait_transfer)
-                        else:
-                            pe.pool_wait_resource += 1
-                            #print("pe.pool_wait_resource", pe.pool_wait_resource)
+                        if event.data_is_transfer == 0:
+                            # 有event資料已經ready但還不能做
+                            isEventWaiting = True
+                            break
+                    if isEventWaiting:
+                        pe.pooling_wait_resource_time += 1
+                    else:
+                        pe.pooling_pure_computation_time += 1
 
             ### Event: pooling 
             for pe in self.PE_array:
@@ -642,9 +684,9 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     pro_event = self.Computation_order[pro_event_idx]
-                    pro_event.data_is_transfer = False
+                    pro_event.data_is_transfer -= 1
 
-             ### Event: data_transfer
+            ### Event: data_transfer
             for event in self.data_transfer_erp.copy():
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
@@ -678,7 +720,7 @@ class Controller(object):
                 for proceeding_index in event.proceeding_event: # 這個loop只會執行一次(一個transfer後都只接一個event)
                     pro_event = self.Computation_order[proceeding_index]
                     pro_event.current_number_of_preceding_event += 1
-                    pro_event.data_is_transfer = True
+                    pro_event.data_is_transfer += 1
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if self.trace:
                             pass
@@ -985,62 +1027,24 @@ class Controller(object):
         
         print('memory accesss times:', self.mem_acc_ctr)
         print()
-        
-        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
-                                self.Total_energy_adc + \
-                                self.Total_energy_dac + \
-                                self.Total_energy_crossbar + \
-                                self.Total_energy_ir_in_cu + \
-                                self.Total_energy_or_in_cu
-        self.Total_energy_pe = self.Total_energy_cu + \
-                                self.Total_energy_edram_buffer + \
-                                self.Total_energy_bus + \
-                                self.Total_energy_activation + \
-                                self.Total_energy_pe_shift_and_add + \
-                                self.Total_energy_pooling + \
-                                self.Total_energy_or
-        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
-        
-        print("Power breakdown:")
-        print("\tTotal:", self.Total_energy, "nJ")
-        print("\tChip level")
-        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
-        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
-        print()
-        print("\tPE level")
-        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
-        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
-        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
-        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
-        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
-        print()
-        print("\tCU level")
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
-        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
-        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
-        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
-        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
-        print()
 
         isBottleneckAnalysis = False
         if isBottleneckAnalysis:
             print("Bottleneck analysis")
-            for pe in self.PE_array:
-                print("pe", self.PE_array.index(pe))
-                print("\tpe.saa_wait_transfer", pe.saa_wait_transfer)
-                print("\tpe.saa_wait_resource", pe.saa_wait_resource)
-                print("\tpe.pool_wait_transfer", pe.pool_wait_transfer)
-                print("\tpe.pool_wait_resource", pe.pool_wait_resource)
+            # for pe in self.PE_array:
+            #     print("pe", self.PE_array.index(pe))
+            #     print("\tpe.saa_wait_transfer", pe.saa_wait_transfer)
+            #     print("\tpe.saa_wait_resource", pe.saa_wait_resource)
+            #     print("\tpe.pool_wait_transfer", pe.pool_wait_transfer)
+            #     print("\tpe.pool_wait_resource", pe.pool_wait_resource)
             for pe in self.PE_array:
                 print("pe", self.PE_array.index(pe))
                 for cu in pe.CU_array:
                     print("\tcu", pe.CU_array.index(cu))
-                    print("\t\tcu.wait_transfer", cu.wait_transfer)
-                    print("\t\tcu.wait_resource", cu.wait_resource)
-
+                    print("\t\tcu.pure_idle_time", cu.pure_idle_time)
+                    print("\t\tcu.wait_transfer_time", cu.wait_transfer_time)
+                    print("\t\tcu.wait_resource_time", cu.wait_resource_time)
+                    print("\t\tcu.wait_computation_time", cu.wait_computation_time)
 
         if self.isPipeLine:
             pipe_str = "pipeline"
@@ -1069,16 +1073,6 @@ class Controller(object):
         plt.ylim([0, 20])
         #plt.xlim([0,])
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/energy_utilization.png')
-        plt.clf()
-        
-        ### Power breakdown
-        # chip
-        labels = 'PE', 'Interconnect'
-        value = [self.Total_energy_pe, self.Total_energy_interconnect]
-        plt.pie(value , labels = labels, autopct='%1.1f%%')
-        plt.axis('equal')
-        plt.title(self.mapping_str+", "+pipe_str)
-        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Power_breakdown_chip.png')
         plt.clf()
 
         ### PE usage
@@ -1150,6 +1144,208 @@ class Controller(object):
         plt.xlim([0, self.cycle_ctr])
         plt.legend(loc='best', prop={'size': 6})
         plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Buffer_utilization_C.png')
+        plt.clf()
+
+        ### Bottleneck analysis
+        self.bottleneck_statistics()
+
+    def bottleneck_statistics(self):
+        if self.isPipeLine:
+            pipe_str = "pipeline"
+        else:
+            pipe_str = "non_pipeline"
+        ## CU
+        total_cu_num = len(self.PE_array)* self.hd_info.CU_num
+        idx = np.arange(total_cu_num)
+        pure_idle_time = list()
+        wait_transfer_time = list()
+        wait_resource_time = list()
+        pure_computation_time = list()
+        pure_idle_time_total = 0
+        wait_transfer_time_total = 0
+        wait_resource_time_total = 0
+        pure_computation_time_total = 0
+        for i in range(len(self.PE_array)):
+            for j in range(self.hd_info.CU_num):
+                pure_idle_time.append(self.PE_array[i].CU_array[j].pure_idle_time)
+                wait_transfer_time.append(self.PE_array[i].CU_array[j].wait_transfer_time)
+                wait_resource_time.append(self.PE_array[i].CU_array[j].wait_resource_time)
+                pure_computation_time.append(self.PE_array[i].CU_array[j].pure_computation_time)
+                pure_idle_time_total += pure_idle_time[-1]
+                wait_transfer_time_total += wait_transfer_time[-1]
+                wait_resource_time_total += wait_resource_time[-1]
+                pure_computation_time_total +=pure_computation_time[-1]
+        pure_idle_time = np.array(pure_idle_time)
+        wait_transfer_time = np.array(wait_transfer_time)
+        wait_resource_time = np.array(wait_resource_time)
+        pure_computation_time = np.array(pure_computation_time)
+        for i in range(len(self.PE_array)):
+            idx_a = idx[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
+            pure_idle_time_a = pure_idle_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
+            wait_transfer_time_a = wait_transfer_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
+            wait_resource_time_a = wait_resource_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
+            pure_computation_time_a = pure_computation_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
+            plt.bar(idx_a+i, pure_idle_time_a, color='b',  width=0.8)
+            plt.bar(idx_a+i, wait_transfer_time_a, bottom=pure_idle_time_a, color='r',  width=0.8)
+            plt.bar(idx_a+i, wait_resource_time_a, bottom=pure_idle_time_a+wait_transfer_time_a, color='g',  width=0.8)
+            plt.bar(idx_a+i, pure_computation_time_a, bottom=pure_idle_time_a+wait_transfer_time_a+wait_resource_time_a, color='y',  width=0.8)
+        plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Bottleneck_CU.png')
+        plt.clf()
+        print("CU Bottleneck analysis:")
+        print("\tTotal pure_idle:", pure_idle_time_total)
+        print("\tTotal wait_transfer:", wait_transfer_time_total)
+        print("\tTotal wait_resource:", wait_resource_time_total)
+        print("\tTotal pure_computation:", pure_computation_time_total)
+        print()
+        print("\tAverage pure_idle, ", pure_idle_time_total/total_cu_num, end="")
+        print("(" + str(pure_idle_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_transfer, ", wait_transfer_time_total/total_cu_num, end="")
+        print("(" + str(wait_transfer_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_resource, ", wait_resource_time_total/total_cu_num, end="")
+        print("(" + str(wait_resource_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage pure_computation, ", pure_computation_time_total/total_cu_num, end="")
+        print("(" + str(pure_computation_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
+
+        # PE SAA
+        total_pe_num = len(self.PE_array)
+        idx = np.arange(total_pe_num)
+        pure_idle_time = list()
+        wait_transfer_time = list()
+        wait_resource_time = list()
+        pure_computation_time = list()
+        pure_idle_time_total = 0
+        wait_transfer_time_total = 0
+        wait_resource_time_total = 0
+        pure_computation_time_total = 0
+        for i in range(len(self.PE_array)):
+            pure_idle_time.append(self.PE_array[i].saa_pure_idle_time)
+            wait_transfer_time.append(self.PE_array[i].saa_wait_transfer_time)
+            wait_resource_time.append(self.PE_array[i].saa_wait_resource_time)
+            pure_computation_time.append(self.PE_array[i].saa_pure_computation_time)
+            pure_idle_time_total += pure_idle_time[-1]
+            wait_transfer_time_total += wait_transfer_time[-1]
+            wait_resource_time_total += wait_resource_time[-1]
+            pure_computation_time_total +=pure_computation_time[-1]
+        pure_idle_time = np.array(pure_idle_time)
+        wait_transfer_time = np.array(wait_transfer_time)
+        wait_resource_time = np.array(wait_resource_time)
+        pure_computation_time = np.array(pure_computation_time)
+        plt.bar(idx, pure_idle_time, color='b',  width=0.8)
+        plt.bar(idx, wait_transfer_time, bottom=pure_idle_time, color='r',  width=0.8)
+        plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8)
+        plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8)
+        plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Bottleneck_PE_SAA.png')
+        plt.clf()
+        print("PE SAA Bottleneck analysis:")
+        print("\tTotal pure_idle:", pure_idle_time_total)
+        print("\tTotal wait_transfer:", wait_transfer_time_total)
+        print("\tTotal wait_resource:", wait_resource_time_total)
+        print("\tTotal pure_computation:", pure_computation_time_total)
+        print()
+        print("\tAverage pure_idle, ", pure_idle_time_total/total_pe_num, end="")
+        print("(" + str(pure_idle_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_transfer, ", wait_transfer_time_total/total_pe_num, end="")
+        print("(" + str(wait_transfer_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_resource, ", wait_resource_time_total/total_pe_num, end="")
+        print("(" + str(wait_resource_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage pure_computation, ", pure_computation_time_total/total_pe_num, end="")
+        print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+
+        # Pooling
+        total_pe_num = len(self.PE_array)
+        idx = np.arange(total_pe_num)
+        pure_idle_time = list()
+        wait_transfer_time = list()
+        wait_resource_time = list()
+        pure_computation_time = list()
+        pure_idle_time_total = 0
+        wait_transfer_time_total = 0
+        wait_resource_time_total = 0
+        pure_computation_time_total = 0
+        for i in range(len(self.PE_array)):
+            pure_idle_time.append(self.PE_array[i].pooling_pure_idle_time)
+            wait_transfer_time.append(self.PE_array[i].pooling_wait_transfer_time)
+            wait_resource_time.append(self.PE_array[i].pooling_wait_resource_time)
+            pure_computation_time.append(self.PE_array[i].pooling_pure_computation_time)
+            pure_idle_time_total += pure_idle_time[-1]
+            wait_transfer_time_total += wait_transfer_time[-1]
+            wait_resource_time_total += wait_resource_time[-1]
+            pure_computation_time_total +=pure_computation_time[-1]
+        pure_idle_time = np.array(pure_idle_time)
+        wait_transfer_time = np.array(wait_transfer_time)
+        wait_resource_time = np.array(wait_resource_time)
+        pure_computation_time = np.array(pure_computation_time)
+        plt.bar(idx, pure_idle_time, color='b',  width=0.8)
+        plt.bar(idx, wait_transfer_time, bottom=pure_idle_time, color='r',  width=0.8)
+        plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8)
+        plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8)
+        plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Bottleneck_Pooling.png')
+        plt.clf()
+        print("Pooling Bottleneck analysis:")
+        print("\tTotal pure_idle:", pure_idle_time_total)
+        print("\tTotal wait_transfer:", wait_transfer_time_total)
+        print("\tTotal wait_resource:", wait_resource_time_total)
+        print("\tTotal pure_computation:", pure_computation_time_total)
+        print()
+        print("\tAverage pure_idle, ", pure_idle_time_total/total_pe_num, end="")
+        print("(" + str(pure_idle_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_transfer, ", wait_transfer_time_total/total_pe_num, end="")
+        print("(" + str(wait_transfer_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage wait_resource, ", wait_resource_time_total/total_pe_num, end="")
+        print("(" + str(wait_resource_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print("\tAverage pure_computation, ", pure_computation_time_total/total_pe_num, end="")
+        print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+
+    def power_breakdown(self):
+        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
+                                self.Total_energy_adc + \
+                                self.Total_energy_dac + \
+                                self.Total_energy_crossbar + \
+                                self.Total_energy_ir_in_cu + \
+                                self.Total_energy_or_in_cu
+        self.Total_energy_pe = self.Total_energy_cu + \
+                                self.Total_energy_edram_buffer + \
+                                self.Total_energy_bus + \
+                                self.Total_energy_activation + \
+                                self.Total_energy_pe_shift_and_add + \
+                                self.Total_energy_pooling + \
+                                self.Total_energy_or
+        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
+
+        print("Power breakdown:")
+        print("\tTotal:", self.Total_energy, "nJ")
+        print("\tChip level")
+        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
+        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
+        print()
+        print("\tPE level")
+        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
+        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
+        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
+        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
+        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
+        print()
+        print("\tCU level")
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
+        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
+        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
+        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
+        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
+        print()
+        ### Power breakdown
+        # chip
+        labels = 'PE', 'Interconnect'
+        value = [self.Total_energy_pe, self.Total_energy_interconnect]
+        plt.pie(value , labels = labels, autopct='%1.1f%%')
+        plt.axis('equal')
+        plt.title(self.mapping_str+", "+pipe_str)
+        plt.savefig('./statistics/'+pipe_str+'/'+self.mapping_str+'/Power_breakdown_chip.png')
         plt.clf()
 
     def idle_analysis(self, event, xb):

@@ -16,9 +16,9 @@ class PE(object):
         
         ### events per cycle
         #self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
-        self.pe_saa_epc = 400
+        self.pe_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
         self.activation_epc = 16
-        self.edram_wr_epc = 8 # 一個cycle可寫幾筆資料
+        self.edram_wr_epc = 32 # 一個cycle可寫幾筆資料
         self.pooling_epc = 16
 
         ### event ready pool
@@ -46,10 +46,15 @@ class PE(object):
         self.reset()
 
         ### bottleneck analysis
-        self.saa_wait_transfer = 0
-        self.saa_wait_resource = 0
-        self.pool_wait_transfer = 0
-        self.pool_wait_resource = 0
+        self.saa_pure_idle_time = 0
+        self.saa_wait_transfer_time = 0
+        self.saa_wait_resource_time = 0
+        self.saa_pure_computation_time = 0
+
+        self.pooling_pure_idle_time = 0
+        self.pooling_wait_transfer_time = 0
+        self.pooling_wait_resource_time = 0
+        self.pooling_pure_computation_time = 0
     
     def reset(self):
         ### state
