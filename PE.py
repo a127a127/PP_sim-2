@@ -55,6 +55,15 @@ class PE(object):
         self.pooling_wait_transfer_time = 0
         self.pooling_wait_resource_time = 0
         self.pooling_pure_computation_time = 0
+
+        ### Energy
+        self.CU_energy = 0
+        self.Edram_buffer_energy = 0
+        self.Bus_energy = 0
+        self.Shift_and_add_energy= 0
+        self.Or_energy = 0
+        self.Activation_energy = 0
+        self.Pooling_energy = 0
     
     def reset(self):
         ### state
