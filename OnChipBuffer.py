@@ -9,6 +9,8 @@ class OnChipBuffer():
         self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit # KB
 
         self.buffer = []
+        
+        self.maximal_usage = 0
 
     def check(self, data):
         for d in self.buffer:
@@ -25,7 +27,8 @@ class OnChipBuffer():
         else: # FIFO
             del self.buffer[0]
             self.buffer.append(data)
-        return
+        
+        self.maximal_usage = max(self.maximal_usage, len(self.buffer))
 
     def get(self):
         if not self.empty():

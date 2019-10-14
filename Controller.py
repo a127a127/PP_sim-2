@@ -1174,26 +1174,8 @@ class Controller(object):
         plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/XB_utilization.png')
         plt.clf()
   
-        ### Buffer utilization
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(self.cycle_ctr):
-                c = [row+1]
-                for i in range(len(self.PE_array)):
-                    c.append(self.buffer_size[i][row])
-                writer.writerow(c)
-
-        for i in range(len(self.PE_array)):
-            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label="PE"+str(i)) #, c=self.color[i])
-        plt.title("Buffer utilization:"+self.mapping_str+", "+self.pipe_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('Number of data')
-        plt.xticks(np.arange(0, 200, 10), fontsize=6)
-        plt.ylim([0, self.max_buffer_size+5])
-        plt.xlim([0, self.cycle_ctr])
-        plt.legend(loc='best', prop={'size': 6})
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Buffer_utilization_C.png')
-        plt.clf()
+        ### Buffer analysis
+        self.buffer_analysis()
 
         ### Energy breakdown
         self.energy_breakdown()
@@ -1477,3 +1459,32 @@ class Controller(object):
 
         #     nlayer = nlayer - 1
         #     layer_type = self.ordergenerator.model_info.layer_list[nlayer].layer_type
+
+    def buffer_analysis(self):
+        ### Utilization
+        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr):
+                c = [row+1]
+                for i in range(len(self.PE_array)):
+                    c.append(self.buffer_size[i][row])
+                writer.writerow(c)
+
+        for i in range(len(self.PE_array)):
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label="PE"+str(i)) #, c=self.color[i])
+        plt.title("Buffer utilization:"+self.mapping_str+", "+self.pipe_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('Number of data')
+        plt.xticks(np.arange(0, 200, 10), fontsize=6)
+        plt.ylim([0, self.max_buffer_size+5])
+        plt.xlim([0, self.cycle_ctr])
+        plt.legend(loc='best', prop={'size': 6})
+        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Buffer_utilization_C.png')
+        plt.clf()
+
+        ### Maximal usage
+        for i in range(len(self.PE_array)):
+            plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage, color='b', width=0.8)
+        plt.legend(["Maximal usage"])
+        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Edram_buffer_maximal_usage.png')
+        plt.clf()
