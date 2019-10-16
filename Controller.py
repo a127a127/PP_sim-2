@@ -472,7 +472,6 @@ class Controller(object):
                     else:
                         pe.saa_pure_computation_time += 1
 
-
             ### Event: activation
             for pe in self.PE_array:
                 for event in pe.activation_erp.copy():
@@ -1091,21 +1090,20 @@ class Controller(object):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
         fre = 1
-        ### Energy per 100 cycle
-        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, fre):
-                writer.writerow([row+1, self.energy_utilization[row]])
-        
-        plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
-        #plt.show()
-        plt.title(self.mapping_str+", "+self.pipe_str)
-        plt.ylabel('Energy (nJ)')
-        plt.xlabel('Cycle')
-        plt.ylim([0, 20])
-        #plt.xlim([0,])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/energy_utilization.png')
-        plt.clf()
+        # ### Energy per 100 cycle
+        # with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for row in range(0, self.cycle_ctr, fre):
+        #         writer.writerow([row+1, self.energy_utilization[row]])
+        # plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
+        # #plt.show()
+        # plt.title(self.mapping_str+", "+self.pipe_str)
+        # plt.ylabel('Energy (nJ)')
+        # plt.xlabel('Cycle')
+        # plt.ylim([0, 20])
+        # #plt.xlim([0,])
+        # plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/energy_utilization.png')
+        # plt.clf()
 
         ### PE usage
         with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
@@ -1168,52 +1166,47 @@ class Controller(object):
 
     def bottleneck_statistics(self):
         ## CU
-        total_cu_num = len(self.PE_array)* self.hd_info.CU_num
-        idx = np.arange(total_cu_num)
-        pure_idle_time = list()
-        wait_transfer_time = list()
-        wait_resource_time = list()
-        pure_computation_time = list()
-        pure_idle_time_total = 0
-        wait_transfer_time_total = 0
-        wait_resource_time_total = 0
-        pure_computation_time_total = 0
-        for i in range(len(self.PE_array)):
-            for j in range(self.hd_info.CU_num):
-                pure_idle_time.append(self.PE_array[i].CU_array[j].pure_idle_time)
-                wait_transfer_time.append(self.PE_array[i].CU_array[j].wait_transfer_time)
-                wait_resource_time.append(self.PE_array[i].CU_array[j].wait_resource_time)
-                pure_computation_time.append(self.PE_array[i].CU_array[j].pure_computation_time)
-                pure_idle_time_total += pure_idle_time[-1]
-                wait_transfer_time_total += wait_transfer_time[-1]
-                wait_resource_time_total += wait_resource_time[-1]
-                pure_computation_time_total +=pure_computation_time[-1]
+        total_pe_num = len(self.PE_array)
+        idx = np.arange(total_pe_num)
+        pure_idle_time, wait_transfer_time, wait_resource_time, pure_computation_time = [], [], [], []
+        pure_idle_time_total, wait_transfer_time_total, wait_resource_time_total, pure_computation_time_total = 0, 0, 0, 0
+        for j in range(self.hd_info.CU_num):
+            pure_idle_time.append([])
+            wait_transfer_time.append([])
+            wait_resource_time.append([])
+            pure_computation_time.append([])
+            for i in range(len(self.PE_array)):
+                pure_idle_time[j].append(self.PE_array[i].CU_array[j].pure_idle_time)
+                wait_transfer_time[j].append(self.PE_array[i].CU_array[j].wait_transfer_time)
+                wait_resource_time[j].append(self.PE_array[i].CU_array[j].wait_resource_time)
+                pure_computation_time[j].append(self.PE_array[i].CU_array[j].pure_computation_time)
+                pure_idle_time_total += pure_idle_time[j][-1]
+                wait_transfer_time_total += wait_transfer_time[j][-1]
+                wait_resource_time_total += wait_resource_time[j][-1]
+                pure_computation_time_total +=pure_computation_time[j][-1]
         pure_idle_time = np.array(pure_idle_time)
         wait_transfer_time = np.array(wait_transfer_time)
         wait_resource_time = np.array(wait_resource_time)
         pure_computation_time = np.array(pure_computation_time)
-        for i in range(len(self.PE_array)):
-            idx_a = idx[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
-            pure_idle_time_a = pure_idle_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
-            wait_transfer_time_a = wait_transfer_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
-            wait_resource_time_a = wait_resource_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
-            pure_computation_time_a = pure_computation_time[i*self.hd_info.CU_num:(i+1)*self.hd_info.CU_num]
-            plt.bar(idx_a+i, pure_idle_time_a, color='b',  width=0.8)
-            plt.bar(idx_a+i, wait_transfer_time_a, bottom=pure_idle_time_a, color='r',  width=0.8)
-            plt.bar(idx_a+i, wait_resource_time_a, bottom=pure_idle_time_a+wait_transfer_time_a, color='g',  width=0.8)
-            plt.bar(idx_a+i, pure_computation_time_a, bottom=pure_idle_time_a+wait_transfer_time_a+wait_resource_time_a, color='y',  width=0.8)
+        for i in range(self.hd_info.CU_num):
+            plt.bar(idx+0.2*i, pure_idle_time[i], width = 0.2, color='b', edgecolor = 'white')
+            plt.bar(idx+0.2*i, wait_transfer_time[i], bottom=pure_idle_time[i], color='r',  width=0.2, edgecolor = 'white')
+            plt.bar(idx+0.2*i, wait_resource_time[i], bottom=pure_idle_time[i]+wait_transfer_time[i], color='g', width=0.2, edgecolor = 'white')
+            plt.bar(idx+0.2*i, pure_computation_time[i], bottom=pure_idle_time[i]+wait_transfer_time[i]+wait_resource_time[i], color='y', width=0.2, edgecolor = 'white')
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
         plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('PE index')
         plt.ylabel('Cycle')
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_CU.png')
         plt.clf()
+
         print("CU Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
         print("\tTotal wait_transfer:", wait_transfer_time_total)
         print("\tTotal wait_resource:", wait_resource_time_total)
         print("\tTotal pure_computation:", pure_computation_time_total)
         print()
+        total_cu_num = total_pe_num * self.hd_info.CU_num
         print("\tAverage pure_idle, ", pure_idle_time_total/total_cu_num, end="")
         print("(" + str(pure_idle_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
         print("\tAverage wait_transfer, ", wait_transfer_time_total/total_cu_num, end="")
@@ -1452,12 +1445,12 @@ class Controller(object):
                 for i in range(len(self.PE_array)):
                     c.append(self.buffer_size[i][row])
                 writer.writerow(c)
-
+        self.buffer_size = np.array(self.buffer_size)
         for i in range(len(self.PE_array)):
-            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label="PE"+str(i)) #, c=self.color[i])
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
         plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('Cycle')
-        plt.ylabel('Number of data')
+        plt.ylabel('Buffer size(KB)')
         plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
         plt.xlim([0, self.cycle_ctr])
@@ -1467,7 +1460,10 @@ class Controller(object):
 
         ### Maximal usage
         for i in range(len(self.PE_array)):
-            plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage, color='b', width=0.8)
+            plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
         plt.legend(["Maximal usage"])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Edram_buffer_maximal_usage.png')
+        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Buffer Size(KB)')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Buffer_maximal_usage.png')
         plt.clf()
