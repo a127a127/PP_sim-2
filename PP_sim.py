@@ -1,6 +1,6 @@
 from Mapping import DefaultMapping
-from Mapping import ParallelismMapping
-from Mapping import TransferMapping
+from Mapping import HighParallelismMapping
+from Mapping import SameColumnFirstMapping
 
 from OrderGenerator import OrderGenerator
 from Controller import Controller
@@ -14,17 +14,17 @@ def main():
     ### Mapping ##
     print("Mapping policy:  ", end="")
     if mapping == 0: # DefaultMapping
-        print("DefaultMapping")
+        print("Default Mapping")
         mapping_information = DefaultMapping()
-        mapping_str = "DefaultMapping"
-    elif mapping == 1: # ParallelismMapping
-        print("ParallelismMapping")
-        mapping_information = ParallelismMapping()
-        mapping_str = "ParallelismMapping"
-    elif mapping == 2: # TransferMapping
-        print("TransferMapping") 
-        mapping_information = TransferMapping()
-        mapping_str = "TransferMapping"
+        mapping_str = "Default_Mapping"
+    elif mapping == 1: # HighParallelismMapping
+        print("High Parallelism Mapping")
+        mapping_information = HighParallelismMapping()
+        mapping_str = "High_Parallelism_Mapping"
+    elif mapping == 2: # SameColumnFirstMapping
+        print("Same Column First Mapping")
+        mapping_information = SameColumnFirstMapping()
+        mapping_str = "Same_Column_First_Mapping"
 
     ### Scheduling ###
     print("Scheduling policy: ", end="")

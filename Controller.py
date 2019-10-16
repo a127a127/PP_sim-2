@@ -7,8 +7,6 @@ from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
 
-# from FeatureMapRecord import FeatureMapRecord # Idle Analysis
-
 import numpy as np
 from math import ceil, floor
 import os, csv
@@ -93,10 +91,6 @@ class Controller(object):
         self.buffer_size = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
-
-        # Idle Analysis
-        # self.fm_record = FeatureMapRecord()
-
         self.max_buffer_size = 0 # num of data
 
     def run(self):
@@ -191,8 +185,6 @@ class Controller(object):
                                             cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
-                                        # idle analysis
-                                        # pro_event.pre_edram_rd_idx = self.Computation_order.index(event)
 
                                     if self.isFreeBuffer:
                                         # free buffer
@@ -318,12 +310,6 @@ class Controller(object):
                                         cu_y, cu_x = pos[4], pos[5]
                                         cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                         xb.adc_trigger.append([pro_event, [cu_idx]])
-
-                                # idle analysis
-                                # self.fm_record.process(event, self.cycle_ctr, xb.position)
-                                # if not xb.last_cycle_state: # idle to busy
-                                #     xb.idle_to_busy.append(self.cycle_ctr)
-                                #     self.idle_analysis(event, xb)
 
             ### Event: adc
             for pe in self.PE_array:
@@ -572,8 +558,6 @@ class Controller(object):
                                         pe.edram_rd_pool_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "data_transfer":
                                         self.data_transfer_trigger.append([pro_event, []])
-                            # idle analysis
-                            # self.fm_record.process(event, self.cycle_ctr, pe.position)
                             break
 
             ### Event: edram_rd_pool
@@ -690,9 +674,6 @@ class Controller(object):
                                         pass
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pe.edram_wr_trigger.append([pro_event, []])
-
-                            # idle analysis
-                            # self.fm_record.process(event, self.cycle_ctr, pe.position)
                             break
 
             ### Interconnect
@@ -1069,6 +1050,13 @@ class Controller(object):
 
 
     def print_statistics_result(self):
+        if self.isPipeLine:
+            self.pipe_str = "Pipeline"
+        else:
+            self.pipe_str = "Non_pipeline"
+        if not os.path.exists('./statistics/'+self.mapping_str+'/'+self.pipe_str):
+            os.makedirs('./statistics/'+self.mapping_str+'/'+self.pipe_str)
+
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
@@ -1094,22 +1082,17 @@ class Controller(object):
                     print("\t\tcu.wait_transfer_time", cu.wait_transfer_time)
                     print("\t\tcu.wait_resource_time", cu.wait_resource_time)
                     print("\t\tcu.wait_computation_time", cu.wait_computation_time)
-
-        if self.isPipeLine:
-            self.pipe_str = "pipeline"
-        else:
-            self.pipe_str = "non_pipeline"
         
         ### non-pipeline stage
         if not self.isPipeLine:
-            with open('./statistics/non_pipeline/'+self.mapping_str+'/stage.csv', 'w', newline='') as csvfile:
+            with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/stage.csv', 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in range(self.cycle_ctr):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
         fre = 1
         ### Energy per 100 cycle
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Energy.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, self.cycle_ctr, fre):
                 writer.writerow([row+1, self.energy_utilization[row]])
@@ -1121,11 +1104,11 @@ class Controller(object):
         plt.xlabel('Cycle')
         plt.ylim([0, 20])
         #plt.xlim([0,])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/energy_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/energy_utilization.png')
         plt.clf()
 
         ### PE usage
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
@@ -1133,15 +1116,15 @@ class Controller(object):
         plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
         plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('Cycle')
-        plt.ylabel('PE number')
+        plt.ylabel('PE index')
         plt.ylim([-1, 16])
         #plt.xlim([1, 250])  ### @@
         plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/PE_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/PE_utilization.png')
         plt.clf()
         
         ### CU usage
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.cu_state_for_plot[0]), fre):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
@@ -1149,16 +1132,16 @@ class Controller(object):
         plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('Cycle')
-        plt.ylabel('CU number')
+        plt.ylabel('CU index')
         #plt.ylim([-1, 64])
         #plt.xlim([1, 250])  ### @@
         plt.yticks(np.arange(-1,64, 2), fontsize=6)
         plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/CU_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/CU_utilization.png')
         plt.clf()
 
         ### XB usage
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.xb_state_for_plot[0]), fre):
                 writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
@@ -1166,12 +1149,12 @@ class Controller(object):
         plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('Cycle')
-        plt.ylabel('XB number')
+        plt.ylabel('XB index')
         #plt.yticks(np.arange(-1,64, 2), fontsize=6)
         plt.yticks(np.arange(-1, 12, 1), fontsize=6)
         plt.xticks(np.arange(0, 100, 2), fontsize=6)
         #plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/XB_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/XB_utilization.png')
         plt.clf()
   
         ### Buffer analysis
@@ -1220,7 +1203,10 @@ class Controller(object):
             plt.bar(idx_a+i, wait_resource_time_a, bottom=pure_idle_time_a+wait_transfer_time_a, color='g',  width=0.8)
             plt.bar(idx_a+i, pure_computation_time_a, bottom=pure_idle_time_a+wait_transfer_time_a+wait_resource_time_a, color='y',  width=0.8)
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Bottleneck_CU.png')
+        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Cycle')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_CU.png')
         plt.clf()
         print("CU Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
@@ -1266,7 +1252,10 @@ class Controller(object):
         plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8)
         plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8)
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Bottleneck_PE_SAA.png')
+        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Cycle')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_PE_SAA.png')
         plt.clf()
         print("PE SAA Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
@@ -1312,7 +1301,10 @@ class Controller(object):
         plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8)
         plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8)
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Bottleneck_Pooling.png')
+        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Cycle')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_Pooling.png')
         plt.clf()
         print("Pooling Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
@@ -1375,7 +1367,7 @@ class Controller(object):
         plt.pie(value , labels = labels, autopct='%1.1f%%')
         plt.axis('equal')
         plt.title(self.mapping_str+", "+self.pipe_str)
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Energy_breakdown_chip.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_chip.png')
         plt.clf()
 
         # PE breakdown
@@ -1410,59 +1402,50 @@ class Controller(object):
         plt.bar(idx, Activation_energy, bottom=energy_sum,  width=0.8)
         energy_sum += Activation_energy
         plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=0.8)
+        plt.xlabel('PE index')
+        plt.ylabel('Energy (nJ)')
         plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Energy_breakdown_PE.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_PE.png')
         plt.clf()
 
-    def idle_analysis(self, event, xb):
-        ### Useless function
-        last_edram_rd_ir_event = self.Computation_order[event.pre_edram_rd_idx]
-        critical_data =  last_edram_rd_ir_event.last_arrived_data
-        nlayer, h, w, c = critical_data[0], critical_data[1][0], critical_data[1][1], critical_data[1][2]
-        # if nlayer == 0:
-        #     # 第一層資料都ready了，只有transfer 或是 wait resource
-        #     idle_to_busy_time = xb.idle_to_busy[-1]
-        #     arrived_buffer_time = self.fm_record.feature_mat[nlayer][h][w][c].arrived_buffer[xb.position[:4]]
-        #     wait_resource_time = idle_to_busy_time - arrived_buffer_time - 2 # 抵達的那個cycle, 與edram read的cycle
-        #     transfer_time = arrived_buffer_time - 1 # 第一層所以直接-1即可
-        #     print("idle_to_busy_time", idle_to_busy_time)
-        #     print("arrived_buffer_time", arrived_buffer_time)
-        #     print("wait_resource_time", wait_resource_time)
-        #     print("transfer_time", transfer_time)
-        #     xb.transfer += transfer_time
-        #     xb.wait_resource += wait_resource_time
+        # PE breakdown (percentage)
+        for i in range(len(self.PE_array)):
+            sum_energy = CU_energy[i] + Edram_buffer_energy[i] + Bus_energy[i] + \
+                         Shift_and_add_energy[i] + Or_energy[i] + \
+                         Activation_energy[i] + Pooling_energy[i]
+            if sum_energy == 0:
+                CU_energy[i], Edram_buffer_energy[i] = 0, 0
+                Bus_energy[i], Shift_and_add_energy[i] = 0, 0
+                Or_energy[i], Activation_energy[i] = 0, 0
+                Pooling_energy[i] = 0
+            else:
+                CU_energy[i], Edram_buffer_energy[i] = CU_energy[i]*100/sum_energy, Edram_buffer_energy[i]*100/sum_energy
+                Bus_energy[i], Shift_and_add_energy[i] = Bus_energy[i]*100/sum_energy, Shift_and_add_energy[i]*100/sum_energy
+                Or_energy[i], Activation_energy[i] = Or_energy[i]*100/sum_energy, Activation_energy[i]*100/sum_energy
+                Pooling_energy[i] = Pooling_energy[i]*100/sum_energy
 
-        # else:
-        #     # 第二層開始要查詢上一層的資料
-        #     idle_to_busy_time = xb.idle_to_busy[-1]
-        #     arrived_buffer_time = self.fm_record.feature_mat[nlayer][h][w][c].arrived_buffer[xb.position[:4]]
-        #     finish_compute_time = self.fm_record.feature_mat[nlayer][h][w][c].finish_compute
-        #     start_compute_time = self.fm_record.feature_mat[nlayer][h][w][c].start_compute
-
-        #     wait_resource_time = idle_to_busy_time - arrived_buffer_time - 2 # 抵達的那個cycle, 與edram read的cycle
-        #     transfer_time = arrived_buffer_time - finish_compute_time
-        #     compute_time = finish_compute_time - start_compute_time
-
-        #     print("wait_resource_time", wait_resource_time)
-        #     print("arrived buffer", arrived_buffer_time)
-        #     print("finish_compute", finish_compute_time)
-        #     print("transfer_time", transfer_time)
-        #     print("compute_time ", compute_time)
-
-        #     xb.compute += compute_time
-        #     xb.transfer += transfer_time
-        #     xb.wait_resource += wait_resource_time
-
-        #     # 找更上一層的critical
-        #     start_compute_pos = self.fm_record.feature_mat[nlayer][h][w][c].start_compute_pos
-        #     print("start_xb_pos", start_compute_pos)
-
-        #     nlayer = nlayer - 1
-        #     layer_type = self.ordergenerator.model_info.layer_list[nlayer].layer_type
+        plt.bar(idx, CU_energy,  width=0.8)
+        energy_sum = CU_energy
+        plt.bar(idx, Edram_buffer_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Edram_buffer_energy
+        plt.bar(idx, Bus_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Bus_energy
+        plt.bar(idx, Shift_and_add_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Shift_and_add_energy
+        plt.bar(idx, Or_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Or_energy
+        plt.bar(idx, Activation_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Activation_energy
+        plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=0.8)
+        plt.xlabel('PE index')
+        plt.ylabel('Energy (%)')
+        plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_PE_percentage.png')
+        plt.clf()
 
     def buffer_analysis(self):
         ### Utilization
-        with open('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(self.cycle_ctr):
                 c = [row+1]
@@ -1472,19 +1455,19 @@ class Controller(object):
 
         for i in range(len(self.PE_array)):
             plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i], label="PE"+str(i)) #, c=self.color[i])
-        plt.title("Buffer utilization:"+self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.pipe_str)
         plt.xlabel('Cycle')
         plt.ylabel('Number of data')
         plt.xticks(np.arange(0, 200, 10), fontsize=6)
         plt.ylim([0, self.max_buffer_size+5])
         plt.xlim([0, self.cycle_ctr])
         plt.legend(loc='best', prop={'size': 6})
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Buffer_utilization_C.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Buffer_utilization_C.png')
         plt.clf()
 
         ### Maximal usage
         for i in range(len(self.PE_array)):
             plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage, color='b', width=0.8)
         plt.legend(["Maximal usage"])
-        plt.savefig('./statistics/'+self.pipe_str+'/'+self.mapping_str+'/Edram_buffer_maximal_usage.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Edram_buffer_maximal_usage.png')
         plt.clf()

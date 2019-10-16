@@ -289,7 +289,7 @@ class DefaultMapping(object):
     def __str__(self):
         return str(self.__dict__)
 
-class ParallelismMapping(object):
+class HighParallelismMapping(object):
     def __init__(self):
         model_config = ModelConfig()
         self.model_info = Model(model_config)
@@ -538,7 +538,7 @@ class ParallelismMapping(object):
     def __str__(self):
         return str(self.__dict__)
 
-class TransferMapping(object):
+class SameColumnFirstMapping(object):
     def __init__(self):
         model_config = ModelConfig()
         self.model_info = Model(model_config)

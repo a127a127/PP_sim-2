@@ -57,13 +57,13 @@ class PE(object):
         self.pooling_pure_computation_time = 0
 
         ### Energy
-        self.CU_energy = 0
-        self.Edram_buffer_energy = 0
-        self.Bus_energy = 0
-        self.Shift_and_add_energy= 0
-        self.Or_energy = 0
-        self.Activation_energy = 0
-        self.Pooling_energy = 0
+        self.CU_energy = 0.
+        self.Edram_buffer_energy = 0.
+        self.Bus_energy = 0.
+        self.Shift_and_add_energy= 0.
+        self.Or_energy = 0.
+        self.Activation_energy = 0.
+        self.Pooling_energy = 0.
     
     def reset(self):
         ### state
