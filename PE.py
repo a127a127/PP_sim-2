@@ -9,6 +9,8 @@ class PE(object):
 
         ### for buffer size analysis
         self.edram_buffer = OnChipBuffer(input_bit)
+
+        self.edram_buffer_i = OnChipBuffer(input_bit)
         self.input_require = []
 
         ### for mapping
