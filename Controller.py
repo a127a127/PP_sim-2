@@ -15,12 +15,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 class Controller(object):
-    def __init__(self, ordergenerator, isPipeLine, trace, mapping_str, isFreeBuffer):
+    def __init__(self, ordergenerator, trace, mapping_str, scheduling_str):
         self.ordergenerator = ordergenerator
-        self.isPipeLine = isPipeLine
         self.trace = trace
         self.mapping_str = mapping_str
-        self.isFreeBuffer = isFreeBuffer
+        self.scheduling_str = scheduling_str
+        if self.scheduling_str == "Pipeline":
+            self.isPipeLine = True
+        else:
+            self.isPipeLine = False
         self.Computation_order = self.ordergenerator.Computation_order
         self.hd_info = HardwareMetaData()
         self.input_bit = self.ordergenerator.model_info.input_bit
@@ -186,27 +189,27 @@ class Controller(object):
                                             xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                             cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
 
-                                    if self.isFreeBuffer:
-                                        # free buffer
-                                        pe_id = self.PE_array.index(pe)
-                                        nlayer = event.nlayer
-                                        if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
-                                            for d in event.outputs:
-                                                pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                                    data = d[1:]
-                                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
-                                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
-                                            for d in event.outputs:
-                                                pos = d[1]
-                                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                                    data = d[1:]
-                                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
-                                        else:
-                                            print("layer type error.")
-                                            exit(0)
+                                    #if self.isFreeBuffer:
+                                    # free buffer
+                                    pe_id = self.PE_array.index(pe)
+                                    nlayer = event.nlayer
+                                    if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
+                                        for d in event.outputs:
+                                            pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                            self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                            if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                                data = d[1:]
+                                                self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
+                                    elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
+                                        for d in event.outputs:
+                                            pos = d[1]
+                                            self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                            if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                                data = d[1:]
+                                                self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, data])
+                                    else:
+                                        print("layer type error.")
+                                        exit(0)
                                 #print("last_arrived_data", event.last_arrived_data)
                                 break
                     elif cu.state and cu.state_edram_rd_ir: # 無resource
@@ -444,11 +447,11 @@ class Controller(object):
                                     pass
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                 pe.activation_trigger.append([pro_event, []])
-                    if self.isFreeBuffer:
-                        # free buffer
-                        for d in rm_data_list:
-                            if [event.nlayer, d] in pe.edram_buffer.buffer:
-                                pe.edram_buffer.buffer.remove([event.nlayer, d])
+                    #if self.isFreeBuffer:
+                    # free buffer
+                    for d in rm_data_list:
+                        if [event.nlayer, d] in pe.edram_buffer.buffer:
+                            pe.edram_buffer.buffer.remove([event.nlayer, d])
 
                 # bottleneck analysis
                 if not pe.state_pe_saa[0]:
@@ -609,19 +612,19 @@ class Controller(object):
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     pos = pro_event.position_idx
                                     pe.pooling_trigger.append([pro_event, []])
-                            if self.isFreeBuffer:
-                                # free buffer
-                                pe_id = self.PE_array.index(pe)
-                                nlayer = event.nlayer
-                                if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
-                                    for d in event.outputs:
-                                        pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                        self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                        if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                            self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
-                                else:
-                                    print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
-                                    exit(0)
+                            #if self.isFreeBuffer:
+                            # free buffer
+                            pe_id = self.PE_array.index(pe)
+                            nlayer = event.nlayer
+                            if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "pooling":
+                                for d in event.outputs:
+                                    pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                    self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                    if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                        self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                            else:
+                                print("layer type error:", self.ordergenerator.model_info.layer_list[nlayer].layer_type)
+                                exit(0)
 
                 # bottleneck analysis
                 if not pe.state_edram_rd_pool:
@@ -766,27 +769,27 @@ class Controller(object):
                             print("pro_event type error:", pro_event.event_type)
                             exit()
 
-                if self.isFreeBuffer: # 把不再需要用到的資料free掉
-                    pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
-                            src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                    if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer data transfer
-                        data = event.outputs[0]
-                        if [event.nlayer, data] in self.PE_array[pe_id].edram_buffer.buffer:
-                            self.PE_array[pe_id].edram_buffer.buffer.remove([event.nlayer, data])
+                #if self.isFreeBuffer: # 把不再需要用到的資料free掉
+                pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
+                        src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer data transfer
+                    data = event.outputs[0]
+                    if [event.nlayer, data] in self.PE_array[pe_id].edram_buffer.buffer:
+                        self.PE_array[pe_id].edram_buffer.buffer.remove([event.nlayer, data])
+                else:
+                    nlayer = event.nlayer+1
+                    if self.ordergenerator.model_info.layer_list[nlayer-1].layer_type != "fully":
+                        for d in event.outputs:
+                            pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                            self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                            if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
                     else:
-                        nlayer = event.nlayer+1
-                        if self.ordergenerator.model_info.layer_list[nlayer-1].layer_type != "fully":
-                            for d in event.outputs:
-                                pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
-                        else:
-                            for d in event.outputs:
-                                pos = d[1]
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
+                        for d in event.outputs:
+                            pos = d[1]
+                            self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                            if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                self.PE_array[pe_id].edram_buffer.buffer.remove([nlayer, d])
 
             ### Fetch data from off-chip memory
             des_dict = dict()
@@ -1049,13 +1052,6 @@ class Controller(object):
 
 
     def print_statistics_result(self):
-        if self.isPipeLine:
-            self.pipe_str = "Pipeline"
-        else:
-            self.pipe_str = "Non_pipeline"
-        if not os.path.exists('./statistics/'+self.mapping_str+'/'+self.pipe_str):
-            os.makedirs('./statistics/'+self.mapping_str+'/'+self.pipe_str)
-
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
@@ -1084,68 +1080,68 @@ class Controller(object):
         
         ### non-pipeline stage
         if not self.isPipeLine:
-            with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/stage.csv', 'w', newline='') as csvfile:
+            with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 for row in range(self.cycle_ctr):
                     writer.writerow([row+1, self.pipeline_stage_record[row]])
 
         fre = 1
         # ### Energy per 100 cycle
-        # with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy.csv', 'w', newline='') as csvfile:
+        # with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for row in range(0, self.cycle_ctr, fre):
         #         writer.writerow([row+1, self.energy_utilization[row]])
         # plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
         # #plt.show()
-        # plt.title(self.mapping_str+", "+self.pipe_str)
+        # plt.title(self.mapping_str+", "+self.scheduling_str)
         # plt.ylabel('Energy (nJ)')
         # plt.xlabel('Cycle')
         # plt.ylim([0, 20])
         # #plt.xlim([0,])
-        # plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/energy_utilization.png')
+        # plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/energy_utilization.png')
         # plt.clf()
 
         ### PE usage
-        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.pe_state_for_plot[0]), fre):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
         plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
         plt.ylabel('PE index')
         plt.ylim([-1, 16])
         plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/PE_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png')
         plt.clf()
         
         ### CU usage
-        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.cu_state_for_plot[0]), fre):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
 
         plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
         plt.ylabel('CU index')
         plt.yticks(np.arange(-1,64, 2), fontsize=6)
         plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/CU_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png')
         plt.clf()
 
         ### XB usage
-        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.xb_state_for_plot[0]), fre):
                 writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
 
         plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
         plt.ylabel('XB index')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/XB_utilization.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png')
         plt.clf()
   
         ### Buffer analysis
@@ -1187,10 +1183,10 @@ class Controller(object):
             plt.bar(idx+0.2*i, wait_resource_time[i], bottom=pure_idle_time[i]+wait_transfer_time[i], color='g', width=0.2, edgecolor = 'white')
             plt.bar(idx+0.2*i, pure_computation_time[i], bottom=pure_idle_time[i]+wait_transfer_time[i]+wait_resource_time[i], color='y', width=0.2, edgecolor = 'white')
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Cycle')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_CU.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Bottleneck_CU.png')
         plt.clf()
 
         print("CU Bottleneck analysis:")
@@ -1238,10 +1234,10 @@ class Controller(object):
         plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8, edgecolor = 'white')
         plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8, edgecolor = 'white')
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Cycle')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_PE_SAA.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Bottleneck_PE_SAA.png')
         plt.clf()
         print("PE SAA Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
@@ -1287,10 +1283,10 @@ class Controller(object):
         plt.bar(idx, wait_resource_time, bottom=pure_idle_time+wait_transfer_time, color='g',  width=0.8, edgecolor = 'white')
         plt.bar(idx, pure_computation_time, bottom=pure_idle_time+wait_transfer_time+wait_resource_time, color='y',  width=0.8, edgecolor = 'white')
         plt.legend(["pure_idle", "wait_transfer", "wait_resource", "pure_computation"])
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Cycle')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Bottleneck_Pooling.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Bottleneck_Pooling.png')
         plt.clf()
         print("Pooling Bottleneck analysis:")
         print("\tTotal pure_idle:", pure_idle_time_total)
@@ -1352,8 +1348,8 @@ class Controller(object):
         value = [self.Total_energy_pe, self.Total_energy_interconnect]
         plt.pie(value , labels = labels, autopct='%1.1f%%')
         plt.axis('equal')
-        plt.title(self.mapping_str+", "+self.pipe_str)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_chip.png')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_chip.png')
         plt.clf()
 
         # PE breakdown
@@ -1391,7 +1387,7 @@ class Controller(object):
         plt.xlabel('PE index')
         plt.ylabel('Energy (nJ)')
         plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_PE.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.png')
         plt.clf()
 
         # PE breakdown (percentage)
@@ -1426,12 +1422,12 @@ class Controller(object):
         plt.xlabel('PE index')
         plt.ylabel('Energy (%)')
         plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Energy_breakdown_PE_percentage.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE_percentage.png')
         plt.clf()
 
     def buffer_analysis(self):
         ### Utilization
-        with open('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer_C.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(self.cycle_ctr):
                 c = [row+1]
@@ -1441,19 +1437,19 @@ class Controller(object):
         self.buffer_size = np.array(self.buffer_size)
         for i in range(len(self.PE_array)):
             plt.plot(range(1, self.cycle_ctr+1), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
         plt.ylabel('Buffer size(KB)')
         plt.legend(loc='best', prop={'size': 6})
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Buffer_utilization_C.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_C.png')
         plt.clf()
 
         ### Maximal usage
         for i in range(len(self.PE_array)):
             plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
         plt.legend(["Maximal usage"])
-        plt.title(self.mapping_str+", "+self.pipe_str)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Buffer Size(KB)')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.pipe_str+'/Buffer_maximal_usage.png')
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage.png')
         plt.clf()

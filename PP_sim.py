@@ -5,7 +5,7 @@ from Mapping import SameColumnFirstMapping
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 
-import time, sys
+import time, sys, os
 
 def main():
     mapping = int(sys.argv[1])
@@ -30,14 +30,15 @@ def main():
     print("Scheduling policy: ", end="")
     if scheduling == 0: # Non-pipeline
         print("Non-pipeline")
-        isPipeLine = False
+        scheduling_str = "Non_pipeline"
     elif scheduling == 1: # Pipeline
         print("Pipeline")
-        isPipeLine = True
+        scheduling_str = "Pipeline"
     print()
 
-    ### Free buffer ###
-    isFreeBuffer = False
+    ### dir ###
+    if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling_str):
+            os.makedirs('./statistics/'+mapping_str+'/'+scheduling_str)
 
     ### Trace ###
     isTrace_order = False
@@ -47,7 +48,7 @@ def main():
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
 
-    order_generator = OrderGenerator(mapping_information, isTrace_order, isFreeBuffer)
+    order_generator = OrderGenerator(mapping_information, isTrace_order)
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
@@ -56,7 +57,7 @@ def main():
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
 
-    controller = Controller(order_generator, isPipeLine, isTrace_controller, mapping_str, isFreeBuffer)
+    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling_str)
     controller.run()
 
     end_simulation_time = time.time()

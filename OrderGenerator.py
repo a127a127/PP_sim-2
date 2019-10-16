@@ -8,15 +8,15 @@ from EventMetaData import EventMetaData
 import numpy as np 
 
 class OrderGenerator(object):
-    def __init__(self, mapping_information, trace, isFreeBuffer):
+    def __init__(self, mapping_information, trace):
         self.model_config = ModelConfig()
         self.model_info = Model(self.model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
 
-        self.isFreeBuffer = isFreeBuffer
-        if self.isFreeBuffer:
-            self.free_buffer_controller = FreeBufferController()
+        #self.isFreeBuffer = isFreeBuffer
+        #if self.isFreeBuffer:
+        self.free_buffer_controller = FreeBufferController()
 
         # mapping
         self.crossbar_array = self.mapping_information.crossbar_array
@@ -151,12 +151,12 @@ class OrderGenerator(object):
                                             event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                             self.Computation_order.append(event)
 
-                                            if self.isFreeBuffer:
-                                                # input require
-                                                pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                for d in data_transfer_outputs:
-                                                    pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                                    self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                            #if self.isFreeBuffer:
+                                            # input require
+                                            pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                            for d in data_transfer_outputs:
+                                                pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
 
                             # dependency
                             eri_event_idx = len(self.Computation_order)
@@ -180,13 +180,13 @@ class OrderGenerator(object):
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
 
-                        if self.isFreeBuffer:
-                            # input require
-                            pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
-                                    cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                            for d in eri_output_sequence:
-                                pos = d[2] + d[1]*self.model_info.input_w[nlayer] + d[3]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                        #if self.isFreeBuffer:
+                        # input require
+                        pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
+                                cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                        for d in eri_output_sequence:
+                            pos = d[2] + d[1]*self.model_info.input_w[nlayer] + d[3]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                            self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: ou
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
@@ -465,17 +465,17 @@ class OrderGenerator(object):
                                             event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                             self.Computation_order.append(event)
 
-                                            if self.isFreeBuffer:
-                                                # input require
-                                                pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                if nlayer-1 >= 0 and self.model_info.layer_list[nlayer-1].layer_type != "fully":
-                                                    for d in data_transfer_outputs:
-                                                        pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
-                                                else:
-                                                    for d in data_transfer_outputs:
-                                                        pos = d[1]
-                                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                            #if self.isFreeBuffer:
+                                            # input require
+                                            pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                            if nlayer-1 >= 0 and self.model_info.layer_list[nlayer-1].layer_type != "fully":
+                                                for d in data_transfer_outputs:
+                                                    pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                    self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                            else:
+                                                for d in data_transfer_outputs:
+                                                    pos = d[1]
+                                                    self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                             # dependency
                             eri_event_idx = len(self.Computation_order)
                             for input_data in data_feed_to_cu:
@@ -498,13 +498,13 @@ class OrderGenerator(object):
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
 
-                        if self.isFreeBuffer:
-                            # input require
-                            pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
-                                    cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                            for d in eri_output_sequence:
-                                pos = d[1]
-                                self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                        #if self.isFreeBuffer:
+                        # input require
+                        pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
+                                cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                        for d in eri_output_sequence:
+                            pos = d[1]
+                            self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: ou
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
@@ -766,13 +766,13 @@ class OrderGenerator(object):
                                             event = EventMetaData("edram_rd_pool", erp_position_idx, erp_preceding_count, [], nlayer, erp_input_sequence, erp_output_sequence)
                                             self.Computation_order.append(event)
 
-                                            if self.isFreeBuffer:
-                                                # input require
-                                                pe_id = pe_pos[3] + pe_pos[2]*self.hd_info.PE_num_x + \
-                                                        pe_pos[1]*self.hd_info.PE_num + pe_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                                for d in erp_output_sequence:
-                                                    pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                                    self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                            #if self.isFreeBuffer:
+                                            # input require
+                                            pe_id = pe_pos[3] + pe_pos[2]*self.hd_info.PE_num_x + \
+                                                    pe_pos[1]*self.hd_info.PE_num + pe_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                            for d in erp_output_sequence:
+                                                pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                                self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: pooling
                                             pool_event_index = len(self.Computation_order)
                                             self.Computation_order[erp_event_idx].proceeding_event.append(pool_event_index)
