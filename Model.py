@@ -28,13 +28,22 @@ class Model(object):
                     self.layer_list[nlayer].filter_w *
                     self.layer_list[nlayer].filter_c
                     )
-                self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1, no padding
-                self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1, no padding
-                self.input_c.append(self.layer_list[nlayer].filter_n)
-                self.input_number.append(
-                    (self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) *
-                    (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1)
-                    ) # stride = 1, no padding
+                if self.layer_list[nlayer].padding == 'VALID':
+                    self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1
+                    self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1
+                    self.input_c.append(self.layer_list[nlayer].filter_n)
+                    self.input_number.append(
+                        (self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) *
+                        (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1)
+                        ) # stride = 1
+                elif self.layer_list[nlayer].padding == 'SAME':
+                    self.input_h.append(self.input_h[nlayer]) # stride = 1
+                    self.input_w.append(self.input_w[nlayer]) # stride = 1
+                    self.input_c.append(self.layer_list[nlayer].filter_n)
+                    self.input_number.append(self.input_h[nlayer] * self.input_w[nlayer]) # stride = 1
+                else:
+                    print("padding type error:", self.layer_list[nlayer].padding)
+                    exit()
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
             elif self.layer_list[nlayer].layer_type == "pooling":
