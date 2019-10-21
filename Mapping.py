@@ -63,7 +63,7 @@ class DefaultMapping(object):
                             for px in range(self.hd_info.PE_num_x):
                                 self.pe_mapping_dict[ctr] = [ry, rx, py, px]
                                 ctr += 1
-        
+
         self.map()
     
     def map(self):
@@ -78,7 +78,7 @@ class DefaultMapping(object):
                 pe_y_num = ceil(matrix_height / (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y))      
                 pe_x_num = ceil(matrix_width / (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x))
                 pe_total_num = pe_y_num * pe_x_num # used PE number
-                
+
                 for w in range(matrix_width):
                     for h in range(matrix_height):
                         # traverse all cells
@@ -90,13 +90,13 @@ class DefaultMapping(object):
                         cu_w = w // (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x) % self.hd_info.CU_num_x
                         pe_h = h // (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y)
                         pe_w = w // (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x)
-                        
+
                         pe_num = pe_idx + pe_h * pe_x_num + pe_w
                         rt_h = self.pe_mapping_dict[pe_num][0]
                         rt_w = self.pe_mapping_dict[pe_num][1]
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
-                        
+
                         nfilter = w // cells_per_filter
                         start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
                         end_bit = start_bit + self.hd_info.cell_bit_width
@@ -106,11 +106,11 @@ class DefaultMapping(object):
                         ngrid = h
 
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
-                
+
                 ## Inputs
                 inputs = []
-                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height # padding, slide
-                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width # padding, slide
+                o_height = self.model_info.input_h[nlayer+1]
+                o_width = self.model_info.input_w[nlayer+1]
                 for oh in range(o_height): 
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -124,7 +124,7 @@ class DefaultMapping(object):
 
                 xb_y_num = ceil(matrix_height / self.hd_info.Xbar_h)
                 xb_x_num = ceil(matrix_width / self.hd_info.Xbar_w)
-                
+
                 for w in range(xb_x_num):
                     for h in range(xb_y_num):
                         # traverse all xbar
@@ -140,7 +140,7 @@ class DefaultMapping(object):
                         rt_w = self.pe_mapping_dict[pe_num][1]
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
-                        
+
                         xbar_inputs = inputs[:, h*self.hd_info.Xbar_h : (h+1)*self.hd_info.Xbar_h].tolist()
 
                         if (w+1) * self.hd_info.Xbar_w <= matrix_width: 
@@ -161,14 +161,13 @@ class DefaultMapping(object):
                             self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("convolution", nlayer, xbar_row, xbar_column, inp))
 
                 pe_idx += pe_total_num
-                       
+
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
-                #matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
                 cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
                 matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
-                
+
                 pe_y_num = ceil(matrix_height / (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y))      
                 pe_x_num = ceil(matrix_width / (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x))
                 pe_total_num = pe_y_num * pe_x_num # used PE num
@@ -184,15 +183,13 @@ class DefaultMapping(object):
                         cu_w = w // (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x) % self.hd_info.CU_num_x
                         pe_h = h // (self.hd_info.Xbar_h * self.hd_info.Xbar_num_y * self.hd_info.CU_num_y)
                         pe_w = w // (self.hd_info.Xbar_w * self.hd_info.Xbar_num_x * self.hd_info.CU_num_x)                        
-                        
+
                         pe_num = pe_idx + pe_h * pe_x_num + pe_w
                         rt_h = self.pe_mapping_dict[pe_num][0]
                         rt_w = self.pe_mapping_dict[pe_num][1]
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
-                        
-                        # nfilter = w // self.model_info.filter_bit
-                        # nbit = w % self.model_info.filter_bit
+
                         nfilter = w // cells_per_filter
                         start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
                         end_bit = start_bit + self.hd_info.cell_bit_width
@@ -224,13 +221,13 @@ class DefaultMapping(object):
                         cu_w = w // self.hd_info.Xbar_num_x % self.hd_info.CU_num_x
                         pe_h = h // (self.hd_info.Xbar_num_y * self.hd_info.CU_num_y)
                         pe_w = w // (self.hd_info.Xbar_num_x * self.hd_info.CU_num_x) 
-                        
+
                         pe_num = pe_idx + pe_h * pe_x_num + pe_w
                         rt_h = self.pe_mapping_dict[pe_num][0]
                         rt_w = self.pe_mapping_dict[pe_num][1]
                         pe_h = self.pe_mapping_dict[pe_num][2]
                         pe_w = self.pe_mapping_dict[pe_num][3]
-                        
+
                         xbar_inputs = inputs[:, h*self.hd_info.Xbar_h : (h+1)*self.hd_info.Xbar_h].tolist()
 
                         if (w+1) * self.hd_info.Xbar_w <= matrix_width:
@@ -285,7 +282,7 @@ class DefaultMapping(object):
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, this_input))
                 pe_idx += pe_total_num
-             
+
     def __str__(self):
         return str(self.__dict__)
 
@@ -652,7 +649,7 @@ class SameColumnFirstMapping(object):
                             pe_h, pe_w = pos[2], pos[3]
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
-                        
+
                             if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
                                 block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
@@ -663,7 +660,7 @@ class SameColumnFirstMapping(object):
                                 block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
                             else:
                                 block_width = self.hd_info.Xbar_w
-                        
+
                             for bh in range(block_height):
                                 for bw in range(block_width):
                                     # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
@@ -683,7 +680,7 @@ class SameColumnFirstMapping(object):
                                     cell_h = bh
                                     cell_w = bw
                                     self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
-                                
+
                             ## Inputs
                             xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
                             xbar_column = [i for i in range(block_width)]
@@ -692,12 +689,12 @@ class SameColumnFirstMapping(object):
                                 self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("convolution", nlayer, xbar_row, xbar_column, inp))
 
                             this_layer_xb_mapping_idx += 1
-                
+
                 # next layer change pe
                 used_pe_num = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)
                 used_xbar_num = used_pe_num * self.num_of_xb_in_pe
                 xbar_mapping_idx += used_xbar_num
-          
+
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 ## Inputs
                 inputs = []
@@ -720,7 +717,7 @@ class SameColumnFirstMapping(object):
                 mapping_width_num_xb_per_pe = self.num_of_xb_in_pe // mapping_height_num_xb_per_pe
                 if mapping_width_num_xb_per_pe * self.hd_info.Xbar_w > matrix_width:
                     mapping_width_num_xb_per_pe = ceil(matrix_width / self.hd_info.Xbar_w)
-                
+
                 # num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
                 num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // cells_per_filter
                 if num_filter_per_pe > self.model_info.filter_n[nlayer]:
@@ -735,7 +732,7 @@ class SameColumnFirstMapping(object):
                             pe_h, pe_w = pos[2], pos[3]
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
-                        
+
                             if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
                                 block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
@@ -766,7 +763,7 @@ class SameColumnFirstMapping(object):
                                     cell_h = bh
                                     cell_w = bw
                                     self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
-                                
+
                             ## Inputs
                             xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
                             xbar_column = [i for i in range(block_width)]
@@ -775,7 +772,7 @@ class SameColumnFirstMapping(object):
                                 self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_row, xbar_column, inp))
 
                             this_layer_xb_mapping_idx += 1
-                
+
                 # next layer change pe
                 used_pe_num = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)
                 used_xbar_num = used_pe_num * self.num_of_xb_in_pe
@@ -813,7 +810,7 @@ class SameColumnFirstMapping(object):
                     xbar_row = [-1]
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, this_input))
-                
+
                 xbar_mapping_idx += used_xbar_num
 
     def __str__(self):
