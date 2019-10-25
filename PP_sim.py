@@ -63,8 +63,6 @@ def main():
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
 
-    controller.print_statistics_result()
-
 def power_break_down():
     # self.Xbar_w = 80
     # LayerMetaData("convolution", 10, 2, 2, 20, 0, 0, 0),

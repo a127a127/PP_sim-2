@@ -86,13 +86,13 @@ class Controller(object):
         self.pe_saa_stall_cycle = 0
 
         # Utilization
-        self.energy_utilization = []
         self.xbar_utilization = []
         self.pe_state_for_plot = [[], []]
         self.cu_state_for_plot = [[], []]
         self.xb_state_for_plot = [[], []]
         self.buffer_size = []
         self.buffer_size_i = []
+        # self.energy_utilization = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
             self.buffer_size_i.append([])
@@ -258,9 +258,11 @@ class Controller(object):
                         if not cu.edram_rd_ir_erp:
                             # CU idle, 且event pool是空的
                             cu.pure_idle_time += 1
+                            #print("PE", self.PE_array.index(pe), "CU", pe.CU_array.index(cu), "pure_idle_time + 1")
                         else:
                             # CU idle, 有event在event pool裡面, 這些event不能開始做, 肯定是資料沒到的拉
                             cu.wait_transfer_time += 1
+                            #print("PE", self.PE_array.index(pe), "CU", pe.CU_array.index(cu), "wait_transfer_time + 1")
                     else:
                         # CU busy
                         isEventWaiting = False
@@ -271,8 +273,10 @@ class Controller(object):
                                 break
                         if isEventWaiting:
                             cu.wait_resource_time += 1
+                            #print("PE", self.PE_array.index(pe), "CU", pe.CU_array.index(cu), "wait_resource_time + 1")
                         else:
                             cu.pure_computation_time += 1
+                            #print("PE", self.PE_array.index(pe), "CU", pe.CU_array.index(cu), "pure_computation_time + 1")
 
             ### Event: ou
             for pe in self.PE_array:
@@ -404,7 +408,7 @@ class Controller(object):
                         continue
                     if self.trace:
                         pass
-                        #print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        # print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
@@ -845,7 +849,6 @@ class Controller(object):
                     packet = Packet(src, des, data, pro_event_idx)
                     self.interconnect.input_packet(packet)
 
-
             ### Pipeline stage control ###
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
@@ -1015,7 +1018,7 @@ class Controller(object):
                             continue
                         cu.state = False
 
-            self.energy_utilization.append(self.Total_energy_cycle*1e09)
+            # self.energy_utilization.append(self.Total_energy_cycle*1e09)
             self.xbar_utilization.append(self.act_xb_ctr)
             
             ### Buffer utilization
@@ -1024,7 +1027,6 @@ class Controller(object):
                 self.buffer_size_i[pe_idx].append(self.PE_array[pe_idx].edram_buffer_i.count())
                 self.max_buffer_size = max(len(self.PE_array[pe_idx].edram_buffer.buffer), self.max_buffer_size)
                 self.max_buffer_size_i = max(len(self.PE_array[pe_idx].edram_buffer_i.buffer), self.max_buffer_size_i)
-
 
             ### Finish?
             isDone = True
@@ -1056,108 +1058,26 @@ class Controller(object):
                 if not isDone:
                     break
 
+        self.print_statistics_result()
 
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
         print("Cycles time:", self.hd_info.cycle_time, "ns\n")
-        
         print('memory accesss times:', self.mem_acc_ctr)
         print()
-
-        isBottleneckAnalysis = False
-        if isBottleneckAnalysis:
-            print("Bottleneck analysis")
-            # for pe in self.PE_array:
-            #     print("pe", self.PE_array.index(pe))
-            #     print("\tpe.saa_wait_transfer", pe.saa_wait_transfer)
-            #     print("\tpe.saa_wait_resource", pe.saa_wait_resource)
-            #     print("\tpe.pool_wait_transfer", pe.pool_wait_transfer)
-            #     print("\tpe.pool_wait_resource", pe.pool_wait_resource)
-            for pe in self.PE_array:
-                print("pe", self.PE_array.index(pe))
-                for cu in pe.CU_array:
-                    print("\tcu", pe.CU_array.index(cu))
-                    print("\t\tcu.pure_idle_time", cu.pure_idle_time)
-                    print("\t\tcu.wait_transfer_time", cu.wait_transfer_time)
-                    print("\t\tcu.wait_resource_time", cu.wait_resource_time)
-                    print("\t\tcu.wait_computation_time", cu.wait_computation_time)
         
-        ### non-pipeline stage
         if not self.isPipeLine:
-            with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                for row in range(self.cycle_ctr):
-                    writer.writerow([row+1, self.pipeline_stage_record[row]])
+            self.non_pipeline_stage()
 
-        fre = 1
-        # ### Energy per 100 cycle
-        # with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for row in range(0, self.cycle_ctr, fre):
-        #         writer.writerow([row+1, self.energy_utilization[row]])
-        # plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
-        # #plt.show()
-        # plt.title(self.mapping_str+", "+self.scheduling_str)
-        # plt.ylabel('Energy (nJ)')
-        # plt.xlabel('Cycle')
-        # plt.ylim([0, 20])
-        # #plt.xlim([0,])
-        # plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/energy_utilization.png')
-        # plt.clf()
-
-        ### PE usage
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.pe_state_for_plot[0]), fre):
-                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
-
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=3, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('PE index')
-        plt.ylim([-1, 16])
-        plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png')
-        plt.clf()
-        
-        ### CU usage
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.cu_state_for_plot[0]), fre):
-                writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
-
-        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('CU index')
-        plt.yticks(np.arange(-1,64, 2), fontsize=6)
-        plt.xticks(np.arange(0,250, 20), fontsize=8)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png')
-        plt.clf()
-
-        ### XB usage
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.xb_state_for_plot[0]), fre):
-                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
-
-        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('XB index')
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png')
-        plt.clf()
-  
-        ### Buffer analysis
+        self.freq = 1
         self.buffer_analysis()
-
-        ### Energy breakdown
         self.energy_breakdown()
-
-        ### Bottleneck analysis
         self.bottleneck_statistics()
+        self.pe_utilization()
+        self.cu_utilization()
+        self.crossbar_utilization()
 
     def bottleneck_statistics(self):
         ## CU
@@ -1200,7 +1120,6 @@ class Controller(object):
         print("\tTotal wait_transfer:", wait_transfer_time_total)
         print("\tTotal wait_resource:", wait_resource_time_total)
         print("\tTotal pure_computation:", pure_computation_time_total)
-        print()
         total_cu_num = total_pe_num * self.hd_info.CU_num
         print("\tAverage pure_idle, ", pure_idle_time_total/total_cu_num, end="")
         print("(" + str(pure_idle_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
@@ -1210,6 +1129,7 @@ class Controller(object):
         print("(" + str(wait_resource_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
         print("\tAverage pure_computation, ", pure_computation_time_total/total_cu_num, end="")
         print("(" + str(pure_computation_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
+        print()
 
         # PE SAA
         total_pe_num = len(self.PE_array)
@@ -1250,7 +1170,6 @@ class Controller(object):
         print("\tTotal wait_transfer:", wait_transfer_time_total)
         print("\tTotal wait_resource:", wait_resource_time_total)
         print("\tTotal pure_computation:", pure_computation_time_total)
-        print()
         print("\tAverage pure_idle, ", pure_idle_time_total/total_pe_num, end="")
         print("(" + str(pure_idle_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print("\tAverage wait_transfer, ", wait_transfer_time_total/total_pe_num, end="")
@@ -1259,6 +1178,7 @@ class Controller(object):
         print("(" + str(wait_resource_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print("\tAverage pure_computation, ", pure_computation_time_total/total_pe_num, end="")
         print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print()
 
         # Pooling
         total_pe_num = len(self.PE_array)
@@ -1299,7 +1219,6 @@ class Controller(object):
         print("\tTotal wait_transfer:", wait_transfer_time_total)
         print("\tTotal wait_resource:", wait_resource_time_total)
         print("\tTotal pure_computation:", pure_computation_time_total)
-        print()
         print("\tAverage pure_idle, ", pure_idle_time_total/total_pe_num, end="")
         print("(" + str(pure_idle_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print("\tAverage wait_transfer, ", wait_transfer_time_total/total_pe_num, end="")
@@ -1308,6 +1227,7 @@ class Controller(object):
         print("(" + str(wait_resource_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print("\tAverage pure_computation, ", pure_computation_time_total/total_pe_num, end="")
         print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
+        print()
 
     def energy_breakdown(self):
         self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
@@ -1349,7 +1269,7 @@ class Controller(object):
         print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
         print()
 
-        # Chip 圓餅圖
+        # Chip pie
         labels = 'PE', 'Interconnect'
         value = [self.Total_energy_pe, self.Total_energy_interconnect]
         plt.pie(value , labels = labels, autopct='%1.1f%%')
@@ -1487,3 +1407,73 @@ class Controller(object):
         plt.ylabel('Buffer Size(KB)')
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage_i.png')
         plt.clf()
+
+    def energy_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, self.freq):
+                writer.writerow([row+1, self.energy_utilization[row]])
+        plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.ylabel('Energy (nJ)')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 20])
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/energy_utilization.png')
+        plt.clf()
+
+    def pe_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.pe_state_for_plot[0]), self.freq):
+                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
+        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)/2))
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('PE index')
+        plt.ylim(-1, len(self.PE_array))
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png', bbox_inches='tight')
+        plt.clf()
+
+    def cu_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.cu_state_for_plot[0]), self.freq):
+                writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
+        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num/10))
+        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('CU index')
+        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num)
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num, self.hd_info.CU_num))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png', bbox_inches='tight')
+        plt.clf()
+
+    def crossbar_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.xb_state_for_plot[0]), self.freq):
+                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
+        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num/10))
+        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('XB index')
+        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num)
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num, self.hd_info.Xbar_num))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png', bbox_inches='tight')
+        plt.clf()
+
+    def non_pipeline_stage(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr):
+                writer.writerow([row+1, self.pipeline_stage_record[row]])
