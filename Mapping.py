@@ -108,6 +108,7 @@ class DefaultMapping(object):
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
 
                 ## Inputs
+                strides = self.model_info.strides[nlayer]
                 inputs = []
                 o_height = self.model_info.input_h[nlayer+1]
                 o_width = self.model_info.input_w[nlayer+1]
@@ -118,7 +119,7 @@ class DefaultMapping(object):
                         for c in range(self.model_info.filter_c[nlayer]):
                             for h in range(self.model_info.filter_h[nlayer]):
                                 for w in range(self.model_info.filter_w[nlayer]):
-                                    nn.append([num_input, oh+h, ow+w, c]) # input feature map position
+                                    nn.append([num_input, oh*strides+h, ow*strides+w, c]) # input feature map position (padding後的)
                         inputs.append(nn)
                 inputs = np.array(inputs)
 
@@ -364,6 +365,7 @@ class HighParallelismMapping(object):
                 pool_pos = self.xb_mapping_dict[xbar_idx][:4]
 
                 ## Inputs
+                strides = self.model_info.strides[nlayer]
                 inputs = []
                 o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height, slide = 1
                 o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width, slide = 1
@@ -374,12 +376,11 @@ class HighParallelismMapping(object):
                         for c in range(self.model_info.filter_c[nlayer]):
                             for h in range(self.model_info.filter_h[nlayer]):
                                 for w in range(self.model_info.filter_w[nlayer]):
-                                    nn.append([num_input, oh+h, ow+w, c]) # input feature map position
+                                    nn.append([num_input, oh*strides+h, ow*strides+w, c]) # input feature map position (padding後的)
                         inputs.append(nn)
                 inputs = np.array(inputs)
 
                 matrix_height = self.model_info.filter_length[nlayer]
-                # matrix_width = self.model_info.filter_n[nlayer] * self.model_info.filter_bit
                 cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
                 matrix_width = cells_per_filter * self.model_info.filter_n[nlayer]
 
@@ -409,8 +410,6 @@ class HighParallelismMapping(object):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
                                 h = b_h + ou_idx_y * self.hd_info.OU_h
 
-                                # nfilter = w // self.model_info.filter_bit
-                                # nbit = w % self.model_info.filter_bit
                                 nfilter = w // cells_per_filter
                                 start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
                                 end_bit = start_bit + self.hd_info.cell_bit_width
@@ -532,6 +531,7 @@ class HighParallelismMapping(object):
                 xbar_row = [-1]
 
                 self.layer_mapping_to_pe[rty][rtx][pey][pex].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, inputs))
+
     def __str__(self):
         return str(self.__dict__)
 
@@ -607,6 +607,7 @@ class SameColumnFirstMapping(object):
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 ## Inputs
+                strides = self.model_info.strides[nlayer]
                 inputs = []
                 o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
                 o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
@@ -617,7 +618,7 @@ class SameColumnFirstMapping(object):
                         for c in range(self.model_info.filter_c[nlayer]):
                             for h in range(self.model_info.filter_h[nlayer]):
                                 for w in range(self.model_info.filter_w[nlayer]):
-                                    nn.append([num_input, oh+h, ow+w, c]) # input feature map position
+                                    nn.append([num_input, oh*strides+h, ow*strides+w, c]) # input feature map position
                         inputs.append(nn)
                 inputs = np.array(inputs)
 
@@ -663,12 +664,9 @@ class SameColumnFirstMapping(object):
 
                             for bh in range(block_height):
                                 for bw in range(block_width):
-                                    # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit 
                                     w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * cells_per_filter
                                     h = bh + xb_h_idx * self.hd_info.Xbar_h
 
-                                    # nfilter = w // self.model_info.filter_bit
-                                    # nbit = w % self.model_info.filter_bit
                                     nfilter = w // cells_per_filter
                                     start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
                                     end_bit = start_bit + self.hd_info.cell_bit_width

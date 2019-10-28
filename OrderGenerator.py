@@ -13,9 +13,6 @@ class OrderGenerator(object):
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
         self.mapping_information = mapping_information
-
-        #self.isFreeBuffer = isFreeBuffer
-        #if self.isFreeBuffer:
         self.free_buffer_controller = FreeBufferController()
 
         # mapping
@@ -79,12 +76,6 @@ class OrderGenerator(object):
         for nlayer in range(self.model_info.layer_length):
             print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
-                if self.model_info.layer_list[nlayer].padding == "SAME":
-                    pad_h = (self.model_info.filter_h[nlayer] - 1) // 2 # 一般來說pad_h, pad_w會相等
-                    pad_w = (self.model_info.filter_w[nlayer] - 1) // 2 # 只支援奇數的filter長寬
-                else:
-                    pad_h, pad_w = 0, 0 # 優化: 不會用到
-
                 ### Event: data_transfer, edram_rd_ir
                 for nCU in range(len(self.cu_traverse_idx)):
                     cu_pos = self.cu_traverse_idx[nCU]
@@ -132,10 +123,10 @@ class OrderGenerator(object):
                                             break
                                         else:
                                             idx += 1
-                                if self.model_info.layer_list[nlayer].padding == "SAME": # 優化: 和VALID合併
+                                if self.model_info.layer_list[nlayer].padding == "SAME":
                                     for d in inp:
-                                        h = d[1] - pad_h
-                                        w = d[2] - pad_w
+                                        h = d[1] - self.model_info.pad[nlayer]
+                                        w = d[2] - self.model_info.pad[nlayer]
                                         c = d[3]
                                         if w >= 0 and w < self.model_info.input_w[nlayer] and h >= 0 and h < self.model_info.input_h[nlayer]:
                                             data = [d[0], h, w, c]
@@ -399,7 +390,6 @@ class OrderGenerator(object):
                                 else:
                                     seq = window_w + window_h * windowlen_w + nfilter * windowlen_w * windowlen_h
                                     edram_wr_inputs  = [[seq, 0, 0]]
-                                    #edram_wr_outputs = [[seq, 0, 0]]
                                     if self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                         self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []
                                     self.feature_mat[nlayer][window_h * self.model_info.input_w[nlayer+1] + window_w + nfilter * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0].append(edram_wr_event_idx)
