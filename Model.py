@@ -7,6 +7,8 @@ class Model(object):
         self.filter_w = []
         self.filter_c = []
         self.filter_length = []
+        self.strides = []
+        self.pad = []
         self.input_n = model_config.input_n
         self.input_h = [model_config.input_h] 
         self.input_w = [model_config.input_w] 
@@ -28,22 +30,17 @@ class Model(object):
                     self.layer_list[nlayer].filter_w *
                     self.layer_list[nlayer].filter_c
                     )
+                self.strides.append(self.layer_list[nlayer].strides)
                 if self.layer_list[nlayer].padding == 'VALID':
-                    self.input_h.append(self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) # stride = 1
-                    self.input_w.append(self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1) # stride = 1
-                    self.input_c.append(self.layer_list[nlayer].filter_n)
-                    self.input_number.append(
-                        (self.input_h[nlayer] - self.layer_list[nlayer].filter_h + 1) *
-                        (self.input_w[nlayer] - self.layer_list[nlayer].filter_w + 1)
-                        ) # stride = 1
+                    self.pad.append(0)
                 elif self.layer_list[nlayer].padding == 'SAME':
-                    self.input_h.append(self.input_h[nlayer]) # stride = 1
-                    self.input_w.append(self.input_w[nlayer]) # stride = 1
-                    self.input_c.append(self.layer_list[nlayer].filter_n)
-                    self.input_number.append(self.input_h[nlayer] * self.input_w[nlayer]) # stride = 1
-                else:
-                    print("padding type error:", self.layer_list[nlayer].padding)
-                    exit()
+                    self.pad.append((self.layer_list[nlayer].filter_h - 1) // 2)
+                self.input_h.append((self.input_h[nlayer] + 2 * self.pad[nlayer] - self.filter_h[nlayer])
+                                     // self.strides[nlayer] + 1)
+                self.input_w.append((self.input_w[nlayer] + 2 * self.pad[nlayer] - self.filter_w[nlayer])
+                                     // self.strides[nlayer] + 1)
+                self.input_c.append(self.layer_list[nlayer].filter_n)
+                self.input_number.append(self.input_h[nlayer+1] * self.input_w[nlayer+1])
                 self.pooling_h.append(0)
                 self.pooling_w.append(0)
             elif self.layer_list[nlayer].layer_type == "pooling":
@@ -52,14 +49,16 @@ class Model(object):
                 self.filter_w.append(0)
                 self.filter_c.append(0)
                 self.filter_length.append(0)
-                self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) # no padding
-                self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) # no padding
+                self.strides.append(0)
+                self.pad.append(0)
+                self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h)
+                self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w)
                 self.input_c.append(self.input_c[nlayer])
                 self.input_number.append(
                     (self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) *
                     (self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) *
                     (self.input_c[nlayer])
-                    ) # no padding
+                    )
                 self.pooling_h.append(self.layer_list[nlayer].pooling_h)
                 self.pooling_w.append(self.layer_list[nlayer].pooling_w)
             elif self.layer_list[nlayer].layer_type == "fully":
@@ -68,6 +67,8 @@ class Model(object):
                 self.filter_w.append(1)
                 self.filter_c.append(1)
                 self.filter_length.append(self.input_h[nlayer] * self.input_w[nlayer] * self.input_c[nlayer])
+                self.strides.append(0)
+                self.pad.append(0)
                 self.input_h.append(self.layer_list[nlayer].neuron_n)
                 self.input_w.append(1)
                 self.input_c.append(1)
