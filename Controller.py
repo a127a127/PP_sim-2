@@ -283,7 +283,6 @@ class Controller(object):
                             self.Total_energy_cycle += (energy_ir_in_cu + energy_dac + energy_crossbar)
                             self.act_xb_ctr += 1
 
-                            # 優化: 這裏energy重複算
                             pe.CU_energy += (energy_ir_in_cu + energy_dac + energy_crossbar)
 
                             xb.state_ou = True
@@ -307,33 +306,38 @@ class Controller(object):
             ### Event: adc
             for pe in self.PE_array:
                 for cu in pe.CU_array:
-                    for event in cu.adc_erp.copy():
-                        for idx in range(len(cu.state_adc)):
-                            if not cu.state_adc[idx]:
+                    if not cu.adc_erp:
+                        continue
+                    if len(cu.state_adc) <= len(cu.adc_erp):
+                        do_adc_num = len(cu.state_adc)
+                    else:
+                        do_adc_num = len(cu.adc_erp)
+                    adc_erp_copy = cu.adc_erp.copy()
+                    for idx in range(do_adc_num):
+                        event = adc_erp_copy[idx]
+                        if self.trace:
+                            pass
+                            #print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                        if not self.isPipeLine:
+                            self.this_layer_event_ctr += 1
+
+                        self.Total_energy_adc += self.hd_info.Energy_adc
+                        self.Total_energy_cycle += self.hd_info.Energy_adc
+                        pe.CU_energy += self.hd_info.Energy_adc
+
+                        cu.adc_erp.remove(event)
+                        cu.state_adc[idx] = True
+
+                        ### add next event counter: cu_saa
+                        for proceeding_index in event.proceeding_event:
+                            pro_event = self.Computation_order[proceeding_index]
+                            pro_event.current_number_of_preceding_event += 1
+
+                            if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                                 if self.trace:
                                     pass
-                                    #print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                                if not self.isPipeLine:
-                                    self.this_layer_event_ctr += 1
-
-                                self.Total_energy_adc += self.hd_info.Energy_adc
-                                self.Total_energy_cycle += self.hd_info.Energy_adc
-                                pe.CU_energy += self.hd_info.Energy_adc
-
-                                cu.adc_erp.remove(event)
-                                cu.state_adc[idx] = True
-
-                                ### add next event counter: cu_saa
-                                for proceeding_index in event.proceeding_event:
-                                    pro_event = self.Computation_order[proceeding_index]
-                                    pro_event.current_number_of_preceding_event += 1
-
-                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                        if self.trace:
-                                            pass
-                                            #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
-                                        cu.cu_saa_trigger.append([pro_event, []])
-                                break
+                                    #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
+                                cu.cu_saa_trigger.append([pro_event, []])
 
             ### Event: cu_saa 
             for pe in self.PE_array:
@@ -387,7 +391,7 @@ class Controller(object):
 
             ### Event: pe_saa 
             for pe in self.PE_array:
-                for event in pe.pe_saa_erp.copy():
+                for event in pe.pe_saa_erp.copy(): # 1個cycle全部做完
                     if event.data_is_transfer != 0: # 此event的資料正在傳輸
                         continue
                     if self.trace:
@@ -466,39 +470,45 @@ class Controller(object):
 
             ### Event: activation
             for pe in self.PE_array:
-                for event in pe.activation_erp.copy():
-                    for idx in range(len(pe.state_activation)):
-                        if not pe.state_activation[idx]:
+                if not pe.activation_erp:
+                    continue
+                if len(pe.state_activation) <= len(pe.activation_erp):
+                    do_act_num = len(pe.state_activation)
+                else:
+                    do_act_num = len(pe.activation_erp)
+                act_erp_copy = pe.activation_erp.copy()
+                for idx in range(do_act_num):
+                    event = act_erp_copy[idx]
+                    if self.trace:
+                        pass
+                        #print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                    if not self.isPipeLine:
+                        self.this_layer_event_ctr += 1
+
+                    energy_or = self.hd_info.Energy_or * self.input_bit
+                    energy_bus = self.hd_info.Energy_bus * self.input_bit
+                    energy_activation = self.hd_info.Energy_activation
+                    self.Total_energy_or += energy_or
+                    self.Total_energy_bus +=energy_bus
+                    self.Total_energy_activation += energy_activation
+                    self.Total_energy_cycle += (energy_or + energy_bus + energy_activation)
+                    pe.Or_energy += energy_or
+                    pe.Bus_energy += energy_bus
+                    pe.Activation_energy += energy_activation
+
+                    pe.state_activation[idx] = True
+                    pe.activation_erp.remove(event)
+
+                    ### add next event counter: edram_wr
+                    for proceeding_index in event.proceeding_event:
+                        pro_event = self.Computation_order[proceeding_index]
+                        pro_event.current_number_of_preceding_event += 1
+                        
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                             if self.trace:
                                 pass
-                                #print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                            if not self.isPipeLine:
-                                self.this_layer_event_ctr += 1
-
-                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
-                            self.Total_energy_activation += self.hd_info.Energy_activation
-                            self.Total_energy_cycle += self.hd_info.Energy_bus * self.input_bit + self.hd_info.Energy_activation
-                            
-                            # 優化: 這裏energy重複算
-                            pe.Or_energy += self.hd_info.Energy_or * self.input_bit
-                            pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
-                            pe.Activation_energy += self.hd_info.Energy_activation
-
-                            pe.state_activation[idx] = True
-                            pe.activation_erp.remove(event)
-
-                            ### add next event counter: edram_wr
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = self.Computation_order[proceeding_index]
-                                pro_event.current_number_of_preceding_event += 1
-                                
-                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                    if self.trace:
-                                        pass
-                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
-                                    pe.edram_wr_trigger.append([pro_event, []])
-                            break
+                                #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
+                            pe.edram_wr_trigger.append([pro_event, []])
 
             ### Event: edram write 
             for pe in self.PE_array:
