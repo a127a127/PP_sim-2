@@ -512,56 +512,60 @@ class Controller(object):
 
             ### Event: edram write 
             for pe in self.PE_array:
-                for event in pe.edram_wr_erp.copy():
-                    for idx in range(len(pe.state_edram_wr)):
-                        if not pe.state_edram_wr[idx]:
+                if not pe.edram_wr_erp:
+                    continue
+                if len(pe.state_edram_wr) <= len(pe.edram_wr_erp):
+                    do_wr_num = len(pe.state_edram_wr)
+                else:
+                    do_wr_num = len(pe.edram_wr_erp)
+                wr_erp_copy = pe.edram_wr_erp.copy()
+                for idx in range(do_wr_num):
+                    event = wr_erp_copy[idx]
+                    if self.trace:
+                        pass
+                        print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, \
+                        ",order index:", self.Computation_order.index(event), "data:", event.outputs)
+                    if not self.isPipeLine:
+                        self.this_layer_event_ctr += 1
+                    
+                    energy_bus = self.hd_info.Energy_bus * self.input_bit
+                    energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit
+
+                    self.Total_energy_bus += energy_bus
+                    self.Total_energy_edram_buffer += energy_edram_buffer
+                    self.Total_energy_cycle += (energy_bus + energy_edram_buffer)
+
+                    pe.Bus_energy += energy_bus
+                    pe.Edram_buffer_energy += energy_edram_buffer
+
+                    pe.state_edram_wr[idx] = True
+                    pe.edram_wr_erp.remove(event)
+
+                    if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer transfer
+                        pe.edram_buffer.put([event.nlayer, event.outputs[0]])
+                        pe.edram_buffer_i.put([event.nlayer, event.outputs[0]])
+                    else:
+                        pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
+                        pe.edram_buffer_i.put([event.nlayer+1, event.outputs[0]])
+
+                    ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
+                    for proceeding_index in event.proceeding_event:
+                        pro_event = self.Computation_order[proceeding_index]
+                        pro_event.current_number_of_preceding_event += 1
+                    
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                             if self.trace:
                                 pass
-                                print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, \
-                                ",order index:", self.Computation_order.index(event), "data:", event.outputs)
-                            if not self.isPipeLine:
-                                self.this_layer_event_ctr += 1
-
-                            #self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-
-                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
-                            self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit
-                            self.Total_energy_cycle += self.hd_info.Energy_bus * self.input_bit + \
-                                                        self.hd_info.Energy_edram_buffer * self.input_bit
-
-                            # 優化: 這裏energy重複算
-                            pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
-                            pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit
-
-                            pe.state_edram_wr[idx] = True
-                            pe.edram_wr_erp.remove(event)
-
-                            if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer transfer
-                                pe.edram_buffer.put([event.nlayer, event.outputs[0]])
-                                pe.edram_buffer_i.put([event.nlayer, event.outputs[0]])
-                            else:
-                                pe.edram_buffer.put([event.nlayer+1, event.outputs[0]])
-                                pe.edram_buffer_i.put([event.nlayer+1, event.outputs[0]])
-
-                            ### add next event counter: edram_rd_ir, edram_rd_pool, data_transfer
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = self.Computation_order[proceeding_index]
-                                pro_event.current_number_of_preceding_event += 1
-                            
-                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                    if self.trace:
-                                        pass
-                                        #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                    pos = pro_event.position_idx
-                                    if pro_event.event_type == "edram_rd_ir":
-                                        cu_y, cu_x = pos[4], pos[5]
-                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                        pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
-                                    elif pro_event.event_type == "edram_rd_pool":
-                                        pe.edram_rd_pool_trigger.append([pro_event, []])
-                                    elif pro_event.event_type == "data_transfer":
-                                        self.data_transfer_trigger.append([pro_event, []])
-                            break
+                                #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                            pos = pro_event.position_idx
+                            if pro_event.event_type == "edram_rd_ir":
+                                cu_y, cu_x = pos[4], pos[5]
+                                cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
+                            elif pro_event.event_type == "edram_rd_pool":
+                                pe.edram_rd_pool_trigger.append([pro_event, []])
+                            elif pro_event.event_type == "data_transfer":
+                                self.data_transfer_trigger.append([pro_event, []])
 
             ### Event: edram_rd_pool
             for pe in self.PE_array:
