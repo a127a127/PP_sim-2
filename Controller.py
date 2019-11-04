@@ -264,43 +264,45 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for xb in cu.XB_array:
-                        for event in xb.ou_erp.copy():
-                            if not xb.state_ou:
-                                if self.trace:
-                                    pass
-                                    #print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
-                                if not self.isPipeLine:
-                                    self.this_layer_event_ctr += 1
-                                self.Total_energy_ir_in_cu += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
-                                self.Total_energy_dac += self.hd_info.Energy_dac
-                                self.Total_energy_crossbar += self.hd_info.Energy_crossbar
-                                self.Total_energy_cycle += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
-                                                            self.hd_info.Energy_dac + \
-                                                            self.hd_info.Energy_crossbar
-                                self.act_xb_ctr += 1
+                        # 有event就拿一個出來做
+                        if xb.ou_erp:
+                            event = xb.ou_erp[0]
+                            if self.trace:
+                                pass
+                                #print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
+                            if not self.isPipeLine:
+                                self.this_layer_event_ctr += 1
+                            
+                            energy_ir_in_cu = self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
+                            energy_dac = self.hd_info.Energy_dac
+                            energy_crossbar = self.hd_info.Energy_crossbar
 
-                                # 優化: 這裏energy重複算
-                                pe.CU_energy += self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h + \
-                                                self.hd_info.Energy_dac + \
-                                                self.hd_info.Energy_crossbar
+                            self.Total_energy_ir_in_cu += energy_ir_in_cu
+                            self.Total_energy_dac += energy_dac
+                            self.Total_energy_crossbar += energy_crossbar
+                            self.Total_energy_cycle += (energy_ir_in_cu + energy_dac + energy_crossbar)
+                            self.act_xb_ctr += 1
 
-                                xb.state_ou = True
-                                xb.ou_erp.remove(event)
+                            # 優化: 這裏energy重複算
+                            pe.CU_energy += (energy_ir_in_cu + energy_dac + energy_crossbar)
 
-                                ### add next event counter: adc
-                                for proceeding_index in event.proceeding_event:
-                                    pro_event = self.Computation_order[proceeding_index]
-                                    pro_event.current_number_of_preceding_event += 1
-                                    
-                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                        if self.trace:
-                                            pass
-                                            #print("\t\tProceeding event is triggered.", pro_event.event_type)
+                            xb.state_ou = True
+                            xb.ou_erp.remove(event)
 
-                                        pos = pro_event.position_idx
-                                        cu_y, cu_x = pos[4], pos[5]
-                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                        xb.adc_trigger.append([pro_event, [cu_idx]])
+                            ### add next event counter: adc
+                            for proceeding_index in event.proceeding_event:
+                                pro_event = self.Computation_order[proceeding_index]
+                                pro_event.current_number_of_preceding_event += 1
+                                
+                                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                    if self.trace:
+                                        pass
+                                        #print("\t\tProceeding event is triggered.", pro_event.event_type)
+
+                                    pos = pro_event.position_idx
+                                    cu_y, cu_x = pos[4], pos[5]
+                                    cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                    xb.adc_trigger.append([pro_event, [cu_idx]])
 
             ### Event: adc
             for pe in self.PE_array:
