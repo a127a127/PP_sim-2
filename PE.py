@@ -20,7 +20,8 @@ class PE(object):
         #self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
         self.pe_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
         self.activation_epc = 16
-        self.edram_wr_epc = 32 # 一個cycle可寫幾筆資料
+        self.edram_wr_epc = 32
+        self.edram_rd_pool_epc = 16
         self.pooling_epc = 16
 
         ### event ready pool
@@ -69,10 +70,10 @@ class PE(object):
     
     def reset(self):
         ### state
-        self.state_edram_rd_pool = False
         self.state_pe_saa = [False] * self.pe_saa_epc
         self.state_activation = [False] * self.activation_epc
         self.state_edram_wr = [False] * self.edram_wr_epc
+        self.state_edram_rd_pool = [False] * self.edram_rd_pool_epc
         self.state_pooling = [False] * self.pooling_epc
 
     def gen_cu(self):
