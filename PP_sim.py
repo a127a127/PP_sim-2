@@ -42,7 +42,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = True
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
@@ -62,6 +62,8 @@ def main():
 
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
+
+    controller.print_statistics_result()
 
 def power_break_down():
     # self.Xbar_w = 80
