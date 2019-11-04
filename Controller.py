@@ -159,7 +159,7 @@ class Controller(object):
                             if not self.isPipeLine:
                                 self.this_layer_event_ctr += 1
 
-                            num_data = len(event.outputs)
+                            num_data = len(event.inputs)
                             energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit * num_data
                             energy_bus = self.hd_info.Energy_bus * self.input_bit * num_data
                             energy_ir_in_cu = self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
@@ -218,14 +218,14 @@ class Controller(object):
                             pe_id = self.PE_array.index(pe)
                             nlayer = event.nlayer
                             if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
-                                for d in event.outputs:
+                                for d in event.inputs:
                                     pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                                     self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                         data = d[1:]
                                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                             elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
-                                for d in event.outputs:
+                                for d in event.inputs:
                                     pos = d[1]
                                     self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
