@@ -114,7 +114,11 @@ class Controller(object):
                     exit()
 
         isDone = False
+        print("Computation order length:", len(self.Computation_order))
+        self.done_event = 0
         while not isDone:
+            if self.cycle_ctr % 2000 == 0:
+                print(self.cycle_ctr, "Done event:", self.done_event)
             self.Total_energy_cycle = 0
             self.cycle_ctr += 1
             self.act_xb_ctr = 0
@@ -154,6 +158,7 @@ class Controller(object):
                                 self.fetch_array.append(FetchEvent(event))
                                 continue
                             
+                            self.done_event += 1
                             if self.trace:
                                 print("\tdo edram_rd_ir, nlayer:", event.nlayer,", cu_pos:", cu.position, ",order index:", self.Computation_order.index(event))
                             if not self.isPipeLine:
@@ -199,20 +204,20 @@ class Controller(object):
                                     xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                     cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
 
-                                ### add next event counter: ou
-                                for proceeding_index in event.proceeding_event:
-                                    pro_event = self.Computation_order[proceeding_index]
-                                    pro_event.current_number_of_preceding_event += 1
+                                # ### add next event counter: ou
+                                # for proceeding_index in event.proceeding_event:
+                                #     pro_event = self.Computation_order[proceeding_index]
+                                #     pro_event.current_number_of_preceding_event += 1
 
-                                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                                        if self.trace:
-                                            pass
-                                            #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                                        pos = pro_event.position_idx
-                                        cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
-                                        cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                        xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
-                                        cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
+                                #     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                                #         if self.trace:
+                                #             pass
+                                #             #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
+                                #         pos = pro_event.position_idx
+                                #         cu_y, cu_x, xb_y, xb_x = pos[4], pos[5], pos[6], pos[7]
+                                #         cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                                #         xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
+                                #         cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
                             
                             ### Free buffer (ideal)
                             pe_id = self.PE_array.index(pe)
@@ -267,6 +272,7 @@ class Controller(object):
                         # 有event就拿一個出來做
                         if xb.ou_erp:
                             event = xb.ou_erp[0]
+                            self.done_event += 1
                             if self.trace:
                                 pass
                                 #print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
@@ -315,6 +321,7 @@ class Controller(object):
                     adc_erp_copy = cu.adc_erp.copy()
                     for idx in range(do_adc_num):
                         event = adc_erp_copy[idx]
+                        self.done_event += 1
                         if self.trace:
                             pass
                             #print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
@@ -343,6 +350,7 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp.copy(): # 1個cycle全部做完
+                        self.done_event += 1
                         if self.trace:
                             pass
                             #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
@@ -394,6 +402,7 @@ class Controller(object):
                 for event in pe.pe_saa_erp.copy(): # 1個cycle全部做完
                     if event.data_is_transfer != 0: # 此event的資料正在傳輸
                         continue
+                    self.done_event += 1
                     if self.trace:
                         pass
                         # print("\tdo pe_saa, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
@@ -479,6 +488,7 @@ class Controller(object):
                 act_erp_copy = pe.activation_erp.copy()
                 for idx in range(do_act_num):
                     event = act_erp_copy[idx]
+                    self.done_event += 1
                     if self.trace:
                         pass
                         #print("\tdo activation, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
@@ -521,6 +531,7 @@ class Controller(object):
                 wr_erp_copy = pe.edram_wr_erp.copy()
                 for idx in range(do_wr_num):
                     event = wr_erp_copy[idx]
+                    self.done_event += 1
                     if self.trace:
                         pass
                         print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, \
@@ -588,7 +599,7 @@ class Controller(object):
                         event.data_is_transfer += len(event.inputs)
                         self.fetch_array.append(FetchEvent(event))
                         continue
-                    
+                    self.done_event += 1
                     if self.trace:
                         print("\tdo edram_rd_pool, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                     if not self.isPipeLine:
@@ -665,6 +676,7 @@ class Controller(object):
                 pool_erp_copy = pe.pooling_erp.copy()
                 for idx in range(do_pool_num):
                     event = pool_erp_copy[idx]
+                    self.done_event += 1
                     if self.trace:
                         print("\tdo pooling, pe_pos:", pe.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                     if not self.isPipeLine:
@@ -724,6 +736,7 @@ class Controller(object):
 
             ### Event: data_transfer
             for event in self.data_transfer_erp.copy():
+                self.done_event += 1
                 if self.trace:
                     print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
                             "pos:", event.position_idx, "data:", event.outputs)

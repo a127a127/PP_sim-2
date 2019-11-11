@@ -242,9 +242,15 @@ class OrderGenerator(object):
                                                     cinput = this_input.inputs[idx][2]
 
                                                     crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    filter_nfilter = crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid.ngrid
-                                                    filter_nbit = crossbar_grid.nbit
+                                                    # [nlayer, ngrid, nfilter, nbit]
+                                                    filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
+                                                    filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
+                                                    #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
+                                                    start_bit = crossbar_grid[3]
+                                                    end_bit = start_bit + self.hd_info.cell_bit_width
+                                                    if end_bit >= self.model_info.filter_bit:
+                                                       end_bit = self.model_info.filter_bit
+                                                    filter_nbit = [i for i in range(start_bit, end_bit)]
 
                                                     #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
                                                     ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
@@ -557,9 +563,15 @@ class OrderGenerator(object):
                                                     cinput = this_input.inputs[idx][2]
                                                     
                                                     crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    filter_nfilter = crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid.ngrid
-                                                    filter_nbit = crossbar_grid.nbit
+                                                    # [nlayer, ngrid, nfilter, nbit]
+                                                    filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
+                                                    filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
+                                                    #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
+                                                    start_bit = crossbar_grid[3]
+                                                    end_bit = start_bit + self.hd_info.cell_bit_width
+                                                    if end_bit >= self.model_info.filter_bit:
+                                                       end_bit = self.model_info.filter_bit
+                                                    filter_nbit = [i for i in range(start_bit, end_bit)]
 
                                                     #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
                                                     ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
