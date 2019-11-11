@@ -5,7 +5,7 @@ from FreeBufferController import FreeBufferController
 from PE import PE
 from XB import XB
 from EventMetaData import EventMetaData
-import numpy as np 
+import numpy as np
 
 class OrderGenerator(object):
     def __init__(self, mapping_information, trace):
@@ -262,7 +262,7 @@ class OrderGenerator(object):
 
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
-                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
+                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
                                             self.Computation_order.append(event)              
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
@@ -582,7 +582,7 @@ class OrderGenerator(object):
                                             self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
-                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, ou_outputs)
+                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
                                             self.Computation_order.append(event)
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position

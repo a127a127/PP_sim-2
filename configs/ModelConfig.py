@@ -2,18 +2,18 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 1
+        model_type = 0
         if model_type == 0: # TestModelConfig
             self.layer_list = [
-                LayerMetaData("convolution",  10, 11, 11, 3, 1, 'VALID', 0, 0,    0),
+                LayerMetaData("convolution",  10, 11, 11, 1, 1, 'VALID', 0, 0,    0),
                 #LayerMetaData("convolution", 1, 3, 3, 1, 1,  'SAME', 0, 0, 0),
                 #LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 0),
                 #LayerMetaData("fully",       0, 0, 0, 0, 0,        0, 0, 0, 2)
                 ]
             self.input_n = 1
-            self.input_h = 12
-            self.input_w = 12
-            self.input_c = 3
+            self.input_h = 14
+            self.input_w = 14
+            self.input_c = 1
             self.input_bit = 16
             self.filter_bit = 16
         elif model_type == 1: # TestModelConfig2
