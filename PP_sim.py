@@ -31,8 +31,6 @@ def main():
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
-    #a = input()
-
     ### Scheduling ###
     print("Scheduling policy: ", end="")
     if scheduling == 0: # Non-pipeline
@@ -72,7 +70,6 @@ def main():
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
     controller.print_statistics_result()
-    #a = input()
 
 def power_break_down():
     # self.Xbar_w = 80

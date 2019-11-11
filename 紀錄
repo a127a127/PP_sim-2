@@ -70,3 +70,14 @@ mapping後會生成大量記憶體, controller最慢
 Run
 mapping時  473.5MB
 order後     941MB
+
+
+otimize1
+    目標： 優化order memory用量
+    發現: computation order這個list超大, 發現ou內的ou output佔超大改成空的[]
+    優化前: 
+        mapping 4.375s/  242MB
+        order   22.20s/  2.17GB
+    優化後:
+        mapping 4.3s / 242MB
+        order   12s / 400MB
