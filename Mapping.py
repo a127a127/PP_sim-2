@@ -6,6 +6,7 @@ from CrossbarGridMetaData import CrossbarGridMetaData
 import sys
 from math import ceil
 import numpy as np
+import gc
 
 class DefaultMapping(object):
     def __init__(self):
@@ -45,8 +46,10 @@ class DefaultMapping(object):
                                         self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         for h in range(self.hd_info.Xbar_h):
-                                            row = [0] * self.hd_info.Xbar_w
+                                            #row = [0] * self.hd_info.Xbar_w
+                                            row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
                                             self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
+        self.crossbar_array = np.array(self.crossbar_array)
 
         self.pe_mapping_dict = dict() # the rt mapping order
         ctr =  0
@@ -70,6 +73,7 @@ class DefaultMapping(object):
         pe_idx = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
+                print("Convolution", nlayer)
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
@@ -99,13 +103,15 @@ class DefaultMapping(object):
 
                         nfilter = w // cells_per_filter
                         start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                        end_bit = start_bit + self.hd_info.cell_bit_width
-                        if end_bit >= self.model_info.filter_bit:
-                            end_bit = self.model_info.filter_bit
-                        nbit = [i for i in range(start_bit, end_bit)]
+                        # end_bit = start_bit + self.hd_info.cell_bit_width
+                        # if end_bit >= self.model_info.filter_bit:
+                        #     end_bit = self.model_info.filter_bit
+                        # nbit = [i for i in range(start_bit, end_bit)]
+                        nbit = start_bit
                         ngrid = h
 
-                        self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                        #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                        self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
                 ## Inputs
                 strides = self.model_info.strides[nlayer]
@@ -164,6 +170,7 @@ class DefaultMapping(object):
                 pe_idx += pe_total_num
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
+                print("Fully", nlayer)
                 ## Weights
                 matrix_height = self.model_info.filter_length[nlayer]
                 cells_per_filter = ceil(self.model_info.filter_bit / self.hd_info.cell_bit_width)
@@ -193,13 +200,15 @@ class DefaultMapping(object):
 
                         nfilter = w // cells_per_filter
                         start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                        end_bit = start_bit + self.hd_info.cell_bit_width
-                        if end_bit >= self.model_info.filter_bit:
-                            end_bit = self.model_info.filter_bit
-                        nbit = [i for i in range(start_bit, end_bit)]
+                        # end_bit = start_bit + self.hd_info.cell_bit_width
+                        # if end_bit >= self.model_info.filter_bit:
+                        #     end_bit = self.model_info.filter_bit
+                        # nbit = [i for i in range(start_bit, end_bit)]
+                        nbit = start_bit
                         ngrid = h
 
-                        self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                        #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                        self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
                 ## Inputs   
                 inputs = []
@@ -250,6 +259,7 @@ class DefaultMapping(object):
                 pe_idx += pe_total_num
     
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                print("Pooling", nlayer)
                 o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                 o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
                 inputs = []
@@ -325,8 +335,10 @@ class HighParallelismMapping(object):
                                         self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         for h in range(self.hd_info.Xbar_h):
-                                            row = [0] * self.hd_info.Xbar_w
+                                            #row = [0] * self.hd_info.Xbar_w
+                                            row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
                                             self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
+        self.crossbar_array = np.array(self.crossbar_array)
 
         self.xb_mapping_dict = dict()
         ctr =  0
@@ -361,6 +373,7 @@ class HighParallelismMapping(object):
          
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
+                print("Convolution", nlayer)
                 ## PE for pooling 
                 pool_pos = self.xb_mapping_dict[xbar_idx][:4]
 
@@ -412,16 +425,18 @@ class HighParallelismMapping(object):
 
                                 nfilter = w // cells_per_filter
                                 start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                end_bit = start_bit + self.hd_info.cell_bit_width
-                                if end_bit >= self.model_info.filter_bit:
-                                    end_bit = self.model_info.filter_bit
-                                nbit = [i for i in range(start_bit, end_bit)]
+                                # end_bit = start_bit + self.hd_info.cell_bit_width
+                                # if end_bit >= self.model_info.filter_bit:
+                                #     end_bit = self.model_info.filter_bit
+                                # nbit = [i for i in range(start_bit, end_bit)]
+                                nbit = start_bit
                                 ngrid = h
 
                                 cell_h = xbar_height_start_idx + b_h
                                 cell_w = xbar_width_start_idx + b_w
 
-                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
                             
                         ## Input
                         start = ou_idx_y * self.hd_info.OU_h
@@ -441,6 +456,7 @@ class HighParallelismMapping(object):
                                 xbar_width_start_idx += self.hd_info.OU_w
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
+                print("Fully", nlayer)
                 ## Inputs
                 inputs = []
                 nn = []
@@ -483,17 +499,20 @@ class HighParallelismMapping(object):
                                 # nbit = w % self.model_info.filter_bit
                                 nfilter = w // cells_per_filter
                                 start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                end_bit = start_bit + self.hd_info.cell_bit_width
-                                if end_bit >= self.model_info.filter_bit:
-                                    end_bit = self.model_info.filter_bit
-                                nbit = [i for i in range(start_bit, end_bit)]
+                                # end_bit = start_bit + self.hd_info.cell_bit_width
+                                # if end_bit >= self.model_info.filter_bit:
+                                #     end_bit = self.model_info.filter_bit
+                                # nbit = [i for i in range(start_bit, end_bit)]
+                                nbit = start_bit
                                 ngrid = h
 
 
                                 cell_h = xbar_height_start_idx + b_h
                                 cell_w = xbar_width_start_idx + b_w
 
-                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
+                        
                         ## Input
                         start = ou_idx_y * self.hd_info.OU_h
                         xbar_inputs = inputs[:, start:(start+block_h)].tolist()
@@ -512,6 +531,7 @@ class HighParallelismMapping(object):
                                 xbar_width_start_idx += self.hd_info.OU_w
             
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                print("Pooling", nlayer)
                 o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                 o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
 
@@ -573,8 +593,10 @@ class SameColumnFirstMapping(object):
                                         self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         for h in range(self.hd_info.Xbar_h):
-                                            row = [0] * self.hd_info.Xbar_w
+                                            #row = [0] * self.hd_info.Xbar_w
+                                            row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
                                             self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
+        self.crossbar_array = np.array(self.crossbar_array)
 
         self.xb_mapping_dict = dict()
         self.num_of_xb_in_pe = self.hd_info.Xbar_num * self.hd_info.CU_num
@@ -606,6 +628,7 @@ class SameColumnFirstMapping(object):
         xbar_mapping_idx = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
+                print("Convolution", nlayer)
                 ## Inputs
                 strides = self.model_info.strides[nlayer]
                 inputs = []
@@ -669,15 +692,17 @@ class SameColumnFirstMapping(object):
 
                                     nfilter = w // cells_per_filter
                                     start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                    end_bit = start_bit + self.hd_info.cell_bit_width
-                                    if end_bit >= self.model_info.filter_bit:
-                                        end_bit = self.model_info.filter_bit
-                                    nbit = [i for i in range(start_bit, end_bit)]
+                                    # end_bit = start_bit + self.hd_info.cell_bit_width
+                                    # if end_bit >= self.model_info.filter_bit:
+                                    #     end_bit = self.model_info.filter_bit
+                                    # nbit = [i for i in range(start_bit, end_bit)]
+                                    nbit = start_bit
                                     ngrid = h
 
                                     cell_h = bh
                                     cell_w = bw
-                                    self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                    #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                    self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
                             ## Inputs
                             xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
@@ -694,6 +719,7 @@ class SameColumnFirstMapping(object):
                 xbar_mapping_idx += used_xbar_num
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
+                print("Fully", nlayer)
                 ## Inputs
                 inputs = []
                 nn = []
@@ -752,15 +778,17 @@ class SameColumnFirstMapping(object):
                                     # nbit = w % self.model_info.filter_bit
                                     nfilter = w // cells_per_filter
                                     start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                    end_bit = start_bit + self.hd_info.cell_bit_width
-                                    if end_bit >= self.model_info.filter_bit:
-                                        end_bit = self.model_info.filter_bit
-                                    nbit = [i for i in range(start_bit, end_bit)]
+                                    # end_bit = start_bit + self.hd_info.cell_bit_width
+                                    # if end_bit >= self.model_info.filter_bit:
+                                    #     end_bit = self.model_info.filter_bit
+                                    # nbit = [i for i in range(start_bit, end_bit)]
+                                    nbit = start_bit
                                     ngrid = h
 
                                     cell_h = bh
                                     cell_w = bw
-                                    self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                    #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                    self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
                             ## Inputs
                             xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
@@ -777,6 +805,7 @@ class SameColumnFirstMapping(object):
                 xbar_mapping_idx += used_xbar_num                
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                print("Pooling", nlayer)
                 o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                 o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
                 inputs = []

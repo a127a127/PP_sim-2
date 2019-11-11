@@ -21,10 +21,10 @@ class HardwareMetaData(object):
         self.Xbar_num_y = 2
         self.Xbar_num_x = 2
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = 10
-        self.Xbar_w = 10
-        self.OU_h = 5
-        self.OU_w = 5
+        self.Xbar_h = 10 #128
+        self.Xbar_w = 10 #128
+        self.OU_h = 5 #8
+        self.OU_w = 5 #8
 
         self.Frequency = 1.2 # GHz
         self.ADC_resolution = 3 # bits

@@ -1,0 +1,72 @@
+input       kernel      performance                                     memory
+                        mapping     order       simulate    total
+11x11       1x11x11     0.6848      0.0237      3.4404      4.1500      265MB
+12x12       1x11x11     0.6835      0.5317      12.630      13.846      279MB            
+13x13       1x11x11     0.6866      0.8636      28.609      30.160      304MB
+
+input增加, 時間mapping增加一點點,  order增加比較明顯, simulate增加明顯,  memroy增加
+
+11x11       10x11x11    0.7722      1.1589      31.850      33.781      311MB
+11x11       100x11x11   1.5837      5.4667      142.95      149.95      753MB
+
+12x12       10x11x11    0.7258      2.8235      127.43      130.98      452MB
+
+12x12       100x11x11   
+
+
+
+* window變四倍,  mapping時間差不多, order時間增加, simulate時間就變成4倍, memroy增加不到一倍
+* weight matrix變成10倍, mapping時間增加兩倍, order時間增加五倍,simulate時間就變成5倍, memroy增加兩倍多, 時間主要simulate卡住
+
+
+window 1, matrix 1萬 simulate time = 150, memory = 0.30G
+window 4, matrix 1萬 simulate time = 600, memory = 0.45G
+
+
+caffenet
+input 224 224 3             window #
+conv1 96x11x11  11616       55x55       time = 150*55*55 = 453750            memory = 55*55/4 * 1.5 * 0.3 = 340G
+pool  27x27
+conv2 256x5x5   6400        27x27       time = 150*27*27*0.64  = 69984       memory = 27*27/4 * 1.5 * 0.3 = 82G
+pool  13x13
+conv3 384x3x3   3456        13x13       time = 150*13*13*0.345 = 8745        memory = 13*13/4 * 1.5 * 0.3 = 19G
+conv4 384x3x3   3456        13x13       time = 150*13*13*0.345 = 8745        memory = 13*13/4 * 1.5 * 0.3 = 19G
+conv5 256x3x3   2304        13x13       time = 150*13*13*0.23  = 5830        memory = 13*13/4 * 1.5 * 0.3 = 19G
+fully 4096      692224      1           time = 150*69.2224     = 10383       memory = 0.3 * 69/10 * 2 = 4G
+fully 4096      16777216    1           time = 150*1677.7216   = 251658      memory = 0.3 * 1677/10 * 2 = 100G
+fully 10                    1
+
+Total time   = 809095s (224Hr)
+Total memory = 583 GB
+
+list 3831M
+numpy 790M
+
+
+加速
+input   kernel      performance(mapping/order/simulate)     memory
+11x11   1x11x11     0.2027/0.0749/3.00                      83/88.6MB
+
+1. 將crossbar array中0改成空的obj
+    performance(mapping/order/simulate) 0.136/0.0268/3 
+    memory  72/77.5
+                             
+2. 再轉乘np array
+    performance(mapping/order/simulate) 5/0.03/2.9
+    memory  85.3/88.5
+
+3. 將crossbar obj直接改用list
+    performance(mapping/order/simulate) 0.208/0.07/3.07
+    memory  83/88.6
+4. 將crossbar obj改成list後, 裡面的bit只記錄start bit, 再轉乘np array
+    performance(mapping/order/simulate) 3.9/0.05/2.9
+    memory  250/250.5
+
+                    
+mapping後67MB
+mapping後會生成大量記憶體, controller最慢
+
+
+Run
+mapping時  473.5MB
+order後     941MB

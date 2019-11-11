@@ -8,10 +8,13 @@ from Controller import Controller
 import time, sys, os
 
 def main():
+    start_time = time.time()
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
 
     ### Mapping ##
+    start_mapping_time = time.time()
+    print("--- Mapping ---")
     print("Mapping policy:  ", end="")
     if mapping == 0: # DefaultMapping
         print("Default Mapping")
@@ -25,6 +28,10 @@ def main():
         print("Same Column First Mapping")
         mapping_information = SameColumnFirstMapping()
         mapping_str = "Same_Column_First_Mapping"
+    end_mapping_time = time.time()
+    print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
+
+    #a = input()
 
     ### Scheduling ###
     print("Scheduling policy: ", end="")
@@ -62,8 +69,10 @@ def main():
 
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
-
+    end_time = time.time()
+    print("--- Run in %s seconds ---\n" % (end_time - start_time))
     controller.print_statistics_result()
+    #a = input()
 
 def power_break_down():
     # self.Xbar_w = 80

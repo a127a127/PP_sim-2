@@ -86,7 +86,7 @@ class PE(object):
                 self.CU_array.append(CU(cu_pos))
 
     def check_state(self):
-        if self.state_edram_rd_pool or True in self.state_pe_saa or True in self.state_activation:
+        if True in self.state_edram_rd_pool or True in self.state_pe_saa or True in self.state_activation:
             return True
         elif True in self.state_edram_wr or True in self.state_pooling:
             return True
