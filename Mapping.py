@@ -86,7 +86,7 @@ class DefaultMapping(object):
                 for w in range(matrix_width):
                     for h in range(matrix_height):
                         # traverse all cells
-                        cell_h = h % self.hd_info.Xbar_h 
+                        cell_h = h % self.hd_info.Xbar_h
                         cell_w = w % self.hd_info.Xbar_w
                         xb_h = h // self.hd_info.Xbar_h % self.hd_info.Xbar_num_y
                         xb_w = w // self.hd_info.Xbar_w % self.hd_info.Xbar_num_x
@@ -118,7 +118,7 @@ class DefaultMapping(object):
                 inputs = []
                 o_height = self.model_info.input_h[nlayer+1]
                 o_width = self.model_info.input_w[nlayer+1]
-                for oh in range(o_height): 
+                for oh in range(o_height):
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
                         nn = []

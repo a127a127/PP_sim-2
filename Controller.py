@@ -1369,6 +1369,10 @@ class Controller(object):
         plt.clf()
 
     def buffer_analysis(self):
+        max_buffer_need = 0
+        for i in range(len(self.PE_array)):
+            max_buffer_need = max(self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, max_buffer_need)
+            max_buffer_need = max(self.PE_array[i].edram_buffer_i.maximal_usage * self.input_bit/8/1000, max_buffer_need)
         ### Utilization
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -1394,6 +1398,7 @@ class Controller(object):
         plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Buffer Size(KB)')
+        plt.ylim((0, max_buffer_need))
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage.png')
         plt.clf()
 
@@ -1422,6 +1427,7 @@ class Controller(object):
         plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('PE index')
         plt.ylabel('Buffer Size(KB)')
+        plt.ylim((0, max_buffer_need))
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage_i.png')
         plt.clf()
 

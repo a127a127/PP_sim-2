@@ -1,5 +1,6 @@
 import numpy as np
 import gc
+import time as tt
 
 class A():
     def __init__(self):
@@ -16,10 +17,11 @@ class B():
         del self.lii
         #del self.a.li
 
-A1 = A()
-B1 = B(A1)
-B1.lii[0] = 22
-print(B1.lii)
-print(A1.li)
-B1.ff()
-print(A1.li)
+A = [A() for i in range(1000000)]
+A = np.array(A)
+start = tt.time()
+for aa in A:
+    aa.a = 10
+
+print("ok", tt.time() - start)
+a = input()

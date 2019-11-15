@@ -5,8 +5,8 @@ class ModelConfig(object):
         model_type = 0
         if model_type == 0: # TestModelConfig
             self.layer_list = [
-                LayerMetaData("convolution",  10, 11, 11, 1, 1, 'VALID', 0, 0,    0),
-                #LayerMetaData("convolution", 1, 3, 3, 1, 1,  'SAME', 0, 0, 0),
+                LayerMetaData("convolution",  10, 11, 11, 1, 1, 'VALID', 0, 0, 0),
+                LayerMetaData("convolution",  1,   3,  3, 1, 1, 'VALID', 0, 0, 0),
                 #LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 0),
                 #LayerMetaData("fully",       0, 0, 0, 0, 0,        0, 0, 0, 2)
                 ]
