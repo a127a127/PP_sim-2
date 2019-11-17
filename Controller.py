@@ -239,6 +239,7 @@ class Controller(object):
                             else:
                                 print("layer type error.")
                                 exit(0)
+                    
                     # bottleneck analysis
                     if not cu.state:
                         # CU idle
@@ -359,9 +360,13 @@ class Controller(object):
 
                         cu.cu_saa_erp.remove(event)
 
-                        need_saa = 0
-                        for saa_amount in range(len(event.inputs)): # amounts of saa 
-                            need_saa += 1
+                        need_saa = event.inputs
+                        if need_saa > len(cu.state_cu_saa):
+                            print("no enough cu saa per cycle..")
+                            exit()
+                        #for saa_amount in range(len(event.inputs)): # amounts of saa
+                        for saa_amount in range(event.inputs): # amounts of saa
+                            #need_saa += 1
                             for idx in range(len(cu.state_cu_saa)):
                                 if not cu.state_cu_saa[idx]:
                                     self.Total_energy_or_in_cu += self.hd_info.Energy_or_in_cu * self.input_bit # read
@@ -378,9 +383,7 @@ class Controller(object):
 
                                     cu.state_cu_saa[idx] = True
                                     break
-                        if need_saa > len(cu.state_cu_saa):
-                            print("no enough cu saa per cycle..")
-                            exit()
+                        
                         
                         ### add next event counter: pe_saa, data_transfer
                         for proceeding_index in event.proceeding_event:

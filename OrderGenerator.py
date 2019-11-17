@@ -262,7 +262,7 @@ class OrderGenerator(object):
 
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
-                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
+                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, 0, 0)
                                             self.Computation_order.append(event)              
                 ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
@@ -284,13 +284,16 @@ class OrderGenerator(object):
                                                     filter_list.append(filter_nfilter)
 
                                             for nfilter in filter_list:
-                                                cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
+                                                # 一張filter生一個cu_saa event
+                                                #cu_saa_inputs = []
+                                                num_of_filter = 0
                                                 for column in range(len(xw)):
-                                                    if nfilter == ou_outputs[column][1][0]:
-                                                        input_nbit = ou_outputs[0][0][1]
-                                                        filter_nbit = ou_outputs[column][1][2]
-                                                        cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
-
+                                                    if nfilter == ou_outputs[column][1][0]: #同一張
+                                                        num_of_filter += 1
+                                                        #input_nbit = ou_outputs[0][0][1]
+                                                        #filter_nbit = ou_outputs[column][1][2]
+                                                        #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
+                                                cu_saa_inputs = num_of_filter
                                                 # add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
                                                 self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
@@ -605,13 +608,15 @@ class OrderGenerator(object):
 
                                             for nfilter in filter_list:
                                                 # 一張filter產生一個cu saa event
-                                                cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
+                                                #cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
+                                                num_of_filter = 0
                                                 for column in range(len(xw)):
                                                     if nfilter == ou_outputs[column][1][0]:
-                                                        input_nbit = ou_outputs[0][0][1]
-                                                        filter_nbit = ou_outputs[column][1][2]
-                                                        cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
-
+                                                        num_of_filter += 1
+                                                        #input_nbit = ou_outputs[0][0][1]
+                                                        #filter_nbit = ou_outputs[column][1][2]
+                                                        #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
+                                                cu_saa_inputs = num_of_filter
                                                 # add dependency
                                                 cu_saa_event_idx = len(self.Computation_order)
                                                 self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
