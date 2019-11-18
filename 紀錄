@@ -81,3 +81,48 @@ otimize1
     優化後:
         mapping 4.3s / 242MB
         order   12s / 400MB - 242MB = 160MB
+
+optimize2
+    目標: 優化記憶體用量, 記憶體用量大可能會swap in out, 造成效能變低, 瘦身order來減低memory
+    觀察: 優化前的memory用量, controller效能
+    Model: input: 15x15x1, kernel: 10x11x11x1, bit: 16/16
+    優化前:
+        neclab6
+            Memory: VIRT 2367M, RES 671M, MEM 0.4%
+            Performance: mapping 4.5s, Order 20.2s, simulate 1077s
+        mac
+            Memory: 524.8MB
+            Performance: mapping 4.15s, Order: 20.78s
+    優化:
+        本次優化減少cu_saa event紀錄的input內容, 其實後面只需要知道一個cu_saa event需要做幾次即可, 所以改幾次數。
+        減少要記錄的內容可以減少記憶體使用, 再來controller判斷也做了部分優化, 且判斷也會變快！
+
+    優化後:
+       mac
+            Memory: 319.9MB
+            Performance: mapping 4.08, Order: 18.71s
+        neclab6
+            Memory: VIRT 2203MB , RES 506M, MEM 0.3%
+            Performance: mapping 4.3s, Order 16.80s, simulate 1088s (無效)
+
+optimize3
+    目標: 減少mapping的memory, 不要先用list再轉乘numpy
+    目前只改defatult mapping
+    優化後:
+        Memory: 167.8MB
+        Performance: mapping: 0.097, Order: 17.5
+    優化後:(caffenet)
+        Memory: 10G
+        Performance: mapping: 1107s, Order: 用上面數字算的話需要175倍(53hr)
+
+optimize4
+    目標: 優化controller速度, 使用連凱提供方法
+    Model: input: 15x15x1, kernel: 10x11x11x1, bit: 16/16
+    優化前:
+        mac
+            Memory: mapping: 34.3MB, 167.8MB
+            Performance: mapping 0.098s, Order: 18.96s, simulate: 
+    優化後:
+
+    
+        

@@ -30,7 +30,7 @@ def main():
         mapping_str = "Same_Column_First_Mapping"
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-
+    a = input("按一下")
     ### Scheduling ###
     print("Scheduling policy: ", end="")
     if scheduling == 0: # Non-pipeline
@@ -57,7 +57,8 @@ def main():
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-
+    a = input("按一下")
+    
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
@@ -69,7 +70,8 @@ def main():
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    controller.print_statistics_result()
+    a = input("按一下")
+    #controller.print_statistics_result()
 
 def power_break_down():
     # self.Xbar_w = 80

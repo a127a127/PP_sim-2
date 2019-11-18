@@ -14,67 +14,33 @@ class DefaultMapping(object):
         self.model_info =  Model(model_config)
         self.hd_info = HardwareMetaData()
 
-        #self.crossbar_array = []
-        # for rty_idx in range(self.hd_info.Router_num_y):
-        #     self.crossbar_array.append([])
-        #     for rtx_idx in range(self.hd_info.Router_num_x):
-        #         self.crossbar_array[rty_idx].append([])
-        #         for pey_idx in range(self.hd_info.PE_num_y):
-        #             self.crossbar_array[rty_idx][rtx_idx].append([])
-        #             for pex_idx in range(self.hd_info.PE_num_x):
-        #                 self.crossbar_array[rty_idx][rtx_idx][pey_idx].append([])
-        #                 for cuy_idx in range(self.hd_info.CU_num_y):
-        #                     self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-        #                     for cux_idx in range(self.hd_info.CU_num_x):
-        #                         self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
-        #                         for xby_idx in range(self.hd_info.Xbar_num_y):
-        #                             self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
-        #                             for xbx_idx in range(self.hd_info.Xbar_num_x):
-        #                                 self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
-        #                                 for h in range(self.hd_info.Xbar_h):
-        #                                     row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
-        #                                     self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
         self.crossbar_array = np.zeros((self.hd_info.Router_num_y, self.hd_info.Router_num_x, 
                                         self.hd_info.PE_num_y, self.hd_info.PE_num_x,
                                         self.hd_info.CU_num_y, self.hd_info.CU_num_x,
                                         self.hd_info.Xbar_num_y, self.hd_info.Xbar_num_x, 
                                         self.hd_info.Xbar_h, self.hd_info.Xbar_w, 4), dtype=np.int)
-        print("weights ok")
-        print("轉numpy ok")
         self.layer_mapping_to_xbar = [] 
         self.layer_mapping_to_pe = []
         for rty_idx in range(self.hd_info.Router_num_y):
-            #self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
             self.layer_mapping_to_pe.append([])
             for rtx_idx in range(self.hd_info.Router_num_x):
-                #self.crossbar_array[rty_idx].append([])
                 self.layer_mapping_to_xbar[rty_idx].append([])
                 self.layer_mapping_to_pe[rty_idx].append([])
                 for pey_idx in range(self.hd_info.PE_num_y):
-                    #self.crossbar_array[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_pe[rty_idx][rtx_idx].append([])
                     for pex_idx in range(self.hd_info.PE_num_x):
-                        #self.crossbar_array[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for cuy_idx in range(self.hd_info.CU_num_y):
-                            #self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             for cux_idx in range(self.hd_info.CU_num_x):
-                                #self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 for xby_idx in range(self.hd_info.Xbar_num_y):
-                                    #self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
-                                        #self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
-                                        #for h in range(self.hd_info.Xbar_h):
-                                            #row = [0] * self.hd_info.Xbar_w
-                                            #row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
-                                            #self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
 
         self.pe_mapping_dict = dict() # the rt mapping order
         ctr =  0
