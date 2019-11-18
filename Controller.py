@@ -272,7 +272,8 @@ class Controller(object):
                     for xb in cu.XB_array:
                         # 有event就拿一個出來做
                         if xb.ou_erp:
-                            event = xb.ou_erp[0]
+                            #event = xb.ou_erp[0]
+                            event = xb.ou_erp.popleft()
                             self.done_event += 1
                             if self.trace:
                                 pass
@@ -293,7 +294,7 @@ class Controller(object):
                             pe.CU_energy += (energy_ir_in_cu + energy_dac + energy_crossbar)
 
                             xb.state_ou = True
-                            xb.ou_erp.remove(event)
+                            #xb.ou_erp.remove(event)
 
                             ### add next event counter: adc
                             for proceeding_index in event.proceeding_event:
@@ -319,9 +320,10 @@ class Controller(object):
                         do_adc_num = len(cu.state_adc)
                     else:
                         do_adc_num = len(cu.adc_erp)
-                    adc_erp_copy = cu.adc_erp.copy()
+                    #adc_erp_copy = cu.adc_erp.copy()
                     for idx in range(do_adc_num):
-                        event = adc_erp_copy[idx]
+                        #event = adc_erp_copy[idx]
+                        event = cu.adc_erp.popleft()
                         self.done_event += 1
                         if self.trace:
                             pass
@@ -333,7 +335,7 @@ class Controller(object):
                         self.Total_energy_cycle += self.hd_info.Energy_adc
                         pe.CU_energy += self.hd_info.Energy_adc
 
-                        cu.adc_erp.remove(event)
+                        #cu.adc_erp.remove(event)
                         cu.state_adc[idx] = True
 
                         ### add next event counter: cu_saa
@@ -350,15 +352,15 @@ class Controller(object):
             ### Event: cu_saa 
             for pe in self.PE_array:
                 for cu in pe.CU_array:
-                    for event in cu.cu_saa_erp.copy(): # 1個cycle全部做完
+                    for event in cu.cu_saa_erp: # 1個cycle全部做完
                         self.done_event += 1
                         if self.trace:
                             pass
                             #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
-
-                        cu.cu_saa_erp.remove(event)
+                        
+                        #cu.cu_saa_erp.remove(event)
 
                         need_saa = event.inputs
                         if need_saa > len(cu.state_cu_saa):
@@ -399,10 +401,12 @@ class Controller(object):
 
                                 elif pro_event.event_type == "edram_wr":
                                     pe.edram_wr_trigger.append([pro_event, []])
-
+                    
+                    cu.cu_saa_erp = []
+            
             ### Event: pe_saa 
             for pe in self.PE_array:
-                for event in pe.pe_saa_erp.copy(): # 1個cycle全部做完
+                for event in pe.pe_saa_erp: # 1個cycle全部做完
                     if event.data_is_transfer != 0: # 此event的資料正在傳輸
                         continue
                     self.done_event += 1
@@ -412,7 +416,7 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
-                    pe.pe_saa_erp.remove(event)
+                    #pe.pe_saa_erp.remove(event)
                     
                     saa_amount = len(event.inputs[0])
                     rm_data_list = event.inputs[1]
@@ -457,7 +461,7 @@ class Controller(object):
                     for d in rm_data_list:
                         if [event.nlayer, d] in pe.edram_buffer_i.buffer:
                             pe.edram_buffer_i.buffer.remove([event.nlayer, d])
-
+                pe.pe_saa_erp = []
                 # bottleneck analysis
                 if not pe.state_pe_saa[0]:
                     # 因為都是從0開使使用, 0 idle代表全部idle
@@ -488,9 +492,10 @@ class Controller(object):
                     do_act_num = len(pe.state_activation)
                 else:
                     do_act_num = len(pe.activation_erp)
-                act_erp_copy = pe.activation_erp.copy()
+                #act_erp_copy = pe.activation_erp.copy()
                 for idx in range(do_act_num):
-                    event = act_erp_copy[idx]
+                    #event = act_erp_copy[idx]
+                    event = pe.activation_erp.popleft()
                     self.done_event += 1
                     if self.trace:
                         pass
@@ -510,7 +515,7 @@ class Controller(object):
                     pe.Activation_energy += energy_activation
 
                     pe.state_activation[idx] = True
-                    pe.activation_erp.remove(event)
+                    # pe.activation_erp.remove(event)
 
                     ### add next event counter: edram_wr
                     for proceeding_index in event.proceeding_event:
@@ -531,9 +536,10 @@ class Controller(object):
                     do_wr_num = len(pe.state_edram_wr)
                 else:
                     do_wr_num = len(pe.edram_wr_erp)
-                wr_erp_copy = pe.edram_wr_erp.copy()
+                #wr_erp_copy = pe.edram_wr_erp.copy()
                 for idx in range(do_wr_num):
-                    event = wr_erp_copy[idx]
+                    #event = wr_erp_copy[idx]
+                    event = pe.edram_wr_erp.popleft()
                     self.done_event += 1
                     if self.trace:
                         pass
@@ -553,7 +559,7 @@ class Controller(object):
                     pe.Edram_buffer_energy += energy_edram_buffer
 
                     pe.state_edram_wr[idx] = True
-                    pe.edram_wr_erp.remove(event)
+                    #pe.edram_wr_erp.remove(event)
 
                     if len(event.outputs[0]) == 4 and event.outputs[0][3] == "u": # same layer transfer
                         pe.edram_buffer.put([event.nlayer, event.outputs[0]])

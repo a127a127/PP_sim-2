@@ -1,6 +1,7 @@
 from OnChipBuffer import OnChipBuffer
 from HardwareMetaData import HardwareMetaData
 from CU import CU
+import collections
 
 class PE(object):
     def __init__(self, pe_pos, input_bit):
@@ -26,11 +27,11 @@ class PE(object):
 
         ### event ready pool
         self.pe_saa_erp = []
-        self.activation_erp = []
+        self.activation_erp = collections.deque()
         #self.edram_rd_ir_erp = []
         self.edram_rd_pool_erp = []
         self.pooling_erp = []
-        self.edram_wr_erp = []
+        self.edram_wr_erp = collections.deque()
         
 
         ### trigger event list

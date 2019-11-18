@@ -1,3 +1,4 @@
+import collections
 class XB(object):
     def __init__(self, xb_pos):
         self.state_ou = False
@@ -6,7 +7,8 @@ class XB(object):
         self.adc_trigger = []
         
         ## event ready pool
-        self.ou_erp = []
+        #self.ou_erp = []
+        self.ou_erp = collections.deque()
         
         ### for order generator
         self.position = xb_pos

@@ -1,13 +1,13 @@
 import numpy as np
 import gc
 import time as tt
+import collections
 
 class A():
     def __init__(self):
         self.a = 1
-        self.b = 2
-        self.c = 3
-        self.li = [1,2,3]
+        self.b = [1,2,3]
+        self.c = True
 
 class B():
     def __init__(self, a):
@@ -17,11 +17,18 @@ class B():
         del self.lii
         #del self.a.li
 
-A = [A() for i in range(1000000)]
-A = np.array(A)
+
+
+
 start = tt.time()
-for aa in A:
-    aa.a = 10
+d = collections.deque()
+d.append(1)
+d.append(1)
+d.append(1)
+d.append(1)
+d.append(1)
+for i in d:
+    print(i)
 
 print("ok", tt.time() - start)
 a = input()

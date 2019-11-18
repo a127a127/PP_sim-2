@@ -117,12 +117,41 @@ optimize3
 
 optimize4
     目標: 優化controller速度, 使用連凱提供方法
-    Model: input: 15x15x1, kernel: 10x11x11x1, bit: 16/16
+    Model: input: 13x13x1, kernel: 10x11x11x1, bit: 16/16
     優化前:
         mac
-            Memory: mapping: 34.3MB, 167.8MB
-            Performance: mapping 0.098s, Order: 18.96s, simulate: 
+            Performance: mapping 0.098s, Order: 6.046s, simulate: 364.3s
+    1. 改ou erp
     優化後:
+        mac:
+            Performance: mapping 0.101s, Order: 6.186s, simulate: 358.06s
+    2. 改adc erp
+    優化後:
+        mac:
+            Performance: simulate: 355.47s
+    3. cu_saa一次全部做完不要每次做一個remove一個, 做完直接清空
+    優化後:
+        mac:
+            Performance: simulate: 352.169s
+    4. pe_saa
+    優化後:
+        mac:
+            Performance: simulate: 353.39s
+    5. 改act 用dequeue
+    優化後:
+        mac:
+            Performance: simulate: 361.0s
+    6. 改write 用dequeue
+    優化後:
+        mac:
+            Performance: simulate: 361.0s
 
+
+
+
+
+optimize5
+    使用set存event metadata 減少memory
+    效果不顯著
     
         

@@ -1,5 +1,6 @@
 from XB import XB
 from HardwareMetaData import HardwareMetaData
+import collections
 
 class CU(object):
     def __init__(self, cu_pos):
@@ -17,7 +18,7 @@ class CU(object):
         ### event ready pool
         self.edram_rd_ir_erp = []
         self.cu_saa_erp = []
-        self.adc_erp = []
+        self.adc_erp = collections.deque()
 
         ### trigger event list
         self.ou_trigger = [] # [pro_event, [cu_idx, xb_idx]]
