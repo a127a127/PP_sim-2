@@ -6,13 +6,13 @@ class ModelConfig(object):
         if model_type == 0: # TestModelConfig
             self.layer_list = [
                 LayerMetaData("convolution",  10, 11, 11, 1, 1, 'VALID', 0, 0, 0),
-                LayerMetaData("convolution",  1,   3,  3, 1, 1, 'VALID', 0, 0, 0),
+                #LayerMetaData("convolution",  1,   3,  3, 1, 1, 'VALID', 0, 0, 0),
                 #LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 0),
                 #LayerMetaData("fully",       0, 0, 0, 0, 0,        0, 0, 0, 2)
                 ]
             self.input_n = 1
-            self.input_h = 14
-            self.input_w = 14
+            self.input_h = 15
+            self.input_w = 15
             self.input_c = 1
             self.input_bit = 16
             self.filter_bit = 16
@@ -52,17 +52,17 @@ class ModelConfig(object):
                 LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3,    0),
                 LayerMetaData("convolution", 256,  5,  5,  96, 1,  'SAME', 0, 0,    0),
                 LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3,    0),
-                LayerMetaData("convolution", 348,  3,  3, 256, 1,  'SAME', 0, 0,    0),
-                LayerMetaData("convolution", 348,  3,  3, 348, 1,  'SAME', 0, 0,    0),
-                LayerMetaData("convolution", 256,  3,  3, 348, 1,  'SAME', 0, 0,    0),
+                LayerMetaData("convolution", 384,  3,  3, 256, 1,  'SAME', 0, 0,    0),
+                LayerMetaData("convolution", 384,  3,  3, 384, 1,  'SAME', 0, 0,    0),
+                LayerMetaData("convolution", 256,  3,  3, 384, 1,  'SAME', 0, 0,    0),
                 LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3,    0),
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 4096),
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 4096),
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0,   10)
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 4096), # 6x6x256
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 4096), # 4096
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 1000)
                 ]
             self.input_n = 1
             self.input_h = 227
-            self.input_w = 227
+            self.input_w = 22
             self.input_c = 3
             self.input_bit = 16
             self.filter_bit = 16
