@@ -7,10 +7,10 @@ class HardwareMetaData(object):
         cfg = ConfigParser()
         cfg.read('./configs/hardware.ini')
 
-        self.cell_bit_width = 1  # Alexnet: 2
+        self.cell_bit_width = 2  # Alexnet: 2
 
-        self.Router_num_y = 2 # Alexnet: 3
-        self.Router_num_x = 2 # Alexnet: 3
+        self.Router_num_y = 3 # Alexnet: 3
+        self.Router_num_x = 3 # Alexnet: 3
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
@@ -18,8 +18,8 @@ class HardwareMetaData(object):
         self.CU_num_y = 2 # Alexnet: 8
         self.CU_num_x = 2 # Alexnet: 8
         self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = 2 # Alexnet: 8
-        self.Xbar_num_x = 2 # Alexnet: 8
+        self.Xbar_num_y = 4 # Alexnet: 8
+        self.Xbar_num_x = 4 # Alexnet: 8
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
         self.Xbar_h = 128 #10
         self.Xbar_w = 128 #10
