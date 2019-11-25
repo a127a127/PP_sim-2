@@ -191,7 +191,7 @@ class OrderGenerator(object):
                         for d in eri_input_sequence:
                             pos = d[2] + d[1]*self.model_info.input_w[nlayer] + d[3]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
                             self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
-                ### Event: ou
+                ### Event: ou, adc, cu_saa
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
@@ -228,9 +228,10 @@ class OrderGenerator(object):
                                     this_block = this_input.xbar_column[index:index + self.hd_info.OU_w]
                                     xbar_block_w.append(this_block)
                                     index += self.hd_info.OU_w
-                                for input_bit in range(self.model_info.input_bit):
+                                for input_bit in range(self.model_info.input_bit): # 每個bit生
                                     for xh in xbar_block_h:
                                         for xw in xbar_block_w:
+                    ### Event: ou
                                             # OU block
                                             ou_inputs = 0
                                             ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
@@ -249,7 +250,7 @@ class OrderGenerator(object):
                                                     start_bit = crossbar_grid[3]
                                                     end_bit = start_bit + self.hd_info.cell_bit_width
                                                     if end_bit >= self.model_info.filter_bit:
-                                                       end_bit = self.model_info.filter_bit
+                                                        end_bit = self.model_info.filter_bit
                                                     filter_nbit = [i for i in range(start_bit, end_bit)]
 
                                                     #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
@@ -264,7 +265,7 @@ class OrderGenerator(object):
                                             preceding_count = 1
                                             event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, 0, 0)
                                             self.Computation_order.append(event)              
-                ### Event: adc
+                    ### Event: adc
                                             position_idx = self.XB_array[xbar_array_idx].position
                                             preceding_count = 1
                                             adc_inputs = 0
@@ -276,7 +277,7 @@ class OrderGenerator(object):
 
                                             event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
                                             self.Computation_order.append(event)
-                ### Event: cu_saa
+                    ### Event: cu_saa
                                             filter_list = []                            
                                             for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
                                                 filter_nfilter = ou_outputs[column][1][0]
@@ -873,6 +874,7 @@ class OrderGenerator(object):
         print("edram_wr_ctr", edram_wr_ctr)
         print("edram_rd_pool_ctr", edram_rd_pool_ctr)
         print("data_transfer_ctr", data_transfer_ctr)
+        print("total", len(self.Computation_order))
 
         for e in self.Computation_order:
             print(self.Computation_order.index(e), e)

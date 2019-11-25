@@ -12,6 +12,7 @@ def main():
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
 
+    a = input("按一下開始mapping")
     ### Mapping ##
     start_mapping_time = time.time()
     print("--- Mapping ---")
@@ -30,7 +31,7 @@ def main():
         mapping_str = "Same_Column_First_Mapping"
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-    a = input("按一下")
+
     ### Scheduling ###
     print("Scheduling policy: ", end="")
     if scheduling == 0: # Non-pipeline
@@ -47,8 +48,9 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = False
+    isTrace_controller = True
 
+    a = input("按一下開始生order")
     ### Generate computation order graph ### 
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
@@ -57,8 +59,9 @@ def main():
 
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-    a = input("按一下")
     
+    a = input("按一下開始模擬")
+    #exit()
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
@@ -71,7 +74,7 @@ def main():
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
     a = input("按一下")
-    #controller.print_statistics_result()
+    controller.print_statistics_result()
 
 def power_break_down():
     # self.Xbar_w = 80

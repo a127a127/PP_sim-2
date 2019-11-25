@@ -8,8 +8,8 @@ class EventMetaData:
         self.proceeding_event = proceeding_event
 
         self.nlayer = nlayer
-        self.inputs = inputs # pe_saa: [[window_h, window_w, nfilter, pre_CU_idx]] edram_rd: [[]]
-        self.outputs = outputs #[(num_input, hinput, winput, cinput, input_bit), (filter_nfilter, filter_ngrid, filter_nbit)]
+        self.inputs = inputs
+        self.outputs = outputs
         self.position_idx = position_idx
 
         self.finished = False

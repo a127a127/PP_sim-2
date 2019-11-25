@@ -416,7 +416,7 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
-                    #pe.pe_saa_erp.remove(event)
+                    pe.pe_saa_erp.remove(event)
                     
                     saa_amount = len(event.inputs[0])
                     rm_data_list = event.inputs[1]
@@ -461,7 +461,7 @@ class Controller(object):
                     for d in rm_data_list:
                         if [event.nlayer, d] in pe.edram_buffer_i.buffer:
                             pe.edram_buffer_i.buffer.remove([event.nlayer, d])
-                pe.pe_saa_erp = []
+
                 # bottleneck analysis
                 if not pe.state_pe_saa[0]:
                     # 因為都是從0開使使用, 0 idle代表全部idle
