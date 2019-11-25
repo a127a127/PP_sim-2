@@ -14,6 +14,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+import time
+
 class Controller(object):
     def __init__(self, ordergenerator, trace, mapping_str, scheduling_str):
         self.ordergenerator = ordergenerator
@@ -116,9 +118,31 @@ class Controller(object):
         isDone = False
         print("Computation order length:", len(self.Computation_order))
         self.done_event = 0
+
+        t_edram = 0
+        t_ou = 0
+        t_adc = 0
+        t_cusaa = 0
+        t_pesaa = 0
+        t_act = 0
+        t_wr = 0
+        t_it = 0
+        t_fe = 0
+        t_tr = 0
+        t_st = 0
+        t_ot = 0
+        t_ = 0
+
         while not isDone:
-            if self.cycle_ctr % 2000 == 0:
-                print(self.cycle_ctr, "Done event:", self.done_event)
+            if self.cycle_ctr % 2000 == 0 and self.done_event!=0:
+                print(self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-s_run)/self.done_event, "time per cycle", (time.time()-s_run)/self.cycle_ctr)
+                print("edram:", t_edram, "ou", t_ou, "adc", t_adc, "cusaa", t_cusaa, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
+                print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "other", t_ot)
+                print("t:", time.time()-t_)
+                t_edram, t_ou, t_adc, t_cusaa, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0, 0, 0
+                t_it, t_fe, t_tr, t_st, t_ot = 0, 0, 0, 0, 0
+                t_ = time.time()
+
             self.Total_energy_cycle = 0
             self.cycle_ctr += 1
             self.act_xb_ctr = 0
@@ -128,6 +152,7 @@ class Controller(object):
                 print("cycle:", self.cycle_ctr)
 
             ### Event: edram_rd_ir
+            staa = time.time()
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     ## cu.state 如果是True代表上一個edram_rd_ir後續的運算還沒算完
@@ -265,8 +290,9 @@ class Controller(object):
                         else:
                             cu.pure_computation_time += 1
                             #print("PE", self.PE_array.index(pe), "CU", pe.CU_array.index(cu), "pure_computation_time + 1")
-
+            t_edram += time.time() - staa
             ### Event: ou
+            staa = time.time()
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for xb in cu.XB_array:
@@ -310,8 +336,10 @@ class Controller(object):
                                     cu_y, cu_x = pos[4], pos[5]
                                     cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
                                     xb.adc_trigger.append([pro_event, [cu_idx]])
-
+                            break
+            t_ou += time.time() - staa
             ### Event: adc
+            staa = time.time()
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if not cu.adc_erp:
@@ -349,7 +377,9 @@ class Controller(object):
                                     #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
                                 cu.cu_saa_trigger.append([pro_event, []])
 
-            ### Event: cu_saa 
+            t_adc += time.time() - staa
+            ### Event: cu_saa
+            staa = time.time()
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp: # 1個cycle全部做完
@@ -404,7 +434,9 @@ class Controller(object):
                     
                     cu.cu_saa_erp = []
             
-            ### Event: pe_saa 
+            t_cusaa += time.time() - staa
+            ### Event: pe_saa
+            staa = time.time()
             for pe in self.PE_array:
                 for event in pe.pe_saa_erp: # 1個cycle全部做完
                     if event.data_is_transfer != 0: # 此event的資料正在傳輸
@@ -483,8 +515,9 @@ class Controller(object):
                         pe.saa_wait_resource_time += 1
                     else:
                         pe.saa_pure_computation_time += 1
-
+            t_pesaa += time.time() - staa
             ### Event: activation
+            staa = time.time()
             for pe in self.PE_array:
                 if not pe.activation_erp:
                     continue
@@ -528,7 +561,9 @@ class Controller(object):
                                 #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx, self.Computation_order.index(pro_event))
                             pe.edram_wr_trigger.append([pro_event, []])
 
-            ### Event: edram write 
+            t_act += time.time() - staa
+            ### Event: edram write
+            staa = time.time()
             for pe in self.PE_array:
                 if not pe.edram_wr_erp:
                     continue
@@ -587,6 +622,7 @@ class Controller(object):
                             elif pro_event.event_type == "data_transfer":
                                 self.data_transfer_trigger.append([pro_event, []])
 
+            t_wr += time.time() - staa
             ### Event: edram_rd_pool
             for pe in self.PE_array:
                 idx = 0
@@ -711,6 +747,7 @@ class Controller(object):
                             pe.edram_wr_trigger.append([pro_event, []])
 
             ### Interconnect
+            staa = time.time()
             for s in range(self.interconnect_step):
                 self.interconnect.step()
                 self.Total_energy_interconnect += self.interconnect.step_energy_consumption
@@ -742,8 +779,9 @@ class Controller(object):
                         self.this_layer_event_ctr += 1
                     pro_event = self.Computation_order[pro_event_idx]
                     pro_event.data_is_transfer -= 1
-
+            t_it += time.time() - staa
             ### Event: data_transfer
+            staa = time.time()
             for event in self.data_transfer_erp.copy():
                 self.done_event += 1
                 if self.trace:
@@ -825,8 +863,9 @@ class Controller(object):
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
-
+            t_tr += time.time() - staa
             ### Fetch data from off-chip memory
+            staa = time.time()
             des_dict = dict()
             for FE in self.fetch_array.copy():
                 FE.cycles_counter += 1
@@ -876,7 +915,7 @@ class Controller(object):
                     data, pro_event_idx = data_pro_event[0], data_pro_event[1]
                     packet = Packet(src, des, data, pro_event_idx)
                     self.interconnect.input_packet(packet)
-
+            t_fe += time.time() - staa
             ### Pipeline stage control ###
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
@@ -887,6 +926,7 @@ class Controller(object):
                     self.this_layer_cycle_ctr = 0
 
             ### Trigger events ###
+            staa = time.time()
             ## Trigger interconnect
             for trigger in self.data_transfer_trigger.copy():
                 pro_event = trigger[0]
@@ -1003,8 +1043,10 @@ class Controller(object):
                     else:
                         pe.pe_saa_erp.append(pro_event)
                         pe.pe_saa_trigger.remove(trigger)
-                        
+            
+            t_tr += time.time() - staa
             ### Record State ###
+            staa = time.time()
             for pe in self.PE_array:
                 if pe.check_state():
                     self.pe_state_for_plot[0].append(self.cycle_ctr)
@@ -1022,7 +1064,9 @@ class Controller(object):
                                 self.PE_array.index(pe) * self.hd_info.CU_num + \
                                 pe.CU_array.index(cu) * self.hd_info.Xbar_num + cu.XB_array.index(xb)
                                 )
+            t_st += time.time() - staa
             ### Reset ###
+            staa = time.time()
             for pe in self.PE_array:
                 pe.reset()
                 for cu in pe.CU_array:
@@ -1085,6 +1129,7 @@ class Controller(object):
                         break
                 if not isDone:
                     break
+            t_ot += time.time() - staa
 
     def print_statistics_result(self):
         print("Total Cycles:", self.cycle_ctr)
