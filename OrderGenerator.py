@@ -228,89 +228,89 @@ class OrderGenerator(object):
                                     this_block = this_input.xbar_column[index:index + self.hd_info.OU_w]
                                     xbar_block_w.append(this_block)
                                     index += self.hd_info.OU_w
-                                for input_bit in range(self.model_info.input_bit): # 每個bit生
-                                    for xh in xbar_block_h:
-                                        for xw in xbar_block_w:
+                                #for input_bit in range(self.model_info.input_bit): # 每個bit生
+                                for xh in xbar_block_h:
+                                    for xw in xbar_block_w:
                     ### Event: ou
-                                            # OU block
-                                            ou_inputs = 0
-                                            ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
-                                            idx = 0
-                                            for h in xh:
-                                                for w in xw:
-                                                    hinput = this_input.inputs[idx][0]
-                                                    winput = this_input.inputs[idx][1]
-                                                    cinput = this_input.inputs[idx][2]
+                                        # OU block
+                                        ou_inputs = 0
+                                        ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
+                                        idx = 0
+                                        for h in xh:
+                                            for w in xw:
+                                                hinput = this_input.inputs[idx][0]
+                                                winput = this_input.inputs[idx][1]
+                                                cinput = this_input.inputs[idx][2]
 
-                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    # [nlayer, ngrid, nfilter, nbit]
-                                                    filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
-                                                    #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
-                                                    start_bit = crossbar_grid[3]
-                                                    end_bit = start_bit + self.hd_info.cell_bit_width
-                                                    if end_bit >= self.model_info.filter_bit:
-                                                        end_bit = self.model_info.filter_bit
-                                                    filter_nbit = [i for i in range(start_bit, end_bit)]
+                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                                # [nlayer, ngrid, nfilter, nbit]
+                                                filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
+                                                filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
+                                                #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
+                                                start_bit = crossbar_grid[3]
+                                                end_bit = start_bit + self.hd_info.cell_bit_width
+                                                if end_bit >= self.model_info.filter_bit:
+                                                    end_bit = self.model_info.filter_bit
+                                                filter_nbit = [i for i in range(start_bit, end_bit)]
 
-                                                    #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
-                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
-                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
-                                                idx += 1
-                                            # add dependency
-                                            ou_event_idx = len(self.Computation_order)
-                                            self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
+                                                #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
+                                                ou_outputs.append([(num_input, hinput, winput, cinput), #, input_bit), \
+                                                                        (filter_nfilter, filter_ngrid, filter_nbit)])
+                                            idx += 1
+                                        # add dependency
+                                        ou_event_idx = len(self.Computation_order)
+                                        self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
 
-                                            position_idx = self.XB_array[xbar_array_idx].position
-                                            preceding_count = 1
-                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, 0, 0)
-                                            self.Computation_order.append(event)              
+                                        position_idx = self.XB_array[xbar_array_idx].position
+                                        preceding_count = 1
+                                        event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, 0, 0)
+                                        self.Computation_order.append(event)              
                     ### Event: adc
-                                            position_idx = self.XB_array[xbar_array_idx].position
-                                            preceding_count = 1
-                                            adc_inputs = 0
-                                            adc_outputs = 0
+                                        position_idx = self.XB_array[xbar_array_idx].position
+                                        preceding_count = 1
+                                        adc_inputs = 0
+                                        adc_outputs = 0
 
-                                            # add dependency
-                                            adc_event_idx = len(self.Computation_order)
-                                            self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+                                        # add dependency
+                                        adc_event_idx = len(self.Computation_order)
+                                        self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
 
-                                            event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
-                                            self.Computation_order.append(event)
+                                        event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                        self.Computation_order.append(event)
                     ### Event: cu_saa
-                                            filter_list = []                            
-                                            for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
-                                                filter_nfilter = ou_outputs[column][1][0]
-                                                if filter_nfilter not in filter_list:
-                                                    filter_list.append(filter_nfilter)
+                                        filter_list = []                            
+                                        for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
+                                            filter_nfilter = ou_outputs[column][1][0]
+                                            if filter_nfilter not in filter_list:
+                                                filter_list.append(filter_nfilter)
 
-                                            for nfilter in filter_list:
-                                                # 一張filter生一個cu_saa event
-                                                #cu_saa_inputs = []
-                                                num_of_filter = 0
-                                                for column in range(len(xw)):
-                                                    if nfilter == ou_outputs[column][1][0]: #同一張
-                                                        num_of_filter += 1
-                                                        #input_nbit = ou_outputs[0][0][1]
-                                                        #filter_nbit = ou_outputs[column][1][2]
-                                                        #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
-                                                cu_saa_inputs = num_of_filter
-                                                # add dependency
-                                                cu_saa_event_idx = len(self.Computation_order)
-                                                self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                        for nfilter in filter_list:
+                                            # 一張filter生一個cu_saa event
+                                            #cu_saa_inputs = []
+                                            num_of_filter = 0
+                                            for column in range(len(xw)):
+                                                if nfilter == ou_outputs[column][1][0]: #同一張
+                                                    num_of_filter += 1
+                                                    #input_nbit = ou_outputs[0][0][1]
+                                                    #filter_nbit = ou_outputs[column][1][2]
+                                                    #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
+                                            cu_saa_inputs = num_of_filter
+                                            # add dependency
+                                            cu_saa_event_idx = len(self.Computation_order)
+                                            self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
 
-                                                # dependecy matrix
-                                                grid = self.pe_saa_mat[nlayer][num_input][nfilter]
-                                                if grid == 0.0:
-                                                    self.pe_saa_mat[nlayer][num_input][nfilter] = []
+                                            # dependecy matrix
+                                            grid = self.pe_saa_mat[nlayer][num_input][nfilter]
+                                            if grid == 0.0:
+                                                self.pe_saa_mat[nlayer][num_input][nfilter] = []
 
-                                                self.pe_saa_mat[nlayer][num_input][nfilter].append(cu_saa_event_idx)
-                                                
-                                                position_idx = self.XB_array[xbar_array_idx].position[:-2]
-                                                preceding_count = 1
-                                                cu_saa_outputs = 0 #[num_input, nfilter]
-                                                event = EventMetaData("cu_saa", position_idx, preceding_count, [], nlayer, cu_saa_inputs, cu_saa_outputs)
-                                                self.Computation_order.append(event)
+                                            self.pe_saa_mat[nlayer][num_input][nfilter].append(cu_saa_event_idx)
+                                            
+                                            position_idx = self.XB_array[xbar_array_idx].position[:-2]
+                                            preceding_count = 1
+                                            cu_saa_outputs = 0 #[num_input, nfilter]
+                                            event = EventMetaData("cu_saa", position_idx, preceding_count, [], nlayer, cu_saa_inputs, cu_saa_outputs)
+                                            self.Computation_order.append(event)
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
                 windowlen_w = self.model_info.input_w[nlayer+1]
                 windowlen_h = self.model_info.input_h[nlayer+1]
@@ -515,7 +515,7 @@ class OrderGenerator(object):
                         for d in eri_input_sequence:
                             pos = d[1]
                             self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
-                ### Event: ou
+                ### Event: ou, adc, cu_saa
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
@@ -553,86 +553,87 @@ class OrderGenerator(object):
                                     xbar_block_w.append(this_block)
                                     index += self.hd_info.OU_w
 
-                                for input_bit in range(self.model_info.input_bit):
-                                    for xh in xbar_block_h:
-                                        for xw in xbar_block_w:
-                                            # OU block
-                                            ou_inputs = 0
-                                            ou_outputs = []  # [[(input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
-                                            idx = 0
-                                            for h in xh:
-                                                for w in xw:
-                                                    hinput = this_input.inputs[idx][0]
-                                                    winput = this_input.inputs[idx][1]
-                                                    cinput = this_input.inputs[idx][2]
-                                                    
-                                                    crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
-                                                    # [nlayer, ngrid, nfilter, nbit]
-                                                    filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
-                                                    filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
-                                                    #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
-                                                    start_bit = crossbar_grid[3]
-                                                    end_bit = start_bit + self.hd_info.cell_bit_width
-                                                    if end_bit >= self.model_info.filter_bit:
-                                                       end_bit = self.model_info.filter_bit
-                                                    filter_nbit = [i for i in range(start_bit, end_bit)]
+                                #for input_bit in range(self.model_info.input_bit):
+                                for xh in xbar_block_h:
+                                    for xw in xbar_block_w:
+                    ### Event: ou
+                                        # OU block
+                                        ou_inputs = 0
+                                        ou_outputs = []  # [[(input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
+                                        idx = 0
+                                        for h in xh:
+                                            for w in xw:
+                                                hinput = this_input.inputs[idx][0]
+                                                winput = this_input.inputs[idx][1]
+                                                cinput = this_input.inputs[idx][2]
+                                                
+                                                crossbar_grid = self.XB_array[xbar_array_idx].crossbar_array[h][w]
+                                                # [nlayer, ngrid, nfilter, nbit]
+                                                filter_nfilter = crossbar_grid[2] #crossbar_grid.nfilter
+                                                filter_ngrid = crossbar_grid[1] #crossbar_grid.ngrid
+                                                #filter_nbit = crossbar_grid[3] #crossbar_grid.nbit
+                                                start_bit = crossbar_grid[3]
+                                                end_bit = start_bit + self.hd_info.cell_bit_width
+                                                if end_bit >= self.model_info.filter_bit:
+                                                    end_bit = self.model_info.filter_bit
+                                                filter_nbit = [i for i in range(start_bit, end_bit)]
 
-                                                    #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
-                                                    ou_outputs.append([(num_input, hinput, winput, cinput, input_bit), \
-                                                                            (filter_nfilter, filter_ngrid, filter_nbit)])
-                                                idx += 1
-                                            ### add dependency
-                                            ou_event_idx = len(self.Computation_order)
-                                            self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
-                                            position_idx = self.XB_array[xbar_array_idx].position
-                                            preceding_count = 1
-                                            event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
-                                            self.Computation_order.append(event)
-                ### Event: adc
-                                            position_idx = self.XB_array[xbar_array_idx].position
-                                            preceding_count = 1
-                                            adc_inputs = 0
-                                            adc_outputs = 0
+                                                #ou_inputs.append([(num_input, hinput, winput, cinput, input_bit)])
+                                                ou_outputs.append([(num_input, hinput, winput, cinput), #, input_bit), \
+                                                                        (filter_nfilter, filter_ngrid, filter_nbit)])
+                                            idx += 1
+                                        ### add dependency
+                                        ou_event_idx = len(self.Computation_order)
+                                        self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
+                                        position_idx = self.XB_array[xbar_array_idx].position
+                                        preceding_count = 1
+                                        event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
+                                        self.Computation_order.append(event)
+                    ### Event: adc
+                                        position_idx = self.XB_array[xbar_array_idx].position
+                                        preceding_count = 1
+                                        adc_inputs = 0
+                                        adc_outputs = 0
 
+                                        # add dependency
+                                        adc_event_idx = len(self.Computation_order)
+                                        self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+
+                                        event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                        self.Computation_order.append(event)
+                    ### Event: cu_saa
+                                        filter_list = []
+                                        for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
+                                            filter_nfilter = ou_outputs[column][1][0]
+                                            if filter_nfilter not in filter_list:
+                                                filter_list.append(filter_nfilter)
+
+                                        for nfilter in filter_list:
+                                            # 一張filter產生一個cu saa event
+                                            #cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
+                                            num_of_filter = 0
+                                            for column in range(len(xw)):
+                                                if nfilter == ou_outputs[column][1][0]:
+                                                    num_of_filter += 1
+                                                    #input_nbit = ou_outputs[0][0][1]
+                                                    #filter_nbit = ou_outputs[column][1][2]
+                                                    #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
+                                            cu_saa_inputs = num_of_filter
                                             # add dependency
-                                            adc_event_idx = len(self.Computation_order)
-                                            self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+                                            cu_saa_event_idx = len(self.Computation_order)
+                                            self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
 
-                                            event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                            # dependecy matrix
+                                            grid = self.pe_saa_mat[nlayer][num_input][nfilter]
+                                            if grid == 0.0:
+                                                self.pe_saa_mat[nlayer][num_input][nfilter] = []
+                                            self.pe_saa_mat[nlayer][num_input][nfilter].append(cu_saa_event_idx)
+
+                                            position_idx = self.XB_array[xbar_array_idx].position[:-2]
+                                            preceding_count = 1
+                                            cu_saa_outputs = 0 #[num_input, nfilter]
+                                            event = EventMetaData("cu_saa", position_idx, preceding_count, [], nlayer, cu_saa_inputs, cu_saa_outputs)
                                             self.Computation_order.append(event)
-                ### Event: cu_saa
-                                            filter_list = []
-                                            for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
-                                                filter_nfilter = ou_outputs[column][1][0]
-                                                if filter_nfilter not in filter_list:
-                                                    filter_list.append(filter_nfilter)
-
-                                            for nfilter in filter_list:
-                                                # 一張filter產生一個cu saa event
-                                                #cu_saa_inputs = []  #[(input_nbit, filter_nfilter, filter_nbit)] 
-                                                num_of_filter = 0
-                                                for column in range(len(xw)):
-                                                    if nfilter == ou_outputs[column][1][0]:
-                                                        num_of_filter += 1
-                                                        #input_nbit = ou_outputs[0][0][1]
-                                                        #filter_nbit = ou_outputs[column][1][2]
-                                                        #cu_saa_inputs.append((num_input, input_nbit, nfilter, filter_nbit))
-                                                cu_saa_inputs = num_of_filter
-                                                # add dependency
-                                                cu_saa_event_idx = len(self.Computation_order)
-                                                self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
-
-                                                # dependecy matrix
-                                                grid = self.pe_saa_mat[nlayer][num_input][nfilter]
-                                                if grid == 0.0:
-                                                    self.pe_saa_mat[nlayer][num_input][nfilter] = []
-                                                self.pe_saa_mat[nlayer][num_input][nfilter].append(cu_saa_event_idx)
-
-                                                position_idx = self.XB_array[xbar_array_idx].position[:-2]
-                                                preceding_count = 1
-                                                cu_saa_outputs = 0 #[num_input, nfilter]
-                                                event = EventMetaData("cu_saa", position_idx, preceding_count, [], nlayer, cu_saa_inputs, cu_saa_outputs)
-                                                self.Computation_order.append(event)
                 ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
                 for nfilter in range(self.model_info.filter_n[nlayer]):
                     num_input = 0
