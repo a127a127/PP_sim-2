@@ -132,10 +132,10 @@ class Controller(object):
         t_st = 0
         t_ot = 0
         t_ = 0
-
+        start_time = time.time()
         while not isDone:
             if self.cycle_ctr % 2000 == 0 and self.done_event!=0:
-                print(self.cycle_ctr, "Done event:", self.done_event, "time per event", time.time()/self.done_event, "time per cycle", time.time()/self.cycle_ctr)
+                print(self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                 print("edram:", t_edram, "ou", t_ou, "adc", t_adc, "cusaa", t_cusaa, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                 print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "other", t_ot)
                 print("t:", time.time()-t_)
@@ -230,26 +230,26 @@ class Controller(object):
                                     xb_idx = xb_x + xb_y * self.hd_info.Xbar_num_x
                                     cu.ou_trigger.append([pro_event, [cu_idx, xb_idx]])
                             
-                        ### Free buffer (ideal)
-                        pe_id = self.PE_array.index(pe)
-                        nlayer = event.nlayer
-                        if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
-                            for d in event.inputs:
-                                pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    data = d[1:]
-                                    self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                        elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
-                            for d in event.inputs:
-                                pos = d[1]
-                                self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                                if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                    data = d[1:]
-                                    self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                        else:
-                            print("layer type error.")
-                            exit(0)
+                            ### Free buffer (ideal)
+                            pe_id = self.PE_array.index(pe)
+                            nlayer = event.nlayer
+                            if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
+                                for d in event.inputs:
+                                    pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                    self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                    if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                        data = d[1:]
+                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                            elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
+                                for d in event.inputs:
+                                    pos = d[1]
+                                    self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
+                                    if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
+                                        data = d[1:]
+                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                            else:
+                                print("layer type error.")
+                                exit()
                     
                     # bottleneck analysis
                     if not cu.state:
@@ -813,7 +813,7 @@ class Controller(object):
                     data = [event.nlayer, event.outputs[0]]
                 else:
                     print("transfer proceeding event type error.\n exit.")
-                    exit(0)
+                    exit()
                 packet = Packet(src, des, data, pro_event_list)
                 src_pe_id = src[3] + src[2] * self.hd_info.PE_num_x + \
                             src[1] * self.hd_info.PE_num + \
