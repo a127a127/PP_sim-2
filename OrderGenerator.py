@@ -338,14 +338,14 @@ class OrderGenerator(object):
                                 pe_idx = cu_idx[0:4]
 
                                 edram_wr_pe_pos  = pe_idx
-                                edram_wr_inputs  = [[window_h, window_w, nfilter, "u"]]
+                                edram_wr_inputs  = 0 #[[window_h, window_w, nfilter, "u"]]
                                 edram_wr_outputs = [[window_h, window_w, nfilter, "u"]]
-                                edram_wr_preceding_count = len(preceding_cu[cu_idx])
+                                edram_wr_preceding_count = len(preceding_cu[cu_idx]) * self.model_info.input_bit # 同一個input 全部bits做完才write
                                 event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                                 self.Computation_order.append(event)
 
                                 source_pe_idx = pe_idx
-                                transfer_inputs  = [[window_h, window_w, nfilter, "u"]]
+                                transfer_inputs  = 0 #[[window_h, window_w, nfilter, "u"]]
                                 transfer_outputs = [[window_h, window_w, nfilter, "u"]]
                                 event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                                 self.Computation_order.append(event)
@@ -358,7 +358,7 @@ class OrderGenerator(object):
                             for pre_event_idx in preceding_list:
                                 if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                                     self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
-                                    pe_saa_preceding_count += 1
+                                    pe_saa_preceding_count += self.model_info.input_bit # += 1
                                 else:
                                     data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[0] + 1
                                     preceding_tmp_data.append(self.Computation_order[data_transfer_id].outputs[0]) # data transfer output
@@ -662,14 +662,14 @@ class OrderGenerator(object):
                             self.Computation_order[pre_event_idx].proceeding_event.append(edram_wr_event_idx)
                         pe_idx = cu_idx[0:4]
                         edram_wr_pe_pos  = pe_idx
-                        edram_wr_inputs  = [[nfilter, 0, 0, "u"]]
+                        edram_wr_inputs  = 0 # [[nfilter, 0, 0, "u"]]
                         edram_wr_outputs = [[nfilter, 0, 0, "u"]]
-                        edram_wr_preceding_count = len(preceding_cu[cu_idx])
+                        edram_wr_preceding_count = len(preceding_cu[cu_idx]) * self.model_info.input_bit # 同一個input 全部bits做完才write
                         event = EventMetaData("edram_wr", edram_wr_pe_pos, edram_wr_preceding_count, [edram_wr_event_idx+1], nlayer, edram_wr_inputs, edram_wr_outputs)
                         self.Computation_order.append(event)
 
                         source_pe_idx = pe_idx
-                        transfer_inputs =  [[nfilter, 0, 0, "u"]]
+                        transfer_inputs =  0 #[[nfilter, 0, 0, "u"]]
                         transfer_outputs = [[nfilter, 0, 0, "u"]]
                         event = EventMetaData("data_transfer", [source_pe_idx, do_pe_saa_pos], 1, [], nlayer, transfer_inputs, transfer_outputs)
                         self.Computation_order.append(event)
@@ -682,7 +682,7 @@ class OrderGenerator(object):
                     for pre_event_idx in preceding_list:
                         if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                             self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
-                            pe_saa_preceding_count += 1
+                            pe_saa_preceding_count += self.model_info.input_bit # +=1
                         else:
                             data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[0] + 1
                             preceding_tmp_data.append(self.Computation_order[data_transfer_id].outputs[0]) # data transfer output

@@ -19,7 +19,7 @@ class PE(object):
         
         ### events per cycle
         #self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
-        self.pe_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
+        self.pe_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num * HardwareMetaData().CU_num 
         self.activation_epc = 16
         self.edram_wr_epc = 32
         self.edram_rd_pool_epc = 16
