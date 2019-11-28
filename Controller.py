@@ -1067,16 +1067,14 @@ class Controller(object):
                     self.pe_state_for_plot[1].append(self.PE_array.index(pe))
                 for cu in pe.CU_array:
                     if cu.check_state():
+                        cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
                         self.cu_state_for_plot[0].append(self.cycle_ctr)
-                        self.cu_state_for_plot[1].append(self.PE_array.index(pe) * self.hd_info.CU_num + \
-                                                        pe.CU_array.index(cu))
-                    
+                        self.cu_state_for_plot[1].append(cu_id)
                     for xb in cu.XB_array:
-                        if xb.check_state():
+                        if xb.state_ou:
                             self.xb_state_for_plot[0].append(self.cycle_ctr)
-                            self.xb_state_for_plot[1].append( \
-                                self.PE_array.index(pe) * self.hd_info.CU_num + \
-                                pe.CU_array.index(cu) * self.hd_info.Xbar_num + cu.XB_array.index(xb)
+                            self.xb_state_for_plot[1].append( cu_id*self.hd_info.Xbar_num + \
+                                cu.XB_array.index(xb)
                                 )
             t_st += time.time() - staa
 

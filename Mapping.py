@@ -256,7 +256,7 @@ class DefaultMapping(object):
                 inputs = []
                 for oh in range(o_height):
                     for ow in range(o_width):
-                        for c in range(self.model_info.filter_n[nlayer-1]):
+                        for c in range(self.model_info.input_c[nlayer]):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):

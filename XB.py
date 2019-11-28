@@ -35,9 +35,7 @@ class XB(object):
         self.state_ou = False
 
     def check_state(self):
-        if self.state_ou:
-            return True
-        return False
+        return self.state_ou
 
     def __str__(self):
         return str(self.__dict__)
