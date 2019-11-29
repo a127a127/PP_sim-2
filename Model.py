@@ -16,6 +16,7 @@ class Model(object):
         self.input_number = []
         self.pooling_h = []
         self.pooling_w = []
+        self.pooling_strides = []
         self.input_bit = model_config.input_bit
         self.filter_bit = model_config.filter_bit
 
@@ -35,14 +36,15 @@ class Model(object):
                     self.pad.append(0)
                 elif self.layer_list[nlayer].padding == 'SAME':
                     self.pad.append((self.layer_list[nlayer].filter_h - 1) // 2)
+                self.pooling_h.append(0)
+                self.pooling_w.append(0)
+                self.pooling_strides.append(0)
                 self.input_h.append((self.input_h[nlayer] + 2 * self.pad[nlayer] - self.filter_h[nlayer])
                                      // self.strides[nlayer] + 1)
                 self.input_w.append((self.input_w[nlayer] + 2 * self.pad[nlayer] - self.filter_w[nlayer])
                                      // self.strides[nlayer] + 1)
                 self.input_c.append(self.layer_list[nlayer].filter_n)
                 self.input_number.append(self.input_h[nlayer+1] * self.input_w[nlayer+1])
-                self.pooling_h.append(0)
-                self.pooling_w.append(0)
             elif self.layer_list[nlayer].layer_type == "pooling":
                 self.filter_n.append(0)
                 self.filter_h.append(0)
@@ -51,16 +53,17 @@ class Model(object):
                 self.filter_length.append(0)
                 self.strides.append(0)
                 self.pad.append(0)
-                self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h)
-                self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w)
-                self.input_c.append(self.input_c[nlayer])
-                self.input_number.append(
-                    (self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) *
-                    (self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) *
-                    (self.input_c[nlayer])
-                    )
+                #self.input_h.append(self.input_h[nlayer] // self.layer_list[nlayer].pooling_h) # 沒有stride
+                #self.input_w.append(self.input_w[nlayer] // self.layer_list[nlayer].pooling_w) # 沒有stride
                 self.pooling_h.append(self.layer_list[nlayer].pooling_h)
                 self.pooling_w.append(self.layer_list[nlayer].pooling_w)
+                self.pooling_strides.append(self.layer_list[nlayer].pooling_strides)
+                self.input_h.append((self.input_h[nlayer] - self.layer_list[nlayer].pooling_h)
+                                    // self.pooling_strides[nlayer] + 1)
+                self.input_w.append((self.input_w[nlayer] - self.layer_list[nlayer].pooling_w)
+                                    // self.pooling_strides[nlayer] + 1)
+                self.input_c.append(self.input_c[nlayer])
+                self.input_number.append(self.input_h[nlayer+1] * self.input_w[nlayer+1] * self.input_c[nlayer+1])
             elif self.layer_list[nlayer].layer_type == "fully":
                 self.filter_n.append(self.layer_list[nlayer].neuron_n)
                 self.filter_h.append(1)
@@ -69,12 +72,13 @@ class Model(object):
                 self.filter_length.append(self.input_h[nlayer] * self.input_w[nlayer] * self.input_c[nlayer])
                 self.strides.append(0)
                 self.pad.append(0)
+                self.pooling_h.append(0)
+                self.pooling_w.append(0)
+                self.pooling_strides.append(0)
                 self.input_h.append(self.layer_list[nlayer].neuron_n)
                 self.input_w.append(1)
                 self.input_c.append(1)
                 self.input_number.append(1)
-                self.pooling_h.append(0)
-                self.pooling_w.append(0)
 
     def __str__(self):
         return str(self.__dict__)

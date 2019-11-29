@@ -66,7 +66,9 @@ class OrderGenerator(object):
                 self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
                 if i+1 < self.model_info.layer_length:
                     self.feature_mat.append(np.zeros((self.model_info.filter_n[i], 1, 1)).tolist())
-
+            else:
+                print("Wrong layer type")
+                exit()
         self.Computation_order = []
         self.generate_order()
         if trace:
@@ -799,8 +801,10 @@ class OrderGenerator(object):
                                             pool_position_idx = pe_pos
                                             pool_preceding_count = 1
                                             pool_input_sequence = erp_input_sequence
-                                            pool_output_sequence = [[pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer], pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer], pool_input_sequence[0][2]]]
-
+                                            #pool_output_sequence = [[pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer], pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer], pool_input_sequence[0][2]]]
+                                            pool_output_sequence = [[pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer], 
+                                                                     pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer], 
+                                                                     pool_input_sequence[0][2]]]
                                             event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
                                             self.Computation_order.append(event)
                 ### Event: edram_wr
@@ -820,7 +824,7 @@ class OrderGenerator(object):
                                                 else:
                                                     o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
                                                     o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
-                                                    edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
+                                                    #edram_wr_input_sequence = [[(pool_input_sequence[0][0] // self.model_info.pooling_h[nlayer]) * o_width + pool_input_sequence[0][1] // self.model_info.pooling_w[nlayer] + pool_input_sequence[0][2] * o_width * o_height, 0, 0]]
                                                     #edram_wr_output_sequence = edram_wr_input_sequence
                                                     if self.feature_mat[nlayer][edram_wr_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + edram_wr_input_sequence[0][1] + edram_wr_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] == 0.0:
                                                         self.feature_mat[nlayer][edram_wr_input_sequence[0][0] * self.model_info.input_w[nlayer+1] + edram_wr_input_sequence[0][1] + edram_wr_input_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]][0][0] = []

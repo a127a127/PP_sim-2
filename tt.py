@@ -2,33 +2,26 @@ import numpy as np
 import gc
 import time as tt
 import collections
+import pandas as pd
+import copy
 
-class A():
-    def __init__(self):
-        self.a = 1
-        self.b = [1,2,3]
-        self.c = True
+A = 5
+B = 4
+C = 3
 
-class B():
-    def __init__(self, a):
-        self.a = a
-        self.lii = a.li
-    def ff(self):
-        del self.lii
-        #del self.a.li
+print("A:", A, "B:", B, "C:", C)
+print("(A - B + 1) // C =", (A - B + 1) // C)
+print("(A - B) // C + 1 =", (A - B) // C + 1)
 
-
-
-
-start = tt.time()
-d = collections.deque()
-d.append(1)
-d.append(1)
-d.append(1)
-d.append(1)
-d.append(1)
-for i in d:
-    print(i)
-
-print("ok", tt.time() - start)
-a = input()
+a = 1
+b = 0
+for i in range(2):
+    print("i", i)
+    if a == 0:
+        if b == 0:
+            print("1")
+        else:
+            print("2")
+    elif a == 1:
+        print("3")
+    

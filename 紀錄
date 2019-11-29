@@ -145,13 +145,35 @@ optimize4
     優化後:
         mac:
             Performance: simulate: 361.0s
+    測試：
+        Model: input: 15x15x1, kernel: 10x11x11x1, bit: 16/16
+        optimize2的數據
+        neclab6
+        優化前:
+            Performance: simulate 1088s
+        優化後:
+            Performance: 1014.94s
 
 
+Lenet
+    Mapping: 2922M, 187M, 14.943s
+    Order:  9149M, 6409M, 734.04s
+    [926, 4616896, 4616896, 4616896, 10718, 10718, 11894, 1176, 33804] 13,941,045
+    simulate: 93741s (5800event/39s) 26hr
 
+Alexnet會產生的event約為lenet的722倍
 
 
 optimize5
-    使用set存event metadata 減少memory
-    效果不顯著
-    
-        
+    目標: 瘦身computation order
+    方法: 16bits不要只生一份就好
+    Lenet
+        Order: 6409M, 734.04s -> 824M, 50s
+        [926, 288556, 288556, 288556, 10718, 10718, 11894, 1176, 33804] 936,080
+        simulate: 93741s (5800event/39s) 26hr
+
+    8000 Done event: 20310 time per event 0.09663141283244701 time per cycle 0.24532299956679343
+    edram: 2.6799349784851074 ou 44.533835887908936 adc 1.8012521266937256 cusaa 1.7140617370605469 pesaa 0.06391620635986328 act 0.01003122329711914 wr 0.014477252960205078
+    iterconeect 32.52555322647095 fetch 0.005879402160644531 trigger 67.94741702079773 state 222.9602987766266 other 115.51902675628662
+    t: 489.85399699211
+

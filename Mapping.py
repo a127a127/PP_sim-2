@@ -62,6 +62,7 @@ class DefaultMapping(object):
     
     def map(self):
         pe_idx = 0
+        pe_total_num = 1
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)
@@ -265,6 +266,8 @@ class DefaultMapping(object):
                 inputs = np.array(inputs)
 
                 pe_idx -= pe_total_num
+                if pe_idx < 0:
+                    pe_idx = 0
                 input_per_pe = len(inputs) // pe_total_num # split into multiple pe
                 if input_per_pe == 0:
                     input_per_pe = 1
@@ -361,7 +364,7 @@ class HighParallelismMapping(object):
         xbar_idx = 0
         xbar_height_start_idx = 0 
         xbar_width_start_idx = 0
-         
+        pool_pos = [0, 0, 0, 0]
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)
@@ -617,6 +620,7 @@ class SameColumnFirstMapping(object):
 
     def map(self):
         xbar_mapping_idx = 0
+        
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)
