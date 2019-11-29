@@ -20,7 +20,7 @@ class ModelConfig(object):
             self.layer_list = [
                 LayerMetaData("convolution", 20, 5, 5,  3, 1, 'VALID', 0, 0, 0,  0),
                 LayerMetaData("convolution", 10, 2, 2, 20, 1, 'VALID', 0, 0, 0,  0),
-                #LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 0,  0),
+                #LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,  0),
                 LayerMetaData("fully",        0, 0, 0,  0, 0,       0, 0, 0, 0, 10)
                 ]
             self.input_n = 1
@@ -32,12 +32,12 @@ class ModelConfig(object):
         elif model_type == 2: # Cifar10Config
             self.layer_list = [
                 LayerMetaData("convolution", 8, 3, 3, 3, 1, 'VALID', 0, 0, 0,  0),
-                #LayerMetaData("pooling",     0, 0, 0, 0, 1,       0, 2, 2, 0,  0),
-                #LayerMetaData("pooling",     0, 0, 0, 0, 1,       0, 2, 2, 0,  0),
+                #LayerMetaData("pooling",     0, 0, 0, 0, 1,       0, 2, 2, 2,  0),
+                #LayerMetaData("pooling",     0, 0, 0, 0, 1,       0, 2, 2, 2,  0),
                 LayerMetaData("convolution", 4, 3, 3, 8, 1, 'VALID', 0, 0, 0,  0),
                 LayerMetaData("convolution", 4, 3, 3, 4, 1, 'VALID', 0, 0, 0,  0),
                 LayerMetaData("convolution", 4, 3, 3, 4, 1, 'VALID', 0, 0, 0,  0),
-                #LayerMetaData("pooling",     0, 0, 0, 0, 0,       0, 2, 2, 0,  0),
+                #LayerMetaData("pooling",     0, 0, 0, 0, 0,       0, 2, 2, 2,  0),
                 LayerMetaData("fully",       0, 0, 0, 0, 0,       0, 0, 0, 0, 10)
                 ]
             self.input_n = 1
@@ -49,13 +49,13 @@ class ModelConfig(object):
         elif model_type == 3: # CaffenetConfig
             self.layer_list = [
                 LayerMetaData("convolution",  96, 11, 11,   3, 4, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 3,    0),
                 LayerMetaData("convolution", 256,  5,  5,  96, 1,  'SAME', 0, 0, 0,    0),
-                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 3,    0),
                 LayerMetaData("convolution", 384,  3,  3, 256, 1,  'SAME', 0, 0, 0,    0),
                 LayerMetaData("convolution", 384,  3,  3, 384, 1,  'SAME', 0, 0, 0,    0),
                 LayerMetaData("convolution", 256,  3,  3, 384, 1,  'SAME', 0, 0, 0,    0),
-                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 3,    0),
                 LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096), # 6x6x256
                 LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096), # 4096
                 LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 1000)
@@ -69,7 +69,7 @@ class ModelConfig(object):
         elif model_type == 4: # LenetConfig
             self.layer_list = [
                 LayerMetaData("convolution",   6, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 0,   0),
+                LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
                 LayerMetaData("convolution",  16, 5, 5,  6, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("convolution", 120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("fully",        0, 0, 0, 0, 0,       0, 0, 0, 0, 120),
