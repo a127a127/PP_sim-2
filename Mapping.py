@@ -252,8 +252,10 @@ class DefaultMapping(object):
     
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
-                o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
-                o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
+                #o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
+                #o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
+                o_height = self.model_info.input_h[nlayer+1]
+                o_width = self.model_info.input_w[nlayer+1]
                 inputs = []
                 for oh in range(o_height):
                     for ow in range(o_width):
@@ -261,7 +263,10 @@ class DefaultMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([oh * self.model_info.pooling_h[nlayer] + ph, ow * self.model_info.pooling_w[nlayer] + pw, c])
+                                    #nn.append([oh * self.model_info.pooling_h[nlayer] + ph, ow * self.model_info.pooling_w[nlayer] + pw, c])
+                                    nn.append([oh * self.model_info.pooling_strides[nlayer] + ph,
+                                               ow * self.model_info.pooling_strides[nlayer] + pw,
+                                               c])
                             inputs.append(nn)
                 inputs = np.array(inputs)
 
