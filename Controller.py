@@ -429,7 +429,8 @@ class Controller(object):
                                     cu.pe_saa_trigger.append([pro_event, []])
 
                                 elif pro_event.event_type == "edram_wr":
-                                    pro_event.inputs = event.inputs
+                                    #pro_event.inputs = event.inputs
+                                    #pro_event.outputs = event.inputs
                                     pe.edram_wr_trigger.append([pro_event, []])
                     
                     cu.cu_saa_erp = []
@@ -583,11 +584,6 @@ class Controller(object):
                         ",order index:", self.Computation_order.index(event), "data:", event.outputs)
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
-                        # if len(event.outputs[0]) == 4: # same layer data transfer write
-                        #     if pro_event.inputs == self.input_bit - 1:
-                        #         self.this_layer_event_ctr += 1
-                        # else:
-                        #    self.this_layer_event_ctr += 1
                     
                     energy_bus = self.hd_info.Energy_bus * self.input_bit
                     energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit
@@ -639,7 +635,8 @@ class Controller(object):
                     if event.data_is_transfer != 0: # 此event的資料正在傳輸
                         continue
                     isData_ready = True
-                    for data in event.inputs:
+                    for inp in event.inputs:
+                        data = inp[1:]
                         #print(event.nlayer, data)
                         if not pe.edram_buffer.check([event.nlayer, data]):
                             # Data not in buffer
@@ -659,7 +656,7 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
 
-                    num_data = len(event.outputs)
+                    num_data = len(event.inputs)
                     energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit * num_data
                     energy_bus = self.hd_info.Energy_bus * self.input_bit * num_data
 
@@ -688,11 +685,12 @@ class Controller(object):
                     # Free buffer (ideal)
                     pe_id = self.PE_array.index(pe)
                     nlayer = event.nlayer
-                    for d in event.outputs:
-                        pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                    for d in event.inputs:
+                        pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                         self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                         if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                            self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
+                            data = d[1:]
+                            self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                     
                     if idx >= len(pe.state_edram_rd_pool):
                         break # 一次讀len(pe.state_edram_rd_pool)筆
@@ -806,9 +804,9 @@ class Controller(object):
 
                 pro_event_list = [event.proceeding_event[0]]
                 if self.Computation_order[pro_event_list[0]].event_type == "edram_rd_ir":
-                    data = [event.nlayer+1, event.inputs[0]]
+                    data = [event.nlayer+1, event.outputs[0]]
                 elif self.Computation_order[pro_event_list[0]].event_type == "edram_rd_pool":
-                    data = [event.nlayer+1, event.inputs[0]]
+                    data = [event.nlayer+1, event.outputs[0]]
                 elif self.Computation_order[pro_event_list[0]].event_type == "pe_saa":
                     data = [event.nlayer, event.outputs[0]]
                 else:
@@ -863,7 +861,7 @@ class Controller(object):
                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([event.nlayer, data])
                 else:
                     nlayer = event.nlayer+1
-                    if self.ordergenerator.model_info.layer_list[nlayer-1].layer_type != "fully":
+                    if self.ordergenerator.model_info.layer_list[nlayer].layer_type != "fully":
                         for d in event.outputs:
                             pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
@@ -871,7 +869,7 @@ class Controller(object):
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                     else:
                         for d in event.outputs:
-                            pos = d[1]
+                            pos = d[0]
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
@@ -1480,8 +1478,8 @@ class Controller(object):
                 writer.writerow(c)
         self.buffer_size_i = np.array(self.buffer_size_i)
         for i in range(len(self.PE_array)):
-            #plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
-            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i], label="PE"+str(i)) #, c=self.color[i])
+            plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
+            #plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i], label="PE"+str(i)) #, c=self.color[i])
         
         plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
