@@ -287,13 +287,15 @@ class Controller(object):
                         if xb.ou_erp:
                             #event = xb.ou_erp[0]
                             event = xb.ou_erp.popleft()
-                            self.done_event += 1
+                            #self.done_event += 1
                             if self.trace:
                                 pass
                                 #print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer) # ",order index:", self.Computation_order.index(event))
-                            if not self.isPipeLine:
-                                if event.inputs == self.input_bit - 1:
-                                    self.this_layer_event_ctr += 1
+                            
+                            # 因為跟adc合併, 不重複count
+                            #if not self.isPipeLine:
+                            #    if event.inputs == self.input_bit:
+                            #        self.this_layer_event_ctr += 1
                             
                             energy_ir_in_cu = self.hd_info.Energy_ir_in_cu * self.hd_info.OU_h
                             energy_dac = self.hd_info.Energy_dac
@@ -311,20 +313,31 @@ class Controller(object):
                             #xb.ou_erp.remove(event)
 
                             ### add next event counter: adc
-                            for proceeding_index in event.proceeding_event:
-                                pro_event = copy.copy(self.Computation_order[proceeding_index]) # shallow copy複製一份adc event
-                                #pro_event.current_number_of_preceding_event += 1
+                            # for proceeding_index in event.proceeding_event:
+                            #     pro_event = copy.copy(self.Computation_order[proceeding_index]) # shallow copy複製一份adc event
+                            #     #pro_event.current_number_of_preceding_event += 1
                                 
-                                #if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:                          
-                                pro_event.inputs = event.inputs # 與ou同input bit的adc被trigger
-                                if self.trace:
-                                    pass
-                                    #print("\t\tProceeding event is triggered.", pro_event.event_type)
+                            #     #if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:                          
+                            #     pro_event.inputs = event.inputs # 與ou同input bit的adc被trigger
+                            #     if self.trace:
+                            #         pass
+                            #         #print("\t\tProceeding event is triggered.", pro_event.event_type)
 
-                                pos = pro_event.position_idx
-                                cu_y, cu_x = pos[4], pos[5]
-                                cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
-                                xb.adc_trigger.append([pro_event, [cu_idx]])
+                            #     pos = pro_event.position_idx
+                            #     cu_y, cu_x = pos[4], pos[5]
+                            #     cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                            #     xb.adc_trigger.append([pro_event, [cu_idx]])
+
+                            ### trigger event adc
+                            adc_event = copy.copy(event) # 複製一份ou event
+                            adc_event.inputs = event.inputs
+                            if self.trace:
+                                pass
+                                #print("\t\tProceeding event is triggered.", adc_event.event_type)
+                            pos = adc_event.position_idx
+                            cu_y, cu_x = pos[4], pos[5]
+                            cu_idx = cu_x + cu_y * self.hd_info.CU_num_x
+                            xb.adc_trigger.append([adc_event, [cu_idx]])
 
                             # 還有其他bit要做, 放回queue
                             event.inputs += 1
