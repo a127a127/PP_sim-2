@@ -234,7 +234,7 @@ class OrderGenerator(object):
                                 #for input_bit in range(self.model_info.input_bit): # 每個bit生
                                 for xh in xbar_block_h:
                                     for xw in xbar_block_w:
-                    ### Event: ou
+                    ### Event: ou_adc
                                         # OU block
                                         ou_inputs = 0
                                         ou_outputs = []  # [[(num_input, input_h, input_w, input_c, input_bit), (nfilter, ngrid, filter_bit)]]
@@ -266,20 +266,20 @@ class OrderGenerator(object):
 
                                         position_idx = self.XB_array[xbar_array_idx].position
                                         preceding_count = 1
-                                        event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, 0, 0)
+                                        event = EventMetaData("ou_adc", position_idx, preceding_count, [], nlayer, 0, 0)
                                         self.Computation_order.append(event)              
                     ### Event: adc
-                                        position_idx = self.XB_array[xbar_array_idx].position
-                                        preceding_count = 1
-                                        adc_inputs = 0
-                                        adc_outputs = 0
+                                        #position_idx = self.XB_array[xbar_array_idx].position
+                                        #preceding_count = 1
+                                        #adc_inputs = 0
+                                        #adc_outputs = 0
 
                                         # add dependency
-                                        adc_event_idx = len(self.Computation_order)
-                                        self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+                                        #adc_event_idx = len(self.Computation_order)
+                                        #self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
 
-                                        event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
-                                        self.Computation_order.append(event)
+                                        #event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                        #self.Computation_order.append(event)
                     ### Event: cu_saa
                                         filter_list = []                            
                                         for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
@@ -300,7 +300,8 @@ class OrderGenerator(object):
                                             cu_saa_inputs = num_of_filter
                                             # add dependency
                                             cu_saa_event_idx = len(self.Computation_order)
-                                            self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                            #self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                            self.Computation_order[ou_event_idx].proceeding_event.append(cu_saa_event_idx)
 
                                             # dependecy matrix
                                             grid = self.pe_saa_mat[nlayer][num_input][nfilter]
@@ -595,20 +596,20 @@ class OrderGenerator(object):
                                         self.Computation_order[eri_event_idx].proceeding_event.append(ou_event_idx)
                                         position_idx = self.XB_array[xbar_array_idx].position
                                         preceding_count = 1
-                                        event = EventMetaData("ou", position_idx, preceding_count, [], nlayer, ou_inputs, [])
+                                        event = EventMetaData("ou_adc", position_idx, preceding_count, [], nlayer, ou_inputs, [])
                                         self.Computation_order.append(event)
                     ### Event: adc
-                                        position_idx = self.XB_array[xbar_array_idx].position
-                                        preceding_count = 1
-                                        adc_inputs = 0
-                                        adc_outputs = 0
+                                        # position_idx = self.XB_array[xbar_array_idx].position
+                                        # preceding_count = 1
+                                        # adc_inputs = 0
+                                        # adc_outputs = 0
 
-                                        # add dependency
-                                        adc_event_idx = len(self.Computation_order)
-                                        self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
+                                        # # add dependency
+                                        # adc_event_idx = len(self.Computation_order)
+                                        # self.Computation_order[ou_event_idx].proceeding_event.append(adc_event_idx)
 
-                                        event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
-                                        self.Computation_order.append(event)
+                                        # event = EventMetaData("adc", position_idx, preceding_count, [], nlayer, adc_inputs, adc_outputs)
+                                        # self.Computation_order.append(event)
                     ### Event: cu_saa
                                         filter_list = []
                                         for column in range(len(xw)): # 同個ou column必須是同一張filter, 只traverse第一個row一次即可
@@ -629,7 +630,7 @@ class OrderGenerator(object):
                                             cu_saa_inputs = num_of_filter
                                             # add dependency
                                             cu_saa_event_idx = len(self.Computation_order)
-                                            self.Computation_order[adc_event_idx].proceeding_event.append(cu_saa_event_idx)
+                                            self.Computation_order[ou_event_idx].proceeding_event.append(cu_saa_event_idx)
 
                                             # dependecy matrix
                                             grid = self.pe_saa_mat[nlayer][num_input][nfilter]
@@ -835,8 +836,9 @@ class OrderGenerator(object):
 
     def trace_order(self):
         edram_rd_ir_ctr = 0
-        ou_ctr = 0
-        adc_ctr = 0
+        # ou_ctr = 0
+        # adc_ctr = 0
+        ou_adc_ctr = 0
         cu_saa_ctr = 0
         pe_saa_ctr = 0
         activation_ctr = 0
@@ -848,10 +850,12 @@ class OrderGenerator(object):
             t = e.event_type
             if t == "edram_rd_ir":
                 edram_rd_ir_ctr += 1
-            elif t == "ou":
-                ou_ctr += 1
-            elif t == "adc":
-                adc_ctr += 1
+            elif t == "ou_adc":
+                ou_adc_ctr += 1
+            # elif t == "ou":
+            #     ou_ctr += 1
+            # elif t == "adc":
+            #     adc_ctr += 1
             elif t == "cu_saa":
                 cu_saa_ctr += 1
             elif t == "pe_saa":
@@ -870,8 +874,9 @@ class OrderGenerator(object):
                 print("event type error:", t)
 
         print("edram_rd_ir_ctr", edram_rd_ir_ctr)
-        print("ou_ctr", ou_ctr)
-        print("adc_ctr", adc_ctr)
+        # print("ou_ctr", ou_ctr)
+        # print("adc_ctr", adc_ctr)
+        print("ou_adc_ctr", ou_adc_ctr)
         print("cu_saa_ctr", cu_saa_ctr)
         print("pe_saa_ctr", pe_saa_ctr)
         print("activation_ctr", activation_ctr)
