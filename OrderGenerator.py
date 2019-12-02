@@ -12,13 +12,13 @@ class OrderGenerator(object):
         model_config = ModelConfig()
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
-        self.mapping_information = mapping_information
+        #self.mapping_information = mapping_information
         self.free_buffer_controller = FreeBufferController()
 
         # mapping
-        self.crossbar_array = self.mapping_information.crossbar_array
-        self.layer_mapping_to_xbar = self.mapping_information.layer_mapping_to_xbar
-        self.layer_mapping_to_pe = self.mapping_information.layer_mapping_to_pe
+        crossbar_array = mapping_information.crossbar_array
+        layer_mapping_to_xbar = mapping_information.layer_mapping_to_xbar
+        self.layer_mapping_to_pe = mapping_information.layer_mapping_to_pe
 
         self.XB_array = []
         self.cu_traverse_idx = []
@@ -35,10 +35,10 @@ class OrderGenerator(object):
                                         xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
                                         xb = XB(xb_pos)
                                         # weights
-                                        xb.crossbar_array = self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                        xb.crossbar_array = crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
 
                                         # inputs
-                                        for mapping_inp in self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]:
+                                        for mapping_inp in layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]:
                                             if mapping_inp.eventtype == "convolution":
                                                 xb.Convolution.append(mapping_inp)
                                             if mapping_inp.eventtype == "fully":
@@ -887,6 +887,30 @@ class OrderGenerator(object):
 
         for e in self.Computation_order:
             print(self.Computation_order.index(e), e)
+
+    def delete_mapping_info(self):
+        import gc
+        #del self.crossbar_array
+        #del self.layer_mapping_to_xbar
+        #del self.layer_mapping_to_pe
+        for nCU in range(len(self.cu_traverse_idx)):
+            cu_pos = self.cu_traverse_idx[nCU]
+            pe_pos = cu_pos[:-2]
+            rty_idx, rtx_idx= cu_pos[0], cu_pos[1]
+            pey_idx, pex_idx = cu_pos[2], cu_pos[3]
+            cuy_idx, cux_idx = cu_pos[4], cu_pos[5]
+            for xby_idx in range(self.hd_info.Xbar_num_y):
+                for xbx_idx in range(self.hd_info.Xbar_num_x):
+                    xbar_array_idx = xbx_idx + (xby_idx * self.hd_info.Xbar_num_x) + \
+                                    (cux_idx * self.hd_info.Xbar_num) + \
+                                    (cuy_idx * self.hd_info.CU_num_x * self.hd_info.Xbar_num) + \
+                                    (pex_idx * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                    (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
+                                    (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
+                                    (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
+                    del self.XB_array[xbar_array_idx].Convolution[:]
+                    del self.XB_array[xbar_array_idx].Fully[:]
+        gc.collect()
 
     def __str__(self):
         return str(self.__dict__)
