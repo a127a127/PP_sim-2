@@ -5,22 +5,22 @@ class ModelConfig(object):
         model_type = 3
         if model_type == 0: # TestModelConfig
             self.layer_list = [
-                LayerMetaData("convolution",  2, 3, 3, 1, 1, 'SAME', 0, 0, 0, 0),
+                LayerMetaData("convolution",  2, 2, 2, 1, 1, 'VALID', 0, 0, 0, 0),
                 #LayerMetaData("convolution",  1, 2, 2, 1, 1, 'VALID', 0, 0, 0, 0),
-                LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 1, 0),
+                #LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 1, 0),
                 LayerMetaData("fully",       0, 0, 0, 0, 0,        0, 0, 0, 0, 2)
                 ]
             self.input_n = 1
-            self.input_h = 4
-            self.input_w = 4
+            self.input_h = 2
+            self.input_w = 2
             self.input_c = 1
-            self.input_bit = 1
+            self.input_bit = 2
             self.filter_bit = 2
         elif model_type == 1: # TestModelConfig2
             self.layer_list = [
                 LayerMetaData("convolution", 20, 5, 5,  3, 1, 'VALID', 0, 0, 0,  0),
                 LayerMetaData("convolution", 10, 2, 2, 20, 1, 'VALID', 0, 0, 0,  0),
-                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,  0),
+                #LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,  0),
                 LayerMetaData("fully",        0, 0, 0,  0, 0,       0, 0, 0, 0, 10)
                 ]
             self.input_n = 1
