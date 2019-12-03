@@ -52,7 +52,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = True
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     if isGenerateOrder:
@@ -79,6 +79,11 @@ def main():
             order_generator = pickle.load(fp)
         end_load = time.time()
         print("--- Load computation order in %s seconds ---\n" %(end_load - start_load))
+
+    ## delete mapping data
+    del order_generator.mapping_information
+    order_generator.delete_mapping_info()
+    del mapping_information
 
     ## Power and performance simulation ###
     #a = input("按一下開始模擬")

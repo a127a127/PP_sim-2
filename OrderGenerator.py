@@ -12,7 +12,7 @@ class OrderGenerator(object):
         model_config = ModelConfig()
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
-        #self.mapping_information = mapping_information
+        self.mapping_information = mapping_information
         self.free_buffer_controller = FreeBufferController()
 
         # mapping
@@ -890,10 +890,6 @@ class OrderGenerator(object):
                 print(self.Computation_order.index(e), e)
 
     def delete_mapping_info(self):
-        import gc
-        #del self.crossbar_array
-        #del self.layer_mapping_to_xbar
-        #del self.layer_mapping_to_pe
         for nCU in range(len(self.cu_traverse_idx)):
             cu_pos = self.cu_traverse_idx[nCU]
             pe_pos = cu_pos[:-2]
@@ -909,9 +905,9 @@ class OrderGenerator(object):
                                     (pey_idx * self.hd_info.PE_num_x * self.hd_info.Xbar_num * self.hd_info.CU_num) + \
                                     (rtx_idx * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num) + \
                                     (rty_idx * self.hd_info.Router_num_x * self.hd_info.PE_num * self.hd_info.CU_num * self.hd_info.Xbar_num)
+                    del self.XB_array[xbar_array_idx].crossbar_array
                     del self.XB_array[xbar_array_idx].Convolution[:]
                     del self.XB_array[xbar_array_idx].Fully[:]
-        gc.collect()
 
     def __str__(self):
         return str(self.__dict__)
