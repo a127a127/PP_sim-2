@@ -52,7 +52,7 @@ def main():
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = False
+    isTrace_controller = True
 
     ### Generate computation order graph ### 
     if isGenerateOrder:
@@ -66,12 +66,12 @@ def main():
         print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
 
         #a = input("存擋order")
-        print("Store order_generator to file \"ComputationOrder\"")
-        start_store = time.time()
-        with open('ComputationOrder', 'wb') as fp:
-            pickle.dump(order_generator, fp)
-        end_store = time.time()
-        print("--- Store computation order in %s seconds ---\n" %(end_store - start_store))
+        # print("Store order_generator to file \"ComputationOrder\"")
+        # start_store = time.time()
+        # with open('ComputationOrder', 'wb') as fp:
+        #     pickle.dump(order_generator, fp)
+        # end_store = time.time()
+        # print("--- Store computation order in %s seconds ---\n" %(end_store - start_store))
     else:
         print("Load order_generator from file \"ComputationOrder\"")
         start_load = time.time()

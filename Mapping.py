@@ -11,6 +11,7 @@ import gc
 class DefaultMapping(object):
     def __init__(self):
         model_config = ModelConfig()
+        print("Model:", model_config.Model_type)
         self.model_info =  Model(model_config)
         self.hd_info = HardwareMetaData()
 
