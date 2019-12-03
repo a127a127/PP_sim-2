@@ -885,8 +885,9 @@ class OrderGenerator(object):
         print("data_transfer_ctr", data_transfer_ctr)
         print("total", len(self.Computation_order))
 
-        for e in self.Computation_order:
-            print(self.Computation_order.index(e), e)
+        if False:
+            for e in self.Computation_order:
+                print(self.Computation_order.index(e), e)
 
     def delete_mapping_info(self):
         import gc

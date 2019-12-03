@@ -134,11 +134,12 @@ class Controller(object):
         t_ = 0
         start_time = time.time()
         while not isDone:
-            if self.cycle_ctr % 2000 == 0 and self.done_event!=0:
-                print(self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
+            if self.cycle_ctr % 200 == 0 and self.done_event!=0:
+                print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                 print("edram:", t_edram, "ou", t_ou, "adc", t_adc, "cusaa", t_cusaa, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                 print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "other", t_ot)
                 print("t:", time.time()-t_)
+                print()
                 t_edram, t_ou, t_adc, t_cusaa, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0, 0, 0
                 t_it, t_fe, t_tr, t_st, t_ot = 0, 0, 0, 0, 0
                 t_ = time.time()
@@ -359,12 +360,12 @@ class Controller(object):
                     for idx in range(do_adc_num):
                         #event = adc_erp_copy[idx]
                         event = cu.adc_erp.popleft()
-                        self.done_event += 1
                         if self.trace:
                             pass
                             #print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer)#, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             if event.inputs == self.input_bit - 1:
+                                self.done_event += 1
                                 self.this_layer_event_ctr += 1
 
                         self.Total_energy_adc += self.hd_info.Energy_adc
@@ -392,12 +393,12 @@ class Controller(object):
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     for event in cu.cu_saa_erp: # 1個cycle全部做完
-                        self.done_event += 1
                         if self.trace:
                             pass
                             #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer) #",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             if event.inputs == self.input_bit - 1:
+                                self.done_event += 1
                                 self.this_layer_event_ctr += 1
                         
                         #cu.cu_saa_erp.remove(event)
