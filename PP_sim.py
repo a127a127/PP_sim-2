@@ -6,14 +6,15 @@ from OrderGenerator import OrderGenerator
 from Controller import Controller
 
 import time, sys, os
+import pickle
 
 def main():
     start_time = time.time()
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
 
-    a = input("按一下開始mapping")
     ### Mapping ##
+    #a = input("按一下開始mapping")
     start_mapping_time = time.time()
     print("--- Mapping ---")
     print("Mapping policy:  ", end="")
@@ -45,24 +46,36 @@ def main():
     ### dir ###
     if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling_str):
             os.makedirs('./statistics/'+mapping_str+'/'+scheduling_str)
+    
+    ### Generate Order ###
+    isGenerateOrder = True
 
     ### Trace ###
     isTrace_order = False
-    isTrace_controller = True
+    isTrace_controller = False
 
-    a = input("按一下開始生order")
     ### Generate computation order graph ### 
-    start_order_time = time.time()
-    print("--- Generate computation order graph ---")
+    if isGenerateOrder:
+        #a = input("按一下開始生order")
+        start_order_time = time.time()
+        print("--- Generate computation order graph ---")
 
-    order_generator = OrderGenerator(mapping_information, isTrace_order)
+        order_generator = OrderGenerator(mapping_information, isTrace_order)
 
-    end_order_time = time.time()
-    print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+        end_order_time = time.time()
+        print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+
+        #a = input("存擋order")
+        with open('ComputationOrder', 'wb') as fp:
+            pickle.dump(order_generator, fp)
     
-    a = input("按一下開始模擬")
-    #exit()
+    else:
+        print("Load order_generator from file \"ComputationOrder\"")
+        with open ('ComputationOrder', 'rb') as fp:
+            order_generator = pickle.load(fp)
+
     ## Power and performance simulation ###
+    #a = input("按一下開始模擬")
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
 
@@ -73,7 +86,7 @@ def main():
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    a = input("按一下")
+    #a = input("按一下輸出統計資料")
     controller.print_statistics_result()
 
 def power_break_down():
