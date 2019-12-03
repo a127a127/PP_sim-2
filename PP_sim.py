@@ -66,13 +66,19 @@ def main():
         print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
 
         #a = input("存擋order")
+        print("Store order_generator to file \"ComputationOrder\"")
+        start_store = time.time()
         with open('ComputationOrder', 'wb') as fp:
             pickle.dump(order_generator, fp)
-    
+        end_store = time.time()
+        print("--- Store computation order in %s seconds ---\n" %(end_store - start_store))
     else:
         print("Load order_generator from file \"ComputationOrder\"")
+        start_load = time.time()
         with open ('ComputationOrder', 'rb') as fp:
             order_generator = pickle.load(fp)
+        end_load = time.time()
+        print("--- Load computation order in %s seconds ---\n" %(end_load - start_load))
 
     ## Power and performance simulation ###
     #a = input("按一下開始模擬")
