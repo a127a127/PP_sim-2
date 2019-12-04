@@ -134,7 +134,7 @@ class Controller(object):
         t_ = 0
         start_time = time.time()
         while not isDone:
-            if self.cycle_ctr % 200 == 0 and self.done_event!=0:
+            if self.cycle_ctr % 20 == 0 and self.done_event!=0:
                 print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                 print("edram:", t_edram, "ou", t_ou, "adc", t_adc, "cusaa", t_cusaa, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                 print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "other", t_ot)
@@ -173,7 +173,7 @@ class Controller(object):
                                     # Data not in buffer
                                     if self.trace:
                                         pass
-                                        #print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
+                                        # print("\tData not ready for edram_rd_ir. Data: layer", event.nlayer, \
                                         #    event.event_type, "index:", self.Computation_order.index(event), data,
                                         #    "position:", cu.position)
                                         #print("\tBuffer:", pe.edram_buffer.buffer)
@@ -183,7 +183,7 @@ class Controller(object):
                                 self.mem_acc_ctr += 1
                                 event.data_is_transfer += len(event.inputs)
                                 self.fetch_array.append(FetchEvent(event))
-                                continue
+                                break
                             
                             self.done_event += 1
                             if self.trace:
@@ -291,7 +291,7 @@ class Controller(object):
                             #self.done_event += 1
                             if self.trace:
                                 pass
-                                #print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer) # ",order index:", self.Computation_order.index(event))
+                                print("\tdo ou, xb_pos:", xb.position, "layer:", event.nlayer) # ",order index:", self.Computation_order.index(event))
                             
                             # 因為跟adc合併, 不重複count
                             #if not self.isPipeLine:
@@ -362,7 +362,7 @@ class Controller(object):
                         event = cu.adc_erp.popleft()
                         if self.trace:
                             pass
-                            #print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer)#, ",order index:", self.Computation_order.index(event))
+                            print("\tdo adc, cu_pos:", cu.position, "layer:", event.nlayer)#, ",order index:", self.Computation_order.index(event))
                         if not self.isPipeLine:
                             if event.inputs == self.input_bit - 1:
                                 self.done_event += 1
@@ -802,6 +802,7 @@ class Controller(object):
                     pro_event = self.Computation_order[pro_event_idx]
                     pro_event.data_is_transfer -= 1
             t_it += time.time() - staa
+            
 
             ### Event: data_transfer
             staa = time.time()
