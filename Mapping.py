@@ -9,6 +9,9 @@ import numpy as np
 import gc
 
 class DefaultMapping(object):
+    # __slots__ = ["model_info", "hd_info", "crossbar_array",  "layer_mapping_to_xbar",
+    #              "layer_mapping_to_pe", "pe_mapping_dict", 
+    #             ]
     def __init__(self):
         model_config = ModelConfig()
         print("Model:", model_config.Model_type)
@@ -300,6 +303,9 @@ class DefaultMapping(object):
         return str(self.__dict__)
 
 class HighParallelismMapping(object):
+    # __slots__ = ["model_info", "hd_info", "crossbar_array",  "layer_mapping_to_xbar",
+    #              "layer_mapping_to_pe", "xb_mapping_dict", 
+    #             ]
     def __init__(self):
         model_config = ModelConfig()
         self.model_info = Model(model_config)
@@ -564,6 +570,9 @@ class HighParallelismMapping(object):
         return str(self.__dict__)
 
 class SameColumnFirstMapping(object):
+    # __slots__ = ["model_info", "hd_info", "crossbar_array",  "layer_mapping_to_xbar",
+    #              "layer_mapping_to_pe", "xb_mapping_dict", 
+    #             ]
     def __init__(self):
         model_config = ModelConfig()
         self.model_info = Model(model_config)

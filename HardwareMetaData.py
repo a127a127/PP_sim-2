@@ -1,6 +1,20 @@
 from configparser import ConfigParser
 
 class HardwareMetaData(object):
+    # __slots__ = ["cell_bit_width", "Router_num_y", "Router_num_x",  "Router_num",
+    #              "PE_num_y", "PE_num_x", "PE_num", "CU_num_y", "CU_num_x", "CU_num",
+    #              "Xbar_num_y", "Xbar_num_x", "Xbar_num", "Xbar_h", "Xbar_w",
+    #              "OU_h", "OU_w", "Frequency", "ADC_resolution", "Router_flit_size", 
+    #              "cycle_time", "eDRAM_read_latency", "eDRAM_buffer_size", "Output_Reg_size",
+    #              "CU_Input_Reg_size", "CU_Output_Reg_size", "CU_Shift_and_add_per_cycle",
+    #              "PE_Shift_and_add_per_cycle", "Activation_per_cycle", "Pooling_per_cycle",
+    #              "eDRAM_buffer_leakage", "Router_leakage", "Act_leakage", "PE_SAA_leakage",
+    #              "Pool_leakage", "DAC_leakage", "MUX_leakage", "SA_leakage", "Crossbar_leakage", 
+    #              "CU_SAA_leakage", "Energy_edram_buffer", "Energy_bus", "Energy_router",
+    #              "Energy_activation", "Energy_shift_and_add", "Energy_pooling", "Energy_or",
+    #              "Energy_adc", "Energy_dac", "Energy_crossbar", "Energy_ir_in_cu", 
+    #              "Energy_or_in_cu", "Fetch_cycle"
+    #             ]
     def __init__(self):
         # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
 
