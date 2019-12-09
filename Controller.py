@@ -183,6 +183,7 @@ class Controller(object):
                                 self.mem_acc_ctr += 1
                                 event.data_is_transfer += len(event.inputs)
                                 self.fetch_array.append(FetchEvent(event))
+                                #continue
                                 break
                             
                             self.done_event += 1
