@@ -1,7 +1,7 @@
 import collections
 class XB(object):
     def __init__(self, xb_pos):
-        self.state_ou = False
+        self.state = False
 
         ## trigger event list
         self.adc_trigger = []
@@ -24,7 +24,7 @@ class XB(object):
         # self.idle_to_busy = [1]
         # self.busy_to_idle = [1]
 
-    def reset(self, cycle):
+    def reset(self):
         ## state
         # if self.state_ou:
         #     self.last_cycle_state = True
@@ -32,10 +32,10 @@ class XB(object):
         #     if self.last_cycle_state:
         #         self.busy_to_idle.append(cycle)
         #     self.last_cycle_state = False
-        self.state_ou = False
+        self.state = False
 
     def check_state(self):
-        return self.state_ou
+        return self.state
 
     def __str__(self):
         return str(self.__dict__)

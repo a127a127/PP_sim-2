@@ -76,6 +76,7 @@ class PE(object):
         self.state_edram_wr = [False] * self.edram_wr_epc
         self.state_edram_rd_pool = [False] * self.edram_rd_pool_epc
         self.state_pooling = [False] * self.pooling_epc
+        self.state = False
 
     def gen_cu(self):
         rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 

@@ -53,11 +53,11 @@ class CU(object):
                 self.XB_array.append(XB(xb_pos))
     
     def check_state(self):
-        if self.state_edram_rd_ir or True in self.state_cu_saa:
+        if self.state_edram_rd_ir or self.state or True in self.state_cu_saa:
             return True
-        for xb in self.XB_array:
-            if xb.check_state():
-                return True
+        # for xb in self.XB_array:
+        #     if xb.check_state():
+        #         return True
         return False
 
     def __str__(self):

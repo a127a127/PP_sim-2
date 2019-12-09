@@ -205,6 +205,7 @@ class Controller(object):
                             pe.CU_energy += energy_ir_in_cu
 
                             cu.state = True
+                            pe.state = True
                             cu.state_edram_rd_ir = True
                             cu.edram_rd_ir_erp.remove(event)
                             cu.edram_rd_event = event # 正在read此event
@@ -213,6 +214,7 @@ class Controller(object):
 
                     if cu.state_edram_rd_ir: # 這裡是要處理edram_rd_ir read多個cycle
                         cu.edram_rd_cycle_ctr += 1
+                        pe.state = True
                         if cu.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
                             cu.edram_rd_cycle_ctr = 0
                             cu.state_edram_rd_ir = False
@@ -311,7 +313,8 @@ class Controller(object):
 
                             pe.CU_energy += (energy_ir_in_cu + energy_dac + energy_crossbar)
 
-                            xb.state_ou = True
+                            xb.state = True
+                            pe.state = True
                             #xb.ou_erp.remove(event)
 
                             ### add next event counter: adc
@@ -375,6 +378,7 @@ class Controller(object):
 
                         #cu.adc_erp.remove(event)
                         cu.state_adc[idx] = True
+                        pe.state = True
 
                         ### add next event counter: cu_saa
                         for proceeding_index in event.proceeding_event:
@@ -397,6 +401,7 @@ class Controller(object):
                         if self.trace:
                             pass
                             #print("\tdo cu_saa, cu_pos:", cu.position, "layer:", event.nlayer) #",order index:", self.Computation_order.index(event))
+                        pe.state = True
                         if not self.isPipeLine:
                             if event.inputs == self.input_bit - 1:
                                 self.done_event += 1
@@ -464,6 +469,7 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
+                    pe.state = True
                     pe.pe_saa_erp.remove(event)
 
                     saa_amount = len(event.inputs[0])
@@ -538,6 +544,7 @@ class Controller(object):
             for pe in self.PE_array:
                 if not pe.activation_erp:
                     continue
+                pe.state = True
                 if len(pe.state_activation) <= len(pe.activation_erp):
                     do_act_num = len(pe.state_activation)
                 else:
@@ -584,6 +591,7 @@ class Controller(object):
             for pe in self.PE_array:
                 if not pe.edram_wr_erp:
                     continue
+                pe.state = True
                 if len(pe.state_edram_wr) <= len(pe.edram_wr_erp):
                     do_wr_num = len(pe.state_edram_wr)
                 else:
@@ -683,6 +691,7 @@ class Controller(object):
                     pe.Bus_energy += energy_bus
 
                     pe.state_edram_rd_pool[idx] = True
+                    pe.state = True
                     pe.edram_rd_pool_erp.remove(event)
                     idx += 1
 
@@ -736,6 +745,7 @@ class Controller(object):
             for pe in self.PE_array:
                 if not pe.pooling_erp:
                     continue
+                pe.state = True
                 if len(pe.state_pooling) <= len(pe.pooling_erp):
                     do_pool_num = len(pe.state_pooling)
                 else:
@@ -1076,7 +1086,8 @@ class Controller(object):
             ### Record State ###
             staa = time.time()
             for pe in self.PE_array:
-                if pe.check_state():
+                #if pe.check_state():
+                if pe.state:
                     self.pe_state_for_plot[0].append(self.cycle_ctr)
                     self.pe_state_for_plot[1].append(self.PE_array.index(pe))
                 for cu in pe.CU_array:
@@ -1085,7 +1096,7 @@ class Controller(object):
                         self.cu_state_for_plot[0].append(self.cycle_ctr)
                         self.cu_state_for_plot[1].append(cu_id)
                     for xb in cu.XB_array:
-                        if xb.state_ou:
+                        if xb.state:
                             self.xb_state_for_plot[0].append(self.cycle_ctr)
                             self.xb_state_for_plot[1].append( cu_id*self.hd_info.Xbar_num + \
                                 cu.XB_array.index(xb)
@@ -1099,13 +1110,13 @@ class Controller(object):
                 for cu in pe.CU_array:
                     cu.reset()
                     for xb in cu.XB_array:
-                        xb.reset(self.cycle_ctr)
+                        xb.reset()
             for pe in self.PE_array:
                 for cu in pe.CU_array:
                     if cu.state:
                         if cu.state_edram_rd_ir: # 正在read
                             continue
-                        if cu.cu_saa_erp or cu.adc_erp:
+                        if cu.cu_saa_erp or cu.adc_erp: # event pool還沒空
                             continue
 
                         isCUBusy = False
@@ -1113,9 +1124,8 @@ class Controller(object):
                             if xb.ou_erp:
                                 isCUBusy = True
                                 break
-                        if isCUBusy:
-                            continue
-                        cu.state = False
+                        if not isCUBusy: # CU沒有內沒有任何要做的event
+                            cu.state = False
 
             # self.energy_utilization.append(self.Total_energy_cycle*1e09)
             self.xbar_utilization.append(self.act_xb_ctr)
