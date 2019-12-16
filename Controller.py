@@ -368,32 +368,28 @@ class Controller(object):
 
                     saa_amount = len(event.inputs[0])
                     rm_data_list = event.inputs[1]
-                    if saa_amount > len(pe.state_pe_saa):
+                    if saa_amount > pe.pe_saa_epc:
                         print("Not enough pe_saa per cycle")
                         exit()
 
                     for s in range(saa_amount):
-                        for idx in range(len(pe.state_pe_saa)):
-                            if not pe.state_pe_saa[idx]: # 可能可以直接用s的idx, 不用判斷有沒有resource, 若沒有上面就會exit了
-                                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-                                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
-                                self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
-                                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
-                                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
-                                self.Total_energy_cycle += self.hd_info.Energy_or * self.input_bit + \
-                                                            self.hd_info.Energy_bus * self.input_bit + \
-                                                            self.hd_info.Energy_shift_and_add + \
-                                                            self.hd_info.Energy_bus * self.input_bit + \
-                                                            self.hd_info.Energy_or * self.input_bit
-                                # 優化: 這裏energy重複算
-                                pe.Or_energy += self.hd_info.Energy_or * self.input_bit
-                                pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
-                                pe.Shift_and_add_energy += self.hd_info.Energy_shift_and_add
-                                pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
-                                pe.Or_energy += self.hd_info.Energy_or * self.input_bit
-
-                                pe.state_pe_saa[idx] = True
-                                break
+                        for idx in range(pe.pe_saa_epc):
+                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
+                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
+                            self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add
+                            self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit
+                            self.Total_energy_or += self.hd_info.Energy_or * self.input_bit
+                            self.Total_energy_cycle += self.hd_info.Energy_or * self.input_bit + \
+                                                        self.hd_info.Energy_bus * self.input_bit + \
+                                                        self.hd_info.Energy_shift_and_add + \
+                                                        self.hd_info.Energy_bus * self.input_bit + \
+                                                        self.hd_info.Energy_or * self.input_bit
+                            # 優化: 這裏energy重複算
+                            pe.Or_energy += self.hd_info.Energy_or * self.input_bit
+                            pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
+                            pe.Shift_and_add_energy += self.hd_info.Energy_shift_and_add
+                            pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
+                            pe.Or_energy += self.hd_info.Energy_or * self.input_bit
 
                         ### add next event counter: activation
                         for proceeding_index in event.proceeding_event:
@@ -410,6 +406,7 @@ class Controller(object):
                         if [event.nlayer, d] in pe.edram_buffer_i.buffer:
                             pe.edram_buffer_i.buffer.remove([event.nlayer, d])
 
+                '''
                 # bottleneck analysis
                 if not pe.state_pe_saa[0]:
                     # 因為都是從0開使使用, 0 idle代表全部idle
@@ -431,6 +428,7 @@ class Controller(object):
                         pe.saa_wait_resource_time += 1
                     else:
                         pe.saa_pure_computation_time += 1
+                '''
             t_pesaa += time.time() - staa
 
             ### Event: activation
@@ -439,8 +437,8 @@ class Controller(object):
                 if not pe.activation_erp:
                     continue
                 pe.state = True
-                if len(pe.state_activation) <= len(pe.activation_erp):
-                    do_act_num = len(pe.state_activation)
+                if pe.activation_epc <= len(pe.activation_erp):
+                    do_act_num = pe.activation_epc
                 else:
                     do_act_num = len(pe.activation_erp)
                 #act_erp_copy = pe.activation_erp.copy()
@@ -465,7 +463,7 @@ class Controller(object):
                     pe.Bus_energy += energy_bus
                     pe.Activation_energy += energy_activation
 
-                    pe.state_activation[idx] = True
+                    #pe.state_activation[idx] = True
                     # pe.activation_erp.remove(event)
 
                     ### add next event counter: edram_wr
@@ -486,8 +484,8 @@ class Controller(object):
                 if not pe.edram_wr_erp:
                     continue
                 pe.state = True
-                if len(pe.state_edram_wr) <= len(pe.edram_wr_erp):
-                    do_wr_num = len(pe.state_edram_wr)
+                if pe.edram_wr_epc <= len(pe.edram_wr_erp):
+                    do_wr_num = pe.edram_wr_epc
                 else:
                     do_wr_num = len(pe.edram_wr_erp)
                 #wr_erp_copy = pe.edram_wr_erp.copy()
@@ -512,7 +510,7 @@ class Controller(object):
                     pe.Bus_energy += energy_bus
                     pe.Edram_buffer_energy += energy_edram_buffer
 
-                    pe.state_edram_wr[idx] = True
+                    #pe.state_edram_wr[idx] = True
                     #pe.edram_wr_erp.remove(event)
 
                     if len(event.outputs[0]) == 4: #and event.outputs[0][3] == "u": # same layer transfer
@@ -584,7 +582,7 @@ class Controller(object):
                     pe.Edram_buffer_energy += energy_edram_buffer
                     pe.Bus_energy += energy_bus
 
-                    pe.state_edram_rd_pool[idx] = True
+                    #pe.state_edram_rd_pool[idx] = True
                     pe.state = True
                     pe.edram_rd_pool_erp.remove(event)
                     idx += 1
@@ -610,9 +608,10 @@ class Controller(object):
                             data = d[1:]
                             self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                     
-                    if idx >= len(pe.state_edram_rd_pool):
+                    if idx >= pe.edram_rd_pool_epc:
                         break # 一次讀len(pe.state_edram_rd_pool)筆
-
+                
+                '''
                 # bottleneck analysis
                 if not pe.state_edram_rd_pool:
                     # Pooling unit idle
@@ -634,14 +633,15 @@ class Controller(object):
                         pe.pooling_wait_resource_time += 1
                     else:
                         pe.pooling_pure_computation_time += 1
+                '''
 
             ### Event: pooling
             for pe in self.PE_array:
                 if not pe.pooling_erp:
                     continue
                 pe.state = True
-                if len(pe.state_pooling) <= len(pe.pooling_erp):
-                    do_pool_num = len(pe.state_pooling)
+                if pe.pooling_epc <= len(pe.pooling_erp):
+                    do_pool_num = pe.pooling_epc
                 else:
                     do_pool_num = len(pe.pooling_erp)
                 pool_erp_copy = pe.pooling_erp.copy()
@@ -658,7 +658,7 @@ class Controller(object):
 
                     pe.Pooling_energy += self.hd_info.Energy_pooling
                     
-                    pe.state_pooling[idx] = True
+                    #pe.state_pooling[idx] = True
                     pe.pooling_erp.remove(event)
 
                     ### add next event counter: edram_wr
@@ -964,7 +964,7 @@ class Controller(object):
             ### Reset ###
             staa = time.time()
             for pe in self.PE_array:
-                pe.reset()
+                pe.state = False
             t_res += time.time() - staa
             
             staa = time.time()
@@ -1051,6 +1051,7 @@ class Controller(object):
         print("(" + str(pure_computation_time_total/total_cu_num/self.cycle_ctr*100) + "%)")
         print()
 
+        '''
         # PE SAA
         total_pe_num = len(self.PE_array)
         idx = np.arange(total_pe_num)
@@ -1148,6 +1149,7 @@ class Controller(object):
         print("\tAverage pure_computation, ", pure_computation_time_total/total_pe_num, end="")
         print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print()
+        '''
 
     def energy_breakdown(self):
         self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \

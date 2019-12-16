@@ -74,11 +74,11 @@ class PE(object):
     
     def reset(self):
         ### state
-        self.state_pe_saa = [False] * self.pe_saa_epc
-        self.state_activation = [False] * self.activation_epc
-        self.state_edram_wr = [False] * self.edram_wr_epc
-        self.state_edram_rd_pool = [False] * self.edram_rd_pool_epc
-        self.state_pooling = [False] * self.pooling_epc
+        #self.state_pe_saa = [False] * self.pe_saa_epc
+        #self.state_activation = [False] * self.activation_epc
+        #self.state_edram_wr = [False] * self.edram_wr_epc
+        #self.state_edram_rd_pool = [False] * self.edram_rd_pool_epc
+        #self.state_pooling = [False] * self.pooling_epc
         self.state = False
 
     def gen_cu(self):
