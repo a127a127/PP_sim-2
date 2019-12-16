@@ -131,7 +131,7 @@ class Controller(object):
         t_ = 0
         start_time = time.time()
         while True:
-            if self.cycle_ctr % 20000 == 0 and self.done_event!=0:
+            if self.cycle_ctr % 200 == 0 and self.done_event!=0:
                 print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                 print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                 print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "reset", t_res, "buffer", t_buf, "fin", t_fin)
