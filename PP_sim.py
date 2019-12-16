@@ -51,7 +51,7 @@ def main():
     isGenerateOrder = True
 
     ### Trace ###
-    isTrace_order = True
+    isTrace_order = False
     isTrace_controller = False
 
     ### Generate computation order graph ### 

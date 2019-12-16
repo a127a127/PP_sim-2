@@ -16,11 +16,8 @@ class OrderGenerator(object):
         self.free_buffer_controller = FreeBufferController()
 
         # mapping
-        crossbar_array = self.mp_info.crossbar_array
-        layer_mapping_to_xbar = self.mp_info.layer_mapping_to_xbar
         self.layer_mapping_to_pe = self.mp_info.layer_mapping_to_pe
 
-        self.XB_array = []
         self.cu_traverse_idx = []
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
