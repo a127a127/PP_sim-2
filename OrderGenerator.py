@@ -30,11 +30,6 @@ class OrderGenerator(object):
                             for cux_idx in range(self.hd_info.CU_num_x):
                                 cu_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx)
                                 self.cu_traverse_idx.append(cu_pos)
-                                for xby_idx in range(self.hd_info.Xbar_num_y):
-                                    for xbx_idx in range(self.hd_info.Xbar_num_x):
-                                        xb_pos = (rty_idx, rtx_idx, pey_idx, pex_idx, cuy_idx, cux_idx, xby_idx, xbx_idx)
-                                        xb = XB(xb_pos)
-                                        self.XB_array.append(xb)
 
         self.pe_saa_mat = [] # for dependency
         self.feature_mat = [] # for dependency
