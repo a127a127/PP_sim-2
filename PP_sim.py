@@ -83,7 +83,6 @@ def main():
 
     ## delete mapping data
     del order_generator.mp_info
-    order_generator.delete_mapping_info()
     del mapping_information
 
     ## Power and performance simulation ###
