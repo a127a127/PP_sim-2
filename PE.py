@@ -5,42 +5,45 @@ import collections
 
 class PE(object):
     def __init__(self, pe_pos, input_bit):
-        ### hardware state flags
         self.position = pe_pos
+
+        ### for edram read event 
+        self.state_edram_rd_ir = False
+        self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
+        self.edram_rd_event = None
+        self.data_is_fetching = False
+        self.edram_rd_cycle_ctr = 0
+
 
         ### for buffer size analysis
         self.edram_buffer = OnChipBuffer(input_bit)
-
         self.edram_buffer_i = OnChipBuffer(input_bit)
         self.input_require = []
-
-        ### for mapping
-        self.Pooling = []
         
         ### events per cycle
-        #self.pe_saa_epc = HardwareMetaData().CU_num * HardwareMetaData().Xbar_w * input_bit
-        self.pe_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num * HardwareMetaData().CU_num 
-        self.activation_epc = 16
-        self.edram_wr_epc = 32
-        self.edram_rd_pool_epc = 16
-        self.pooling_epc = 16
+        # 要在一個cycle完成最多可能來自所有CU的資料
+        self.pe_saa_epc = HardwareMetaData().Router_num * HardwareMetaData().PE_num * HardwareMetaData().CU_num 
+        self.activation_epc = 128 #16
+        self.edram_wr_epc = 128 #32
+        self.edram_rd_pool_epc = 128 #16
+        self.pooling_epc = 128 #16
 
         ### event ready pool
+        self.edram_rd_ir_erp = collections.deque()
         self.pe_saa_erp = []
         self.activation_erp = collections.deque()
         #self.edram_rd_ir_erp = []
         self.edram_rd_pool_erp = []
         self.pooling_erp = []
         self.edram_wr_erp = collections.deque()
-        
 
-        ### trigger event list
+        ### trigger event
+        self.cu_op_trigger = 0
         self.activation_trigger = []
         self.edram_wr_trigger = []
         self.edram_rd_pool_trigger = []
         self.edram_rd_ir_trigger = []
         self.pooling_trigger = []
-        
         self.pe_saa_trigger = [] # for data transfer
 
         ### generate CU

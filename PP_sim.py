@@ -51,7 +51,7 @@ def main():
     isGenerateOrder = True
 
     ### Trace ###
-    isTrace_order = False
+    isTrace_order = True
     isTrace_controller = False
 
     ### Generate computation order graph ### 
@@ -79,9 +79,10 @@ def main():
             order_generator = pickle.load(fp)
         end_load = time.time()
         print("--- Load computation order in %s seconds ---\n" %(end_load - start_load))
+    a = input()
 
     ## delete mapping data
-    del order_generator.mapping_information
+    del order_generator.mp_info
     order_generator.delete_mapping_info()
     del mapping_information
 

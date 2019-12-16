@@ -1,44 +1,30 @@
 from configparser import ConfigParser
 
 class HardwareMetaData(object):
-    # __slots__ = ["cell_bit_width", "Router_num_y", "Router_num_x",  "Router_num",
-    #              "PE_num_y", "PE_num_x", "PE_num", "CU_num_y", "CU_num_x", "CU_num",
-    #              "Xbar_num_y", "Xbar_num_x", "Xbar_num", "Xbar_h", "Xbar_w",
-    #              "OU_h", "OU_w", "Frequency", "ADC_resolution", "Router_flit_size", 
-    #              "cycle_time", "eDRAM_read_latency", "eDRAM_buffer_size", "Output_Reg_size",
-    #              "CU_Input_Reg_size", "CU_Output_Reg_size", "CU_Shift_and_add_per_cycle",
-    #              "PE_Shift_and_add_per_cycle", "Activation_per_cycle", "Pooling_per_cycle",
-    #              "eDRAM_buffer_leakage", "Router_leakage", "Act_leakage", "PE_SAA_leakage",
-    #              "Pool_leakage", "DAC_leakage", "MUX_leakage", "SA_leakage", "Crossbar_leakage", 
-    #              "CU_SAA_leakage", "Energy_edram_buffer", "Energy_bus", "Energy_router",
-    #              "Energy_activation", "Energy_shift_and_add", "Energy_pooling", "Energy_or",
-    #              "Energy_adc", "Energy_dac", "Energy_crossbar", "Energy_ir_in_cu", 
-    #              "Energy_or_in_cu", "Fetch_cycle"
-    #             ]
     def __init__(self):
         # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
 
         cfg = ConfigParser()
         cfg.read('./configs/hardware.ini')
 
-        self.cell_bit_width = 2  # Alexnet: 2
+        self.cell_bit_width = 1  # Alexnet: 2
 
-        self.Router_num_y = 10 # Alexnet: 10
-        self.Router_num_x = 10 # Alexnet: 10
+        self.Router_num_y = 2 # Alexnet: 10
+        self.Router_num_x = 2 # Alexnet: 10
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num_y = 4 # Alexnet: 4
-        self.CU_num_x = 3 # Alexnet: 3
+        self.CU_num_y = 2 # Alexnet: 4
+        self.CU_num_x = 2 # Alexnet: 3
         self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = 4 # Alexnet: 4
-        self.Xbar_num_x = 2 # Alexnet: 2
+        self.Xbar_num_y = 2 # Alexnet: 4
+        self.Xbar_num_x = 2  # Alexnet: 2
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = 128 #128 #10
-        self.Xbar_w = 128 #128 #10
-        self.OU_h = 9 #9 #5
-        self.OU_w = 8 #8 #5
+        self.Xbar_h = 10 #128 #10
+        self.Xbar_w = 10 #128 #10
+        self.OU_h = 5 #9 #5
+        self.OU_w = 5 #8 #5
 
         self.Frequency = 1.2 # GHz
         self.ADC_resolution = 3 # bits
@@ -51,12 +37,6 @@ class HardwareMetaData(object):
         self.Output_Reg_size = 3 # nKB
         self.CU_Input_Reg_size = 2 # nKB
         self.CU_Output_Reg_size = 256 # nKB
-        
-        self.CU_Shift_and_add_per_cycle = 4
-        self.PE_Shift_and_add_per_cycle = 4
-        self.Activation_per_cycle = 100
-        self.Pooling_per_cycle = 100
-
 
         # Leakage
         self.eDRAM_buffer_leakage = 0
@@ -78,11 +58,14 @@ class HardwareMetaData(object):
         self.Energy_shift_and_add = 0.05 * 0.01 / 2 / 1.2 # per data doing shift and add
         self.Energy_pooling = 0.4 * 0.01 / 1.2 # nxn data doing pooling
         self.Energy_or = 1.68 * 0.01 / 1.2 / 128 # per bit
-        self.Energy_adc = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
-                          (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1)) \
-                          # per ou 
-        self.Energy_dac = 4 * 0.01 / 1.2 / 8 * self.OU_h / 128 # per ou
-        self.Energy_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128)) # per ou
+        
+        # per operation unit (ou)
+        self.Energy_ou_dac = 4 * 0.01 / 1.2 / 8 * self.OU_h / 128
+        self.Energy_ou_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128))
+        self.Energy_ou_adc = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
+                          (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1))
+        self.Energy_ou_ssa = 0.05 * 0.01 / 2 / 1.2 * self.OU_w
+
         self.Energy_ir_in_cu = 1.24 * 0.01 / 1.2 / 256 # per bit
         self.Energy_or_in_cu = 0.23 * 0.01 / 1.2 / 128 # per bit
 

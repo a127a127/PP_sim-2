@@ -11,27 +11,28 @@ class CU(object):
         self.edram_rd_event = None
         self.edram_rd_cycle_ctr = 0
 
-        ### per cycle
-        self.cu_saa_epc = HardwareMetaData().OU_w * HardwareMetaData().Xbar_num
-        self.adc_epc = HardwareMetaData().Xbar_num
-
         ### event ready pool
-        self.edram_rd_ir_erp = []
+        self.edram_rd_ir_erp = collections.deque()
         self.cu_saa_erp = []
-        self.adc_erp = collections.deque()
+
+        ### CU operation
+        self.finish_cycle = 0
+        self.cu_op_event = 0
 
         ### trigger event list
         self.ou_trigger = [] # [pro_event, [cu_idx, xb_idx]]
         self.pe_saa_trigger = []
         self.cu_saa_trigger = []
+        self.cu_op_trigger  = 0
+
+        ### CU operation
+        self.finish_cycle = 0
         
         ### generate XB
         self.XB_array = []
         self.gen_xb()
         
         self.state_edram_rd_ir = False
-        self.state_cu_saa = [False] * self.cu_saa_epc
-        self.state_adc = [False] * self.adc_epc
         
         ### bottleneck analysis
         self.pure_idle_time = 0
@@ -40,8 +41,7 @@ class CU(object):
         self.pure_computation_time = 0
 
     def reset(self):
-        self.state_cu_saa = [False] * self.cu_saa_epc
-        self.state_adc = [False] * self.adc_epc
+        return
 
     def gen_xb(self):
         rty, rtx, pey, pex, cuy, cux = self.position[0], self.position[1], self.position[2], self.position[3] , self.position[4], self.position[5] 
@@ -53,11 +53,8 @@ class CU(object):
                 self.XB_array.append(XB(xb_pos))
     
     def check_state(self):
-        if self.state_edram_rd_ir or self.state or True in self.state_cu_saa:
+        if self.state_edram_rd_ir or self.state:
             return True
-        # for xb in self.XB_array:
-        #     if xb.check_state():
-        #         return True
         return False
 
     def __str__(self):

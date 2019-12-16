@@ -19,6 +19,7 @@ class OnChipBuffer():
         return False
     
     def put(self, data): # put a data to buffer
+        # 優化: 不要檢查
         if data in self.buffer:
             ### TODO: FIFO switch
             return

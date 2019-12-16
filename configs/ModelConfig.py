@@ -2,21 +2,21 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 3
+        model_type = 0
         if model_type == 0: # TestModelConfig
             self.Model_type = "Test"
             self.layer_list = [
-                LayerMetaData("convolution",  10, 4, 4, 1, 1, 'VALID', 0, 0, 0, 0),
-                #LayerMetaData("convolution",  1, 2, 2, 1, 1, 'VALID', 0, 0, 0, 0),
-                #LayerMetaData("pooling",     0, 0, 0, 0, 0,        0, 2, 2, 1, 0),
-                #LayerMetaData("fully",       0, 0, 0, 0, 0,        0, 0, 0, 0, 2)
+                LayerMetaData("convolution", 20, 5, 5,  3, 1, 'VALID', 0, 0, 0,  0),
+                LayerMetaData("convolution", 10, 2, 2, 20, 1, 'VALID', 0, 0, 0,  0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,  0),
+                LayerMetaData("fully",        0, 0, 0,  0, 0,       0, 0, 0, 0, 10)
                 ]
             self.input_n = 1
-            self.input_h = 4
-            self.input_w = 4
-            self.input_c = 1
-            self.input_bit = 16
-            self.filter_bit = 16
+            self.input_h = 7
+            self.input_w = 7
+            self.input_c = 3
+            self.input_bit = 2
+            self.filter_bit = 4
         elif model_type == 1: # TestModelConfig2
             self.Model_type = "Test2"
             self.layer_list = [
