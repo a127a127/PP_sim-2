@@ -51,11 +51,6 @@ class CU(object):
             for xbx in range(XB_num_x):
                 xb_pos = (rty, rtx, pey, pex, cuy, cux, xby, xbx)
                 self.XB_array.append(XB(xb_pos))
-    
-    def check_state(self):
-        if self.state_edram_rd_ir or self.state:
-            return True
-        return False
 
     def __str__(self):
         return str(self.__dict__)

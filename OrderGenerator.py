@@ -201,7 +201,9 @@ class OrderGenerator(object):
                                 num_ou_w = math.ceil(len(inp.xbar_column) / self.hd_info.OU_w)
                                 num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
 
-                                num_ou_in_xb[(xby_idx, xbx_idx)] = num_ou
+                                #num_ou_in_xb[(xby_idx, xbx_idx)] = num_ou
+                                xb_idx = xbx_idx + xby_idx * HardwareMetaData().Xbar_num_x
+                                num_ou_in_xb[xb_idx] = num_ou
                                 max_ou = max(num_ou, max_ou)
 
                                 num_input = inp.inputs[0][0]
@@ -306,11 +308,11 @@ class OrderGenerator(object):
                             do_edram_wr_pos = do_act_pos
                             edram_wr_preceding_count = 1
                             edram_wr_inputs  = 0
+                            edram_wr_outputs = [[window_h, window_w, nfilter]]
 
                             # dependecy matrix
                             if nlayer+1 < self.model_info.layer_length:
                                 if self.model_info.layer_list[nlayer+1].layer_type != "fully":
-                                    edram_wr_outputs = [[window_h, window_w, nfilter]]
                                     if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
                                         self.feature_mat[nlayer][window_h][window_w][nfilter] = []
                                     self.feature_mat[nlayer][window_h][window_w][nfilter].append(edram_wr_event_idx)
@@ -430,7 +432,9 @@ class OrderGenerator(object):
                                 num_ou_w = math.ceil(len(inp.xbar_column) / self.hd_info.OU_w)
                                 num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
 
-                                num_ou_in_xb[(xby_idx, xbx_idx)] = num_ou
+                                #num_ou_in_xb[(xby_idx, xbx_idx)] = num_ou
+                                xb_idx = xbx_idx + xby_idx * HardwareMetaData().Xbar_num_x
+                                num_ou_in_xb[xb_idx] = num_ou
                                 max_ou = max(num_ou, max_ou)
 
                                 num_input = inp.inputs[0][0]
