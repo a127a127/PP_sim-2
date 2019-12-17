@@ -7,13 +7,14 @@ class PE(object):
     def __init__(self, pe_pos, input_bit):
         self.position = pe_pos
 
+        self.state = False
+
         ### for edram read event 
         self.state_edram_rd_ir = False
         self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
         self.edram_rd_event = None
         self.data_is_fetching = False
         self.edram_rd_cycle_ctr = 0
-
 
         ### for buffer size analysis
         self.edram_buffer = OnChipBuffer(input_bit)
@@ -29,10 +30,8 @@ class PE(object):
         self.pooling_epc = 128 #16
 
         ### event ready pool
-        self.edram_rd_ir_erp = collections.deque()
         self.pe_saa_erp = []
         self.activation_erp = collections.deque()
-        #self.edram_rd_ir_erp = []
         self.edram_rd_pool_erp = []
         self.pooling_erp = []
         self.edram_wr_erp = collections.deque()
@@ -49,8 +48,6 @@ class PE(object):
         ### generate CU
         self.CU_array = []
         self.gen_cu()
-
-        self.reset()
 
         ### bottleneck analysis
         self.saa_pure_idle_time = 0
@@ -71,15 +68,6 @@ class PE(object):
         self.Or_energy = 0.
         self.Activation_energy = 0.
         self.Pooling_energy = 0.
-    
-    def reset(self):
-        ### state
-        #self.state_pe_saa = [False] * self.pe_saa_epc
-        #self.state_activation = [False] * self.activation_epc
-        #self.state_edram_wr = [False] * self.edram_wr_epc
-        #self.state_edram_rd_pool = [False] * self.edram_rd_pool_epc
-        #self.state_pooling = [False] * self.pooling_epc
-        self.state = False
 
     def gen_cu(self):
         rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 
@@ -89,16 +77,6 @@ class PE(object):
             for cux in range(CU_num_x):
                 cu_pos = (rty, rtx, pey, pex, cuy, cux)
                 self.CU_array.append(CU(cu_pos))
-
-    def check_state(self):
-        if True in self.state_edram_rd_pool or True in self.state_pe_saa or True in self.state_activation:
-            return True
-        elif True in self.state_edram_wr or True in self.state_pooling:
-            return True
-        for cu in self.CU_array:
-            if cu.check_state():
-                return True
-        return False
 
     def __str__(self):
         return str(self.__dict__)
