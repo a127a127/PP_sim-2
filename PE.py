@@ -16,6 +16,9 @@ class PE(object):
         self.data_is_fetching = False
         self.edram_rd_cycle_ctr = 0
 
+        ### for cu operation
+        self.cu_op_list = []
+
         ### for buffer size analysis
         self.edram_buffer = OnChipBuffer(input_bit)
         self.edram_buffer_i = OnChipBuffer(input_bit)

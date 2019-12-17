@@ -203,17 +203,16 @@ class Controller(object):
 
                     pe.edram_rd_cycle_ctr += 1
                     if pe.edram_rd_cycle_ctr == self.edram_read_cycles: # finish edram read
-                        if self.trace:
-                            print("\tfinish edram read")
+                        #print("\tfinish edram read")
                         self.done_event += 1
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
                         pe.edram_rd_cycle_ctr = 0
                         pe.state_edram_rd_ir = False
 
-                        cuy, cux = event.position_idx[4], event.position_idx[5]
-                        cu_idx = cux + cuy * HardwareMetaData().CU_num_x
-                        cu = pe.CU_array[cu_idx]
+                        # cuy, cux = event.position_idx[4], event.position_idx[5]
+                        # cu_idx = cux + cuy * HardwareMetaData().CU_num_x
+                        # cu = pe.CU_array[cu_idx]
 
                         # trigger cu operation
                         proceeding_index = event.proceeding_event[0] # 只會trigger一個cu operation
@@ -238,15 +237,13 @@ class Controller(object):
                                 if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                     data = d[1:]
                                     self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                        else:
-                            print("layer type error.")
-                            exit()
             t_edram += time.time() - staa
 
             ### Event: cu_operation
             staa = time.time()
             for pe in self.PE_array:
-                for cu in pe.CU_array:
+                #for cu in pe.CU_array:
+                for cu in pe.cu_op_list.copy():
                     cu.state = False # for bottleneck analysis
                     if cu.finish_cycle == 0 and cu.cu_op_event != 0:
                         ## 第一次do cu operation
@@ -305,6 +302,7 @@ class Controller(object):
 
                             cu.finish_cycle = 0
                             cu.cu_op_event = 0
+                            pe.cu_op_list.remove(cu)
 
                             ## State
                             pe.state = True
@@ -764,9 +762,6 @@ class Controller(object):
                             des_pe.edram_rd_pool_trigger.append([pro_event, []])
                         elif pro_event.event_type == "pe_saa":
                             des_pe.pe_saa_trigger.append([pro_event, []])
-                        else:
-                            print("pro_event type error:", pro_event.event_type)
-                            exit()
 
                 # Free buffer (ideal)
                 pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
@@ -928,6 +923,7 @@ class Controller(object):
                     cu_idx = cux + cuy * self.hd_info.CU_num_x
                     cu = pe.CU_array[cu_idx]
                     cu.cu_op_event = event
+                    pe.cu_op_list.append(cu)
                     pe.cu_op_trigger = 0
 
                 for cu in pe.CU_array:
