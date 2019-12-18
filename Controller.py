@@ -63,7 +63,6 @@ class Controller(object):
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x, self.input_bit)
         self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
         self.interconnect_step = floor(self.interconnect_step)
-        self.interconnect_step = 4000
         self.data_transfer_trigger = []
         self.data_transfer_erp = []
         # Pipeline control
@@ -121,7 +120,8 @@ class Controller(object):
         t_pesaa = 0
         t_act = 0
         t_wr = 0
-        t_it = 0
+        t_it1 = 0
+        t_it2 = 0
         t_fe = 0
         t_tr = 0
         t_st = 0
@@ -134,11 +134,11 @@ class Controller(object):
             if self.cycle_ctr % 200 == 0 and self.done_event!=0:
                 print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                 print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
-                print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st, "reset", t_res, "buffer", t_buf, "fin", t_fin)
+                print("iterconeect1", t_it1, "iterconeect2", t_it2, "fetch", t_fe, "trigger", t_tr, "state", t_st, "reset", t_res, "buffer", t_buf, "fin", t_fin)
                 print("t:", time.time()-t_)
                 print()
                 t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
-                t_it, t_fe, t_tr, t_st, t_res, t_buf, t_fin = 0, 0, 0, 0, 0, 0, 0
+                t_it1, t_it2, t_fe, t_tr, t_st, t_res, t_buf, t_fin = 0, 0, 0, 0, 0, 0, 0, 0
                 t_ = time.time()
 
             self.Total_energy_cycle = 0
@@ -296,7 +296,8 @@ class Controller(object):
                                         pass
                                         #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                                     if pro_event.event_type == "pe_saa":
-                                        cu.pe_saa_trigger.append([pro_event, []])
+                                        #cu.pe_saa_trigger.append([pro_event, []])
+                                        pe.pe_saa_trigger.append([pro_event, []])
                                     elif pro_event.event_type == "edram_wr":
                                         pe.edram_wr_trigger.append([pro_event, []])
 
@@ -675,7 +676,9 @@ class Controller(object):
             for s in range(self.interconnect_step):
                 self.interconnect.step()
                 self.Total_energy_interconnect += self.interconnect.step_energy_consumption
+            t_it1 += time.time() - staa
             # Packets arrive: Store data, trigger event
+            staa = time.time()
             arrived_packet = self.interconnect.get_arrived_packet()
             for pk in arrived_packet:
                 if self.trace:
@@ -688,8 +691,6 @@ class Controller(object):
 
                 self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # write
                 self.Total_energy_cycle += self.hd_info.Energy_edram_buffer * self.input_bit
-
-                # 優化: 這裏energy重複算
                 pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit
 
                 pe.edram_buffer.put(pk.data)
@@ -704,7 +705,7 @@ class Controller(object):
 
                     pro_event = self.Computation_order[pro_event_idx]
                     pro_event.data_is_transfer -= 1
-            t_it += time.time() - staa
+            t_it2 += time.time() - staa
             
             ### Event: data_transfer
             staa = time.time()
@@ -839,7 +840,6 @@ class Controller(object):
                     self.interconnect.input_packet(packet)
             t_fe += time.time() - staa
 
-
             ### Pipeline stage control ###
             if not self.isPipeLine:
                 self.pipeline_stage_record.append(self.pipeline_layer_stage)
@@ -925,31 +925,30 @@ class Controller(object):
                     cu.cu_op_event = event
                     pe.cu_op_list.append(cu)
                     pe.cu_op_trigger = 0
-
-                for cu in pe.CU_array:
-                    ## Trigger pe saa
-                    for trigger in cu.pe_saa_trigger.copy():
-                        pro_event = trigger[0]
-                        if not self.isPipeLine:
-                            if pro_event.nlayer == self.pipeline_layer_stage:
-                                pe.pe_saa_erp.append(pro_event)
-                                cu.pe_saa_trigger.remove(trigger)
-                        else:
-                            pe.pe_saa_erp.append(pro_event) 
-                            cu.pe_saa_trigger.remove(trigger)
-                ## Trigger pe saa (for data transfer) 
+                ## Trigger pe saa
                 for trigger in pe.pe_saa_trigger.copy():
                     pro_event = trigger[0]
-                    if not self.isPipeLine:
-                        if pro_event.nlayer == self.pipeline_layer_stage:
-                            pe.pe_saa_erp.append(pro_event)
-                            pe.pe_saa_trigger.remove(trigger)
-                    else:
-                        pe.pe_saa_erp.append(pro_event)
-                        pe.pe_saa_trigger.remove(trigger)
+                    pe.pe_saa_erp.append(pro_event) 
+                    pe.pe_saa_trigger.remove(trigger)
+                # for cu in pe.CU_array:
+                #     ## Trigger pe saa
+                #     for trigger in cu.pe_saa_trigger.copy():
+                #         pro_event = trigger[0]
+                #         cu.pe_saa_erp.append(pro_event) 
+                #         cu.pe_saa_trigger.remove(trigger)
+                # ## Trigger pe saa (for data transfer) 
+                # for trigger in pe.pe_saa_trigger.copy():
+                #     pro_event = trigger[0]
+                #     if not self.isPipeLine:
+                #         if pro_event.nlayer == self.pipeline_layer_stage:
+                #             pe.pe_saa_erp.append(pro_event)
+                #             pe.pe_saa_trigger.remove(trigger)
+                #     else:
+                #         pe.pe_saa_erp.append(pro_event)
+                #         pe.pe_saa_trigger.remove(trigger)
             t_tr += time.time() - staa
 
-            ### Record State ###
+            ### Record PE State ###
             staa = time.time()
             for pe in self.PE_array:
                 if pe.state:
@@ -957,7 +956,7 @@ class Controller(object):
                     self.pe_state_for_plot[1].append(self.PE_array.index(pe))
             t_st += time.time() - staa
 
-            ### Reset ###
+            ### Reset PE ###
             staa = time.time()
             for pe in self.PE_array:
                 pe.state = False
@@ -965,11 +964,14 @@ class Controller(object):
             
             staa = time.time()
             ### Buffer utilization
-            for pe_idx in range(len(self.PE_array)):
-                self.buffer_size[pe_idx].append(self.PE_array[pe_idx].edram_buffer.count())
-                self.buffer_size_i[pe_idx].append(self.PE_array[pe_idx].edram_buffer_i.count())
-                self.max_buffer_size = max(len(self.PE_array[pe_idx].edram_buffer.buffer), self.max_buffer_size)
-                self.max_buffer_size_i = max(len(self.PE_array[pe_idx].edram_buffer_i.buffer), self.max_buffer_size_i)
+            pe_idx = 0
+            #for pe_idx in range(len(self.PE_array)):
+            for pe in self.PE_array:
+                self.buffer_size[pe_idx].append(len(pe.edram_buffer.buffer))
+                self.buffer_size_i[pe_idx].append(len(pe.edram_buffer_i.buffer))
+                self.max_buffer_size = max(len(pe.edram_buffer.buffer), self.max_buffer_size)
+                self.max_buffer_size_i = max(len(pe.edram_buffer_i.buffer), self.max_buffer_size_i)
+                pe_idx += 1
             t_buf += time.time() - staa
             #print(self.this_layer_event_ctr)
 

@@ -20,6 +20,7 @@ class Interconnect(object):
         self.arrived_list = []
 
         self.packet_in_module_ctr = 0
+        self.busy_router = []
 
     def input_packet(self, packet):
         self.packet_in_module_ctr += 1
@@ -42,6 +43,8 @@ class Interconnect(object):
             print("type error")
             return
         self.router_array[rt_y][rt_x].packet_in(packet, port_type)
+        if (rt_y, rt_x) not in self.busy_router:
+            self.busy_router.append((rt_y, rt_x))
 
     def step(self):
         if self.packet_in_module_ctr == 0:
@@ -49,45 +52,39 @@ class Interconnect(object):
         self.step_energy_consumption = 0
         packet_transfer = []
 
-        for h in range(self.rt_h):
-            for w in range(self.rt_w):
-                if not self.router_array[h][w].arrived_order:
-                    continue
-                port_type = self.router_array[h][w].arrived_order.popleft()
-                packet =  self.router_array[h][w].input_queue[port_type].popleft()
-                self.step_energy_consumption += self.router_step_energy
-                if packet.destination[1] > w:
-                    packet_transfer.append((h, w+1, packet, "east"))
-                elif packet.destination[1] < w:
-                    packet_transfer.append((h, w-1, packet, "west"))
-                else:
-                    if packet.destination[0] > h:
-                        packet_transfer.append((h+1, w, packet, "south"))
-                    elif packet.destination[0] < h:
-                        packet_transfer.append((h-1, w, packet, "north"))
-                    else: # arrived
-                        self.arrived_list.append(packet)
-                # packet, port_type = self.router_array[h][w].step()
-                # self.step_energy_consumption += self.router_step_energy
-                # if port_type == "east":
-                #     packet_transfer.append((h, w+1, packet, port_type))
-                # elif port_type == "west":
-                #     packet_transfer.append((h, w-1, packet, port_type))
-                # elif port_type == "south":
-                #     packet_transfer.append((h+1, w, packet, port_type))
-                # elif port_type == "north":
-                #     packet_transfer.append((h-1, w, packet, port_type))
-                # else: # arrived
-                #     self.arrived_list.append(packet)
+        br = []
+        for rt_id in self.busy_router:
+            h = rt_id[0]
+            w = rt_id[1]
+            port_type = self.router_array[h][w].arrived_order.popleft()
+            packet =  self.router_array[h][w].input_queue[port_type].popleft()
+            self.step_energy_consumption += self.router_step_energy
+            if packet.destination[1] > w:
+                packet_transfer.append((h, w+1, packet, "east"))
+            elif packet.destination[1] < w:
+                packet_transfer.append((h, w-1, packet, "west"))
+            else:
+                if packet.destination[0] > h:
+                    packet_transfer.append((h+1, w, packet, "south"))
+                elif packet.destination[0] < h:
+                    packet_transfer.append((h-1, w, packet, "north"))
+                else: # arrived
+                    self.arrived_list.append(packet)
+            if self.router_array[h][w].arrived_order:
+                br.append((h, w))
+        self.busy_router = br
         for p in packet_transfer:
             h = p[0]
             w = p[1]
             packet = p[2]
             port_type = p[3]
             self.router_array[h][w].packet_in(packet, port_type)
+            if (h, w) not in self.busy_router:
+                self.busy_router.append((h,w))
+
+        self.busy_router = br
 
     def get_arrived_packet(self):
-        # 優化: Copy
         A = self.arrived_list.copy()
         self.packet_in_module_ctr -= len(A)
         self.arrived_list = []
