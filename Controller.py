@@ -104,6 +104,14 @@ class Controller(object):
         self.max_buffer_size = 0 # num of data
         self.max_buffer_size_i = 0 # num of data
 
+        # execute event
+        self.erp_rd     = []
+        self.erp_cu_op  = []
+        self.erp_pe_saa = []
+        self.erp_act    = []
+        self.erp_wr     = []
+        self.erp_pool   = []
+
         # Trigger pe
         self.trigger_edram_rd = []
         self.trigger_cu_op    = []
@@ -129,6 +137,8 @@ class Controller(object):
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(e)
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
+                    if pe not in self.erp_rd:
+                        self.erp_rd.append(pe)
                     # if pe not in pe_edram:
                     #     pe_edram.append(pe)
             if e.nlayer != 0:
@@ -149,17 +159,19 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
-            if self.cycle_ctr % 5000 == 0 and self.done_event!=0:
-                print("layer:", layer)
-                print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
-                print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
-                print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
-                print("buffer", t_buf, "pool", t_poo)
-                print("t:", time.time()-t_)
-                print("tt:", t_edram+t_cuop+t_pesaa+t_act+t_wr+t_it+t_fe+t_tr+t_st+t_buf+t_poo)
-                t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
-                t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
-                t_ = time.time()
+            if self.cycle_ctr % 5000 == 0:
+                if self.done_event == 0:
+                    print("0")
+                else:
+                    print("layer:", layer)
+                    print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
+                    print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
+                    print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
+                    print("buffer", t_buf, "pool", t_poo)
+                    print("t:", time.time()-t_)
+                    t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
+                    t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
+                    t_ = time.time()
 
             self.cycle_ctr += 1
             self.act_xb_ctr = 0
@@ -263,8 +275,9 @@ class Controller(object):
             pe_idx += 1
 
     def event_edram_rd(self):
+        erp = []
         for pe in self.PE_array:
-            if not pe.state_edram_rd_ir: # PE一次只做一個 Edram read to IR
+            if not pe.state_edram_rd_ir: # PE可以read, PE一次只做一個 Edram read to IR)
                 if not pe.idle_eventQueuing_CU: # 沒有任何CU要做edram read
                     pass
                 else: # 有Event正在排隊且為idle的CU
@@ -347,12 +360,17 @@ class Controller(object):
                                 data = d[1:]
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                     '''
+            
+            if pe.state_edram_rd_ir or pe.idle_eventQueuing_CU:
+                erp.append(pe)
+        self.erp_rd = erp
 
     def event_cu_op(self):
-        for pe in self.PE_array:
+        erp = []
+        for pe in self.erp_cu_op:
             for cu in pe.cu_op_list.copy():
                 cu.state = False # for bottleneck analysis
-                if cu.finish_cycle == 0 and cu.cu_op_event != 0:
+                if cu.finish_cycle == 0 and cu.cu_op_event != 0: # cu operation start
                     if self.trace:
                         pass
                         print("\tcu operation start")
@@ -380,7 +398,7 @@ class Controller(object):
                             self.xb_state_for_plot[1].append(xb_id)
 
                 elif cu.finish_cycle != 0 and cu.cu_op_event != 0: ## doing cu operation
-                    if cu.finish_cycle == self.cycle_ctr:
+                    if cu.finish_cycle == self.cycle_ctr: # finish
                         if self.trace:
                             pass
                             print("\tcu operation finish")
@@ -446,13 +464,17 @@ class Controller(object):
                         cu.wait_resource_time += 1
                     else:
                         cu.pure_computation_time += 1
+            if pe.cu_op_list:
+                erp.append(pe)
+        self.erp_cu_op = erp
 
     def event_pe_saa(self):
-        for pe in self.PE_array:
-            erp = []
+        erp = []
+        for pe in self.erp_pe_saa:
+            pe_saa_erp = []
             for event in pe.pe_saa_erp: # 1個cycle全部做完
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
-                    erp.append(event)
+                    pe_saa_erp.append(event)
                     continue
                 if self.trace:
                     pass
@@ -497,7 +519,9 @@ class Controller(object):
                         pe.edram_buffer_i.buffer.remove([event.nlayer, d])
                 '''
 
-            pe.pe_saa_erp = erp
+            pe.pe_saa_erp = pe_saa_erp
+            if pe.pe_saa_erp:
+                erp.append(pe)
             '''
             # bottleneck analysis
             if not pe.state_pe_saa[0]:
@@ -521,9 +545,11 @@ class Controller(object):
                 else:
                     pe.saa_pure_computation_time += 1
             '''
+        self.erp_pe_saa = erp
 
     def event_act(self):
-        for pe in self.PE_array:
+        erp = []
+        for pe in self.erp_act:
             if not pe.activation_erp:
                 continue
             pe.state = True
@@ -552,9 +578,6 @@ class Controller(object):
                 pe.Bus_energy += energy_bus
                 pe.Activation_energy += energy_activation
 
-                #pe.state_activation[idx] = True
-                # pe.activation_erp.remove(event)
-
                 ### add next event counter: edram_wr
                 for proceeding_index in event.proceeding_event:
                     pro_event = self.Computation_order[proceeding_index]
@@ -568,8 +591,13 @@ class Controller(object):
                         if pe not in self.trigger_edram_wr:
                             self.trigger_edram_wr.append(pe)
 
+            if pe.activation_erp:
+                erp.append(pe)
+        self.erp_act = erp
+
     def event_edram_wr(self):
-        for pe in self.PE_array:
+        erp = []
+        for pe in self.erp_wr:
             if not pe.edram_wr_erp:
                 continue
             pe.state = True
@@ -625,6 +653,10 @@ class Controller(object):
                                 self.trigger_pool_rd.append(pe)
                         elif pro_event.event_type == "data_transfer":
                             self.data_transfer_trigger.append([pro_event, []])
+
+            if pe.edram_wr_erp:
+                erp.append(pe)
+        self.erp_wr = erp
 
     def event_edram_rd_pool(self):
         for pe in self.PE_array:
@@ -721,7 +753,8 @@ class Controller(object):
             '''
 
     def event_pool(self):
-        for pe in self.PE_array:
+        erp = []
+        for pe in self.erp_pool:
             if not pe.pooling_erp:
                 continue
             pe.state = True
@@ -751,6 +784,10 @@ class Controller(object):
                             pass
                             #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_wr_trigger.append([pro_event, []])
+
+            if pe.pooling_erp:
+                erp.append(pe)
+        self.erp_pool = erp
 
     def process_interconnect(self):
         for s in range(self.interconnect_step):
@@ -938,6 +975,12 @@ class Controller(object):
                             if cu_idx not in pe.idle_eventQueuing_CU:
                                 pe.idle_eventQueuing_CU.append(cu_idx)
                         pe.edram_rd_ir_trigger.remove(trigger)
+                        append_event = True
+                    else:
+                        append_event = False
+                if append_event:
+                    if pe not in self.erp_rd:
+                        self.erp_rd.append(pe)
                 if pe.edram_rd_ir_trigger:
                     tri_edram.append(pe)
             self.trigger_edram_rd = tri_edram
@@ -948,17 +991,21 @@ class Controller(object):
                     cu_idx    = trigger[1][0]
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
                 pe.edram_rd_ir_trigger = []
+                if pe not in self.erp_rd:
+                    self.erp_rd.append(pe)
             self.trigger_edram_rd = []
 
         for pe in self.trigger_cu_op:
-            if pe.cu_op_trigger != 0: # 應該不用判斷
-                event = pe.cu_op_trigger
-                cuy, cux = event.position_idx[4], event.position_idx[5]
-                cu_idx = cux + cuy * self.hd_info.CU_num_x
-                cu = pe.CU_array[cu_idx]
-                cu.cu_op_event = event
-                pe.cu_op_list.append(cu)
-                pe.cu_op_trigger = 0
+            #if pe.cu_op_trigger != 0: # 應該不用判斷
+            event = pe.cu_op_trigger
+            cuy, cux = event.position_idx[4], event.position_idx[5]
+            cu_idx = cux + cuy * self.hd_info.CU_num_x
+            cu = pe.CU_array[cu_idx]
+            cu.cu_op_event = event
+            pe.cu_op_list.append(cu)
+            pe.cu_op_trigger = 0
+            if pe not in self.erp_cu_op:
+                self.erp_cu_op.append(pe)
         self.trigger_cu_op = []
 
         for pe in self.trigger_pe_saa:
@@ -966,21 +1013,27 @@ class Controller(object):
                 pro_event = trigger[0]
                 pe.pe_saa_erp.append(pro_event) 
             pe.pe_saa_trigger = []
+            if pe not in self.erp_pe_saa:
+                self.erp_pe_saa.append(pe)
         self.trigger_pe_saa = []
-
-        for pe in self.trigger_edram_wr:
-            for trigger in pe.edram_wr_trigger:
-                pro_event = trigger[0]
-                pe.edram_wr_erp.append(pro_event)
-            pe.edram_wr_trigger = []
-        self.trigger_edram_wr = []
 
         for pe in self.trigger_act:
             for trigger in pe.activation_trigger:
                 pro_event = trigger[0]
                 pe.activation_erp.append(pro_event)
             pe.activation_trigger = []
+            if pe not in self.erp_act:
+                self.erp_act.append(pe)
         self.trigger_act = []
+
+        for pe in self.trigger_edram_wr:
+            for trigger in pe.edram_wr_trigger:
+                pro_event = trigger[0]
+                pe.edram_wr_erp.append(pro_event)
+            pe.edram_wr_trigger = []
+            if pe not in self.erp_wr:
+                self.erp_wr.append(pe)
+        self.trigger_edram_wr = []
 
         # Trigger edram_read_pool
         if not self.isPipeLine:
@@ -1008,6 +1061,8 @@ class Controller(object):
                 pro_event = trigger[0]
                 pe.pooling_erp.append(pro_event)
             pe.pooling_trigger = []
+            if pe not in self.erp_pool:
+                self.erp_pool.append(pe)
         self.trigger_pool = []
 
     def print_statistics_result(self):
@@ -1390,7 +1445,6 @@ class Controller(object):
             writer = csv.writer(csvfile)
             for row in range(0, len(self.pe_state_for_plot[0]), self.freq):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
-        '''
         plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)/2))
         plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+self.scheduling_str)
@@ -1402,14 +1456,12 @@ class Controller(object):
         plt.xticks(range(0, self.cycle_ctr, 10))
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png', bbox_inches='tight')
         plt.clf()
-        '''
 
     def cu_utilization(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(0, len(self.cu_state_for_plot[0]), self.freq):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
-        '''
         plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num/10))
         plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
         plt.title(self.mapping_str+", "+self.scheduling_str)
@@ -1421,7 +1473,6 @@ class Controller(object):
         plt.xticks(range(0, self.cycle_ctr, 10))
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png', bbox_inches='tight')
         plt.clf()
-        '''
 
     def crossbar_utilization(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
