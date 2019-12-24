@@ -204,12 +204,11 @@ class DefaultMapping(object):
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
                 ## Inputs   
-                inputs = []
+                #inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     nn.append([0, h, 0, 0])
-                inputs.append(nn)
-
+                inputs = [nn]
                 inputs = np.array(inputs)
 
                 xb_y_num = ceil(matrix_height / self.hd_info.Xbar_h)
@@ -460,11 +459,11 @@ class HighParallelismMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
                 ## Inputs
-                inputs = []
+                #inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     nn.append([0, h, 0, 0])
-                inputs.append(nn)
+                inputs = [nn]
                 inputs = np.array(inputs)
                
                 matrix_height = self.model_info.filter_length[nlayer]
@@ -730,11 +729,11 @@ class SameColumnFirstMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
                 ## Inputs
-                inputs = []
+                #inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     nn.append([0, h, 0, 0])
-                inputs.append(nn)
+                inputs = [nn]
                 inputs = np.array(inputs)
 
                 ## Weights

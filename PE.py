@@ -35,9 +35,9 @@ class PE(object):
         ### event ready pool
         self.pe_saa_erp = []
         self.activation_erp = collections.deque()
+        self.edram_wr_erp   = collections.deque()
         self.edram_rd_pool_erp = []
-        self.pooling_erp = []
-        self.edram_wr_erp = collections.deque()
+        self.pooling_erp    = collections.deque()
 
         ### trigger event
         self.cu_op_trigger = 0
