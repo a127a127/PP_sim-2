@@ -162,6 +162,8 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
+            if self.cycle_ctr == 100:
+                break
             if self.cycle_ctr % 5000 == 0:
                 if self.done_event == 0:
                     print("0")
@@ -792,6 +794,8 @@ class Controller(object):
                             pass
                             #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
                         pe.edram_wr_trigger.append([pro_event, []])
+                        if pe not in self.trigger_edram_wr:
+                            self.trigger_edram_wr.append(pe)
 
             if pe.pooling_erp:
                 erp.append(pe)
@@ -973,18 +977,20 @@ class Controller(object):
         # Trigger edram_rd_ir
         if not self.isPipeLine:
             if self.trigger_next_layer:
-                for pe in self.trigger_edram_rd:
-                    for trigger in pe.edram_rd_ir_trigger:
-                        pro_event = trigger[0]
-                        cu_idx    = trigger[1][0]
-                        pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
-                        if cu_idx not in pe.idle_eventQueuing_CU:
-                            pe.idle_eventQueuing_CU.append(cu_idx)
-                    pe.edram_rd_ir_trigger = []
-                    if pe not in self.erp_rd:
-                        self.erp_rd.append(pe)
-                self.trigger_edram_rd = []
-                self.trigger_next_layer = False
+                if self.pipeline_layer_stage < self.ordergenerator.model_info.layer_length:
+                    if self.ordergenerator.model_info.layer_list[self.pipeline_layer_stage].layer_type == "convolution":
+                        for pe in self.trigger_edram_rd:
+                            for trigger in pe.edram_rd_ir_trigger:
+                                pro_event = trigger[0]
+                                cu_idx    = trigger[1][0]
+                                pe.CU_array[cu_idx].edram_rd_ir_erp.append(pro_event)
+                                if cu_idx not in pe.idle_eventQueuing_CU:
+                                    pe.idle_eventQueuing_CU.append(cu_idx)
+                            pe.edram_rd_ir_trigger = []
+                            if pe not in self.erp_rd:
+                                self.erp_rd.append(pe)
+                        self.trigger_edram_rd = []
+                        self.trigger_next_layer = False
         else: # pipeline
             for pe in self.trigger_edram_rd:
                 for trigger in pe.edram_rd_ir_trigger:
@@ -1041,15 +1047,17 @@ class Controller(object):
         # Trigger edram_read_pool
         if not self.isPipeLine:
             if self.trigger_next_layer:
-                for pe in self.trigger_pool_rd:
-                    for trigger in pe.edram_rd_pool_trigger:
-                        pro_event = trigger[0]
-                        pe.edram_rd_pool_erp.append(pro_event)
-                    pe.edram_rd_pool_trigger = []
-                    if pe not in self.erp_pool_rd:
-                        self.erp_pool_rd.append(pe)
-                self.trigger_pool_rd = []
-                self.trigger_next_layer = False
+                if self.pipeline_layer_stage < self.ordergenerator.model_info.layer_length:
+                    if self.ordergenerator.model_info.layer_list[self.pipeline_layer_stage].layer_type == "pooling":
+                        for pe in self.trigger_pool_rd:
+                            for trigger in pe.edram_rd_pool_trigger:
+                                pro_event = trigger[0]
+                                pe.edram_rd_pool_erp.append(pro_event)
+                            pe.edram_rd_pool_trigger = []
+                            if pe not in self.erp_pool_rd:
+                                self.erp_pool_rd.append(pe)
+                        self.trigger_pool_rd = []
+                        self.trigger_next_layer = False
         else: # pipeline
             for pe in self.trigger_pool_rd:
                 for trigger in pe.edram_rd_pool_trigger:
