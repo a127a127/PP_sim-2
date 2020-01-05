@@ -591,18 +591,19 @@ class OrderGenerator(object):
                                                 pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
                                                 self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                 ### Event: pooling
-                                            pool_event_index = len(self.Computation_order)
-                                            self.Computation_order[erp_event_idx].proceeding_event.append(pool_event_index)
+                                            # pool_event_index = len(self.Computation_order)
+                                            # self.Computation_order[erp_event_idx].proceeding_event.append(pool_event_index)
 
-                                            pool_position_idx = pe_pos
-                                            pool_preceding_count = 1
-                                            pool_input_sequence = 0
-                                            pool_output_sequence = 0
-                                            event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
-                                            self.Computation_order.append(event)
+                                            # pool_position_idx = pe_pos
+                                            # pool_preceding_count = 1
+                                            # pool_input_sequence = 0
+                                            # pool_output_sequence = 0
+                                            # event = EventMetaData("pooling", pool_position_idx, pool_preceding_count, [], nlayer, pool_input_sequence, pool_output_sequence)
+                                            # self.Computation_order.append(event)
                 ### Event: edram_wr
                                             edram_wr_event_idx = len(self.Computation_order)
-                                            self.Computation_order[pool_event_index].proceeding_event.append(edram_wr_event_idx)
+                                            #self.Computation_order[pool_event_index].proceeding_event.append(edram_wr_event_idx)
+                                            self.Computation_order[erp_event_idx].proceeding_event.append(edram_wr_event_idx)
 
                                             edram_wr_position_idx = pe_pos
                                             edram_wr_preceding_count = 1
@@ -630,7 +631,6 @@ class OrderGenerator(object):
     def trace_order(self):
         edram_rd_ir_ctr = 0
         cu_op_ctr  = 0
-        cu_saa_ctr = 0
         pe_saa_ctr = 0
         activation_ctr = 0
         pooling_ctr = 0
@@ -643,8 +643,6 @@ class OrderGenerator(object):
                 edram_rd_ir_ctr += 1
             elif t == "cu_operation":
                 cu_op_ctr += 1
-            elif t == "cu_saa":
-                cu_saa_ctr += 1
             elif t == "pe_saa":
                 pe_saa_ctr += 1
             elif t == "activation":
@@ -662,7 +660,6 @@ class OrderGenerator(object):
 
         print("edram_rd_ir_ctr", edram_rd_ir_ctr)
         print("cu_op_ctr", cu_op_ctr)
-        print("cu_saa_ctr", cu_saa_ctr)
         print("pe_saa_ctr", pe_saa_ctr)
         print("activation_ctr", activation_ctr)
         print("edram_wr_ctr", edram_wr_ctr)
