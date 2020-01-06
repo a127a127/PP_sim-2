@@ -893,10 +893,9 @@ class Controller(object):
                 #if FE.event.event_type == "edram_rd_ir" or FE.event.event_type == "edram_rd_pool":
                 if not self.isPipeLine:
                     self.this_layer_event_ctr -= len(FE.event.inputs)
-                FE.event.preceding_event_count += len(FE.event.inputs)
+                FE.event.preceding_event_count += len(FE.event.inputs) # write event
                 if des not in des_dict:
-                    #des_dict[des] = []
-                    des_dict[des] = set()
+                    des_dict[des] = []
                 for inp in FE.event.inputs:
                     data = inp[1:]
                     data = [FE.event.nlayer, data]
