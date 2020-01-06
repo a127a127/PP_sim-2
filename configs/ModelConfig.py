@@ -2,7 +2,7 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 5
+        model_type = 7
         if model_type == 0: # TestModelConfig
             self.Model_type = "Test0"
             self.layer_list = [
@@ -34,16 +34,16 @@ class ModelConfig(object):
             self.input_c = 3
             self.input_bit = 2
             self.filter_bit = 4
-        elif model_type == 2: # Cifar10Config
+        elif model_type == 2: # Cifar10Config from 子賢paper
             self.Model_type = "Cifar10"
             self.layer_list = [
-                LayerMetaData("convolution", 32, 3, 3,  3, 1,  'SAME', 0, 0, 0,   0),
-                LayerMetaData("convolution", 32, 3, 3, 32, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("pooling",      0, 0, 0,  0, 1,       0, 2, 2, 1,   0),
-                LayerMetaData("convolution", 64, 3, 3, 32, 1,  'SAME', 0, 0, 0,   0),
-                LayerMetaData("convolution", 64, 3, 3, 64, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("pooling",      0, 0, 0, 0,  0,       0, 2, 2, 1,   0),
-                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0, 512),
+                LayerMetaData("convolution", 32, 5, 5,  3, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution", 32, 5, 5, 32, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution", 64, 5, 5, 32, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0,  64),
                 LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0,  10)
                 ]
             self.input_n = 1
@@ -92,14 +92,14 @@ class ModelConfig(object):
             self.filter_bit = 16
         elif model_type == 5: # DeepIDConfig
             self.Model_type = "DeepID"
-            self.layer_information = [
+            self.layer_list = [
                 LayerMetaData("convolution",   20, 4, 4,  1, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
                 LayerMetaData("convolution",   40, 3, 3, 20, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
                 LayerMetaData("convolution",   60, 3, 3, 40, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
-                LayerMetaData("convolution",   80, 3, 3, 60, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("convolution",   80, 2, 2, 60, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  160),
                 LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  100)
             ]
@@ -109,7 +109,7 @@ class ModelConfig(object):
             self.input_c = 1
             self.input_bit = 16
             self.filter_bit = 16
-        elif model_type == 5: # TestModelConfig2
+        elif model_type == 6: # TestModelConfig2
             self.Model_type = "Test2"
             self.layer_list = [
                 LayerMetaData("convolution",  2, 2, 2,  1, 1, 'VALID', 0, 0, 0,  0),
@@ -123,5 +123,24 @@ class ModelConfig(object):
             self.input_c = 1
             self.input_bit = 2
             self.filter_bit = 2
+        elif model_type == 7: # 大cifar 測試
+            self.Model_type = "Cifar10"
+            self.layer_list = [
+                LayerMetaData("convolution", 32, 3, 3,  3, 1,  'SAME', 0, 0, 0,   0),
+                LayerMetaData("convolution", 32, 3, 3, 32, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution", 64, 3, 3, 32, 1,  'SAME', 0, 0, 0,   0),
+                LayerMetaData("convolution", 64, 3, 3, 64, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0, 0,  0,       0, 2, 2, 2,   0),
+                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0, 512),
+                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0,  10)
+                ]
+            self.input_n = 1
+            self.input_h = 32
+            self.input_w = 32
+            self.input_c = 3
+            self.input_bit = 16
+            self.filter_bit = 16
+
     def __str__(self):
             return str(self.__dict__)

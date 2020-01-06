@@ -1,4 +1,5 @@
 from HardwareMetaData import HardwareMetaData
+import collections
 
 class OnChipBuffer():
     def __init__(self, input_bit):
@@ -8,7 +9,7 @@ class OnChipBuffer():
         
         self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit # KB
 
-        self.buffer = []
+        self.buffer = collections.deque()
         
         self.maximal_usage = 0
 
@@ -20,13 +21,14 @@ class OnChipBuffer():
     
     def put(self, data): # put a data to buffer
         # 優化: 不要檢查
-        if data in self.buffer:
-            ### TODO: FIFO switch
-            return
+        # if data in self.buffer:
+        #     ### TODO: FIFO switch
+        #     return
         if len(self.buffer) < self.num_of_data:
             self.buffer.append(data)
         else: # FIFO
-            del self.buffer[0]
+            #del self.buffer[0]
+            self.buffer.popleft()
             self.buffer.append(data)
         
         self.maximal_usage = max(self.maximal_usage, len(self.buffer))
