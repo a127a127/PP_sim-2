@@ -6,9 +6,7 @@ class ModelConfig(object):
         if model_type == 0: # TestModelConfig
             self.Model_type = "Test0"
             self.layer_list = [
-                LayerMetaData("convolution",  1, 11, 11,   1, 4, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 2,    0),
-                LayerMetaData("convolution",  1,  5,  5,   1, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 64, 3, 3, 64, 1, 'VALID', 0, 0, 0,  0),
                 #LayerMetaData("convolution",  96, 11, 11,   3, 4, 'VALID', 0, 0, 0,    0),
                 #LayerMetaData("convolution",  1,  3, 3, 1, 1, 'SAME', 0, 0, 0,  0),
                 #LayerMetaData("convolution",  1,  2, 2, 1, 1, 'VALID', 0, 0, 0,  0),
@@ -17,11 +15,11 @@ class ModelConfig(object):
                 #LayerMetaData("fully",        0, 0, 0,  0, 0,       0, 0, 0, 0, 20)
                 ]
             self.input_n = 1
-            self.input_h = 117 #50
-            self.input_w = 117 #50
-            self.input_c = 1
-            self.input_bit = 1
-            self.filter_bit = 1
+            self.input_h = 30 #50
+            self.input_w = 30 #50
+            self.input_c = 64
+            self.input_bit = 16
+            self.filter_bit = 16
         elif model_type == 1: # TestModelConfig1
             self.Model_type = "Test1"
             self.layer_list = [
@@ -39,14 +37,14 @@ class ModelConfig(object):
         elif model_type == 2: # Cifar10Config
             self.Model_type = "Cifar10"
             self.layer_list = [
-                LayerMetaData("convolution", 32, 3, 3,  3, 1,  'SAME', 0, 0, 0,  0),
-                LayerMetaData("convolution", 32, 3, 3,  3, 1, 'VALID', 0, 0, 0,  0),
-                LayerMetaData("pooling",      0, 0, 0,  0, 1,       0, 2, 2, 1,  0),
-                LayerMetaData("convolution", 64, 3, 3, 32, 1,  'SAME', 0, 0, 0,  0),
-                LayerMetaData("convolution", 64, 3, 3, 64, 1, 'VALID', 0, 0, 0,  0),
-                LayerMetaData("pooling",      0, 0, 0, 0, 0,        0, 2, 2, 1,  0),
-                LayerMetaData("fully",        0, 0, 0, 0, 0,       0, 0, 0, 0, 512),
-                LayerMetaData("fully",        0, 0, 0, 0, 0,       0, 0, 0, 0,  10)
+                LayerMetaData("convolution", 32, 3, 3,  3, 1,  'SAME', 0, 0, 0,   0),
+                LayerMetaData("convolution", 32, 3, 3, 32, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0,  0, 1,       0, 2, 2, 1,   0),
+                LayerMetaData("convolution", 64, 3, 3, 32, 1,  'SAME', 0, 0, 0,   0),
+                LayerMetaData("convolution", 64, 3, 3, 64, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",      0, 0, 0, 0,  0,       0, 2, 2, 1,   0),
+                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0, 512),
+                LayerMetaData("fully",        0, 0, 0, 0,  0,       0, 0, 0, 0,  10)
                 ]
             self.input_n = 1
             self.input_h = 32
