@@ -2,7 +2,7 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 2
+        model_type = 5
         if model_type == 0: # TestModelConfig
             self.Model_type = "Test0"
             self.layer_list = [
@@ -87,6 +87,25 @@ class ModelConfig(object):
             self.input_n = 1
             self.input_h = 32
             self.input_w = 32
+            self.input_c = 1
+            self.input_bit = 16
+            self.filter_bit = 16
+        elif model_type == 5: # DeepIDConfig
+            self.Model_type = "DeepID"
+            self.layer_information = [
+                LayerMetaData("convolution",   20, 4, 4,  1, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution",   40, 3, 3, 20, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution",   60, 3, 3, 40, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution",   80, 3, 3, 60, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  160),
+                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  100)
+            ]
+            self.input_n = 1
+            self.input_h = 39
+            self.input_w = 31
             self.input_c = 1
             self.input_bit = 16
             self.filter_bit = 16
