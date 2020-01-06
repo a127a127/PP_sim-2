@@ -105,6 +105,7 @@ class Controller(object):
             self.buffer_size_i.append([])
         self.max_buffer_size = 0 # num of data
         self.max_buffer_size_i = 0 # num of data
+        self.buffer_record_freq =  100
 
         # execute event
         self.erp_rd      = []
@@ -126,7 +127,6 @@ class Controller(object):
 
         self.trigger_next_layer = False
 
-        self.buffer_record_freq =  100
 
     def run(self):
         # 只檢查有event的pe
@@ -296,14 +296,16 @@ class Controller(object):
                     ## 開始做cu的edram read
                     ## 1. 資料是否還在transfer？
                     if event.data_is_transfer != 0:
+                        #print("\tdata_is_transfer", event.data_is_transfer)
                         continue
                     ## 2. 檢查資料是否都已在buffer中？
                     isData_ready = True
                     for inp in event.inputs: 
                         data = inp[1:] # inp: [num_input, fm_h, fm_w, fm_c]
                         if not pe.edram_buffer.check([event.nlayer, data]): # Data not in buffer
-                            # if self.trace:
-                            #     print("\tData not ready for edram_rd_pool. Data: layer", event.nlayer, event.event_type, data)
+                            if self.trace:
+                                print("\tData not ready for edram read. Data: layer", event.nlayer   , data)
+                                print("\tbuffer", pe.edram_buffer)
                             isData_ready = False
                             break
                     if not isData_ready: # 資料不在buffer, 則fetch from off-chip
@@ -315,6 +317,20 @@ class Controller(object):
                 event = pe.edram_rd_event
                 num_data = len(event.inputs)
                 if event.data_is_transfer != 0:
+                    continue
+                ## 檢查資料是否都已在buffer中？
+                isData_ready = True
+                for inp in event.inputs: 
+                    data = inp[1:] # inp: [num_input, fm_h, fm_w, fm_c]
+                    if not pe.edram_buffer.check([event.nlayer, data]): # Data not in buffer
+                        if self.trace:
+                            print("\tData not ready for edram read. Data: layer", event.nlayer   , data)
+                            print("\tbuffer", pe.edram_buffer)
+                        isData_ready = False
+                        break
+                if not isData_ready: # 資料不在buffer, 則fetch from off-chip
+                    event.data_is_transfer += len(event.inputs)
+                    self.fetch_array.append(FetchEvent(event))
                     continue
                 pe.state = True
                 if pe.edram_rd_cycle_ctr == 0:
@@ -353,7 +369,7 @@ class Controller(object):
                     if pe not in self.trigger_cu_op:
                         self.trigger_cu_op.append(pe)
 
-                    '''
+
                     # Free buffer (ideal)
                     pe_id = self.PE_array.index(pe)
                     nlayer = event.nlayer
@@ -371,7 +387,7 @@ class Controller(object):
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                 data = d[1:]
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                    '''
+
             
             if pe.state_edram_rd_ir or pe.idle_eventQueuing_CU:
                 erp.append(pe)
@@ -729,7 +745,7 @@ class Controller(object):
                         pe.edram_wr_trigger.append([pro_event, []])
                         if pe not in self.trigger_edram_wr:
                             self.trigger_edram_wr.append(pe)
-                '''
+                
                 # Free buffer (ideal)
                 pe_id = self.PE_array.index(pe)
                 nlayer = event.nlayer
@@ -739,7 +755,7 @@ class Controller(object):
                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                         data = d[1:]
                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                '''
+                
             
             if pe.edram_rd_pool_erp:
                 erp.append(pe)
@@ -777,7 +793,7 @@ class Controller(object):
         for pk in arrived_packet:
             if self.trace:
                 pass
-                #print("\tArrived packet:", pk)
+                print("\tArrived packet:", pk)
             rty, rtx = pk.destination[0], pk.destination[1]
             pey, pex = pk.destination[2], pk.destination[3]
             pe_idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.PE_num * self.hd_info.Router_num_x
@@ -804,8 +820,8 @@ class Controller(object):
             self.done_event += 1
             if self.trace:
                 pass
-                #print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
-                #        "pos:", event.position_idx, "data:", event.outputs)
+                print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
+                       "pos:", event.position_idx, "data:", event.outputs)
             self.data_transfer_erp.remove(event)
 
             src = event.position_idx[0]
@@ -846,20 +862,26 @@ class Controller(object):
                 pro_event.data_is_transfer += 1
                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                     if pro_event.event_type == "edram_rd_ir":
+                        if self.trace:
+                            print("\ttrigger edram read")
                         cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
                         cu_idx = cux + cuy * self.hd_info.CU_num_x
                         des_pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                         if des_pe not in self.trigger_edram_rd:
                             self.trigger_edram_rd.append(des_pe)
                     elif pro_event.event_type == "edram_rd_pool":
+                        if self.trace:
+                            print("\ttrigger pooling edram read")
                         des_pe.edram_rd_pool_trigger.append([pro_event, []])
                         if des_pe not in self.trigger_pool_rd:
                             self.trigger_pool_rd.append(des_pe)
                     elif pro_event.event_type == "pe_saa":
+                        if self.trace:
+                            print("\ttrigger pe saa")
                         des_pe.pe_saa_trigger.append([pro_event, []])
                         if des_pe not in self.trigger_pe_saa:
                             self.trigger_pe_saa.append(des_pe)
-            '''
+            
             # Free buffer (ideal)
             pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
                     src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
@@ -881,7 +903,6 @@ class Controller(object):
                         self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                         if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                             self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
-            '''
 
     def fetch(self):
         des_dict = dict()
@@ -928,7 +949,7 @@ class Controller(object):
         if not self.isPipeLine:
             if self.trigger_next_layer:
                 if self.pipeline_layer_stage < self.ordergenerator.model_info.layer_length:
-                    if self.ordergenerator.model_info.layer_list[self.pipeline_layer_stage].layer_type == "convolution":
+                    if self.ordergenerator.model_info.layer_list[self.pipeline_layer_stage].layer_type != "pooling":
                         for pe in self.trigger_edram_rd:
                             for trigger in pe.edram_rd_ir_trigger:
                                 pro_event = trigger[0]
@@ -1340,7 +1361,7 @@ class Controller(object):
                 writer.writerow(c)
         self.buffer_size = np.array(self.buffer_size)
         for i in range(len(self.PE_array)):
-            plt.plot(range(self.buffer_record_freq, self.cycle_ctr, self.buffer_record_freq), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
+            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
         plt.title(self.mapping_str+", "+self.scheduling_str)
         plt.xlabel('Cycle')
         plt.ylabel('Buffer size(KB)')
@@ -1369,7 +1390,7 @@ class Controller(object):
                 writer.writerow(c)
         self.buffer_size_i = np.array(self.buffer_size_i)
         for i in range(len(self.PE_array)):
-            plt.plot(range(self.buffer_record_freq, self.cycle_ctr, self.buffer_record_freq), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
+            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
             #plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i], label="PE"+str(i)) #, c=self.color[i])
         
         plt.title(self.mapping_str+", "+self.scheduling_str)

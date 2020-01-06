@@ -7,7 +7,7 @@ class OnChipBuffer():
         #self.eDRAM_buffer_bank_num = HardwareMetaData().eDRAM_buffer_bank_num
         #self.eDRAM_buffer_bus_width = HardwareMetaData().eDRAM_buffer_bus_width # bit
         
-        self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit # KB
+        self.num_of_data = self.eDRAM_buffer_size * 1024 * 8 / input_bit
 
         self.buffer = collections.deque()
         
@@ -20,14 +20,13 @@ class OnChipBuffer():
         return False
     
     def put(self, data): # put a data to buffer
-        # 優化: 不要檢查
-        # if data in self.buffer:
-        #     ### TODO: FIFO switch
-        #     return
+        if data in self.buffer:
+            self.buffer.remove(data)
+            self.buffer.append(data)
+            return
         if len(self.buffer) < self.num_of_data:
             self.buffer.append(data)
         else: # FIFO
-            #del self.buffer[0]
             self.buffer.popleft()
             self.buffer.append(data)
         
