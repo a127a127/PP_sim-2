@@ -3,7 +3,6 @@ from configs.ModelConfig import ModelConfig
 from Model import Model
 from FreeBufferController import FreeBufferController
 from PE import PE
-from XB import XB
 from EventMetaData import EventMetaData
 import numpy as np
 import math
