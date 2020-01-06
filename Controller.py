@@ -890,25 +890,26 @@ class Controller(object):
             if FE.cycles_counter == FE.fetch_cycle:
                 src  = (0, FE.event.position_idx[1], -1, -1)
                 des  = FE.event.position_idx[0:4]
-                if FE.event.event_type == "edram_rd_ir" or FE.event.event_type == "edram_rd_pool":
-                    if not self.isPipeLine:
-                        self.this_layer_event_ctr -= len(FE.event.inputs)
-                    FE.event.preceding_event_count += len(FE.event.inputs)
-                    if des not in des_dict:
-                        des_dict[des] = []
-                    for inp in FE.event.inputs:
-                        data = inp[1:]
-                        data = [FE.event.nlayer, data]
-                        pro_event_idx = self.Computation_order.index(FE.event)
+                #if FE.event.event_type == "edram_rd_ir" or FE.event.event_type == "edram_rd_pool":
+                if not self.isPipeLine:
+                    self.this_layer_event_ctr -= len(FE.event.inputs)
+                FE.event.preceding_event_count += len(FE.event.inputs)
+                if des not in des_dict:
+                    #des_dict[des] = []
+                    des_dict[des] = set()
+                for inp in FE.event.inputs:
+                    data = inp[1:]
+                    data = [FE.event.nlayer, data]
+                    pro_event_idx = self.Computation_order.index(FE.event)
 
-                        isDataInDict = False
-                        for data_pro_event in des_dict[des]:
-                            if data == data_pro_event[0]:
-                                data_pro_event[1].append(pro_event_idx)
-                                isDataInDict = True
-                                break
-                        if not isDataInDict:
-                            des_dict[des].append([data, [pro_event_idx]])
+                    isDataInDict = False
+                    for data_pro_event in des_dict[des]:
+                        if data == data_pro_event[0]:
+                            data_pro_event[1].append(pro_event_idx)
+                            isDataInDict = True
+                            break
+                    if not isDataInDict:
+                        des_dict[des].append([data, [pro_event_idx]])
                 self.fetch_array.remove(FE)
         for des in des_dict:
             src = (0, des[1], -1, -1)

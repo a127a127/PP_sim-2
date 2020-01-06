@@ -37,7 +37,7 @@ class HardwareMetaData(object):
         self.eDRAM_read_bits  = floor(256 * 1.2 * self.cycle_time) # bits / per cycle
         self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
 
-        self.eDRAM_buffer_size  = 1.6 # nKB
+        self.eDRAM_buffer_size  = 64 # nKB
         self.Output_Reg_size    = 3 # nKB
         self.CU_Input_Reg_size  = 2 # nKB
         self.CU_Output_Reg_size = 256 # nKB
