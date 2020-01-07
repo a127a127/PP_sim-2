@@ -324,7 +324,6 @@ class OrderGenerator(object):
                                 if inp.nlayer == nlayer:
                                     num_inp += 1
                             max_xb_input_len = max(max_xb_input_len, num_inp)
-
                     for nInp in range(max_xb_input_len):
                         data_feed_to_cu = []
                         for xby_idx in range(self.hd_info.Xbar_num_y):
@@ -408,7 +407,6 @@ class OrderGenerator(object):
                                     inp = []
                                 if not inp:
                                     continue
-                                
                                 # Total ou in the event
                                 num_ou_h = math.ceil(len(inp.xbar_row)    / self.hd_info.OU_h)
                                 num_ou_w = math.ceil(len(inp.xbar_column) / self.hd_info.OU_w)

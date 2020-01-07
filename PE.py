@@ -10,10 +10,11 @@ class PE(object):
         self.state = False
 
         ### for edram read event 
-        self.state_edram_rd_ir = False
+        #self.state_edram_rd_ir = False
         self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
         self.edram_rd_event = None
         self.edram_rd_cycle_ctr = 0
+        self.data_to_ir_ing = False
 
         ### for cu operation
         self.cu_op_list = []
