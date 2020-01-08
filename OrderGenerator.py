@@ -122,7 +122,7 @@ class OrderGenerator(object):
                                         data_transfer_event_idx = len(self.Computation_order)
                                         edram_wr_event.proceeding_event.append(data_transfer_event_idx)
                                         data_transfer_preceding_count = 1 
-                                        data_transfer_inputs = 0
+                                        data_transfer_inputs  = 0
                                         data_transfer_outputs = edram_wr_event.outputs # [[h, w, c]]
                                         event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
                                         self.Computation_order.append(event)

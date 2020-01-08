@@ -12,6 +12,7 @@ class PE(object):
         ### for edram read event 
         #self.state_edram_rd_ir = False
         self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
+        self.eventQueuing_CU = [] # for perfomance analysis
         self.edram_rd_event = None
         self.edram_rd_cycle_ctr = 0
         self.data_to_ir_ing = False
@@ -47,25 +48,29 @@ class PE(object):
         self.CU_array = []
         self.gen_cu()
 
-        ### bottleneck analysis
-        self.saa_pure_idle_time = 0
-        self.saa_wait_transfer_time = 0
-        self.saa_wait_resource_time = 0
-        self.saa_pure_computation_time = 0
+        ### performance analysis
+        self.pure_idle_time = 0
+        self.wait_transfer_time = 0
+        self.wait_resource_time = 0
+        self.pure_computation_time = 0
+        # self.saa_pure_idle_time = 0
+        # self.saa_wait_transfer_time = 0
+        # self.saa_wait_resource_time = 0
+        # self.saa_pure_computation_time = 0
 
-        self.pooling_pure_idle_time = 0
-        self.pooling_wait_transfer_time = 0
-        self.pooling_wait_resource_time = 0
-        self.pooling_pure_computation_time = 0
+        # self.pooling_pure_idle_time = 0
+        # self.pooling_wait_transfer_time = 0
+        # self.pooling_wait_resource_time = 0
+        # self.pooling_pure_computation_time = 0
 
         ### Energy
-        self.CU_energy = 0.
-        self.Edram_buffer_energy = 0.
-        self.Bus_energy = 0.
-        self.Shift_and_add_energy= 0.
-        self.Or_energy = 0.
-        self.Activation_energy = 0.
-        self.Pooling_energy = 0.
+        self.CU_energy            = 0.
+        self.Edram_buffer_energy  = 0.
+        self.Bus_energy           = 0.
+        self.Shift_and_add_energy = 0.
+        self.Or_energy            = 0.
+        self.Activation_energy    = 0.
+        self.Pooling_energy       = 0.
 
     def gen_cu(self):
         rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 
