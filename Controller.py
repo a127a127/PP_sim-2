@@ -171,7 +171,6 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
-
             if self.cycle_ctr % 10000 == 0:
                 if self.done_event == 0:
                     pass
@@ -451,7 +450,8 @@ class Controller(object):
                         if cu.edram_rd_ir_erp:
                             #if cu_idx not in pe.idle_eventQueuing_CU:
                             pe.idle_eventQueuing_CU.append(cu_idx)
-                            self.erp_rd.append(pe)
+                            if pe not in self.erp_rd:
+                                self.erp_rd.append(pe)
 
                         ### add next event counter: pe_saa
                         for proceeding_index in cu.cu_op_event.proceeding_event:

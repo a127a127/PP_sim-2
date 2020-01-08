@@ -84,6 +84,11 @@ class OrderGenerator(object):
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_inputs = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                xb_inputs = []
+                                for x_inp in xbar_inputs:
+                                    if x_inp.nlayer == nlayer:
+                                        xb_inputs.append(x_inp)
+                                xbar_inputs = xb_inputs
                                 if nInp < len(xbar_inputs):
                                     inp = xbar_inputs[nInp].inputs
                                 else:
@@ -171,6 +176,11 @@ class OrderGenerator(object):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_inputs  = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
                                 xbar_weights = self.mp_info.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                xb_inputs = []
+                                for x_inp in xbar_inputs:
+                                    if x_inp.nlayer == nlayer:
+                                        xb_inputs.append(x_inp)
+                                xbar_inputs = xb_inputs
                                 if nInp < len(xbar_inputs):
                                     inp = xbar_inputs[nInp]
                                 else:
@@ -259,7 +269,7 @@ class OrderGenerator(object):
                                 if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                                     self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
                                 else:
-                                    data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[0] + 1
+                                    data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[-1] + 1
                                     preceding_tmp_data.append(self.Computation_order[data_transfer_id].outputs[0]) # data transfer output
                                 if self.Computation_order[pre_event_idx].position_idx not in preceding_cu_idx:
                                     preceding_cu_idx.append(self.Computation_order[pre_event_idx].position_idx)
@@ -329,6 +339,11 @@ class OrderGenerator(object):
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_inputs = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                xb_inputs = []
+                                for x_inp in xbar_inputs:
+                                    if x_inp.nlayer == nlayer:
+                                        xb_inputs.append(x_inp)
+                                xbar_inputs = xb_inputs
                                 if nInp < len(xbar_inputs):
                                     inp = xbar_inputs[nInp].inputs
                                 else:
@@ -400,6 +415,11 @@ class OrderGenerator(object):
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_inputs  = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                xb_inputs = []
+                                for x_inp in xbar_inputs:
+                                    if x_inp.nlayer == nlayer:
+                                        xb_inputs.append(x_inp)
+                                xbar_inputs = xb_inputs
                                 xbar_weights = self.mp_info.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
                                 if nInp < len(xbar_inputs):
                                     inp = xbar_inputs[nInp]
@@ -484,7 +504,7 @@ class OrderGenerator(object):
                         if self.Computation_order[pre_event_idx].position_idx[:-2] == do_pe_saa_pos: # in same PE
                             self.Computation_order[pre_event_idx].proceeding_event.append(pe_saa_event_idx)
                         else:
-                            data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[0] + 1
+                            data_transfer_id = self.Computation_order[pre_event_idx].proceeding_event[-1] + 1
                             preceding_tmp_data.append(self.Computation_order[data_transfer_id].outputs[0]) # data transfer output
                         if self.Computation_order[pre_event_idx].position_idx not in preceding_cu_idx:
                             preceding_cu_idx.append(self.Computation_order[pre_event_idx].position_idx)

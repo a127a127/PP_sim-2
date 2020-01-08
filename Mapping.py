@@ -203,8 +203,7 @@ class DefaultMapping(object):
                         #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                         self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
 
-                ## Inputs   
-                #inputs = []
+                ## Inputs
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     nn.append([0, h, 0, 0])
@@ -301,45 +300,37 @@ class DefaultMapping(object):
 class HighParallelismMapping(object):
     def __init__(self):
         model_config = ModelConfig()
+        print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
 
-        self.crossbar_array = []
+        self.crossbar_array = np.zeros((self.hd_info.Router_num_y, self.hd_info.Router_num_x, 
+                                        self.hd_info.PE_num_y, self.hd_info.PE_num_x,
+                                        self.hd_info.CU_num_y, self.hd_info.CU_num_x,
+                                        self.hd_info.Xbar_num_y, self.hd_info.Xbar_num_x, 
+                                        self.hd_info.Xbar_h, self.hd_info.Xbar_w, 4), dtype=np.int)
         self.layer_mapping_to_xbar = []
         self.layer_mapping_to_pe = []
         for rty_idx in range(self.hd_info.Router_num_y):
-            self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
             self.layer_mapping_to_pe.append([])
             for rtx_idx in range(self.hd_info.Router_num_x):
-                self.crossbar_array[rty_idx].append([])
                 self.layer_mapping_to_xbar[rty_idx].append([])
                 self.layer_mapping_to_pe[rty_idx].append([])
                 for pey_idx in range(self.hd_info.PE_num_y):
-                    self.crossbar_array[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_pe[rty_idx][rtx_idx].append([])
                     for pex_idx in range(self.hd_info.PE_num_x):
-                        self.crossbar_array[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for cuy_idx in range(self.hd_info.CU_num_y):
-                            self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             for cux_idx in range(self.hd_info.CU_num_x):
-                                self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 for xby_idx in range(self.hd_info.Xbar_num_y):
-                                    self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
-                                        self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
-                                        for h in range(self.hd_info.Xbar_h):
-                                            #row = [0] * self.hd_info.Xbar_w
-                                            row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
-                                            self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
-        self.crossbar_array = np.array(self.crossbar_array)
 
         self.xb_mapping_dict = dict()
         ctr =  0
@@ -381,8 +372,8 @@ class HighParallelismMapping(object):
                 ## Inputs
                 strides = self.model_info.strides[nlayer]
                 inputs = []
-                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height, slide = 1
-                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width, slide = 1
+                o_height = self.model_info.input_h[nlayer+1]
+                o_width = self.model_info.input_w[nlayer+1]
                 for oh in range(o_height):
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -565,45 +556,37 @@ class HighParallelismMapping(object):
 class SameColumnFirstMapping(object):
     def __init__(self):
         model_config = ModelConfig()
+        print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
         self.hd_info = HardwareMetaData()
 
-        self.crossbar_array = []
+        self.crossbar_array = np.zeros((self.hd_info.Router_num_y, self.hd_info.Router_num_x, 
+                                        self.hd_info.PE_num_y, self.hd_info.PE_num_x,
+                                        self.hd_info.CU_num_y, self.hd_info.CU_num_x,
+                                        self.hd_info.Xbar_num_y, self.hd_info.Xbar_num_x, 
+                                        self.hd_info.Xbar_h, self.hd_info.Xbar_w, 4), dtype=np.int)
         self.layer_mapping_to_xbar = []
         self.layer_mapping_to_pe = []
         for rty_idx in range(self.hd_info.Router_num_y):
-            self.crossbar_array.append([])
             self.layer_mapping_to_xbar.append([])
             self.layer_mapping_to_pe.append([])
             for rtx_idx in range(self.hd_info.Router_num_x):
-                self.crossbar_array[rty_idx].append([])
                 self.layer_mapping_to_xbar[rty_idx].append([])
                 self.layer_mapping_to_pe[rty_idx].append([])
                 for pey_idx in range(self.hd_info.PE_num_y):
-                    self.crossbar_array[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.layer_mapping_to_pe[rty_idx][rtx_idx].append([])
                     for pex_idx in range(self.hd_info.PE_num_x):
-                        self.crossbar_array[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for cuy_idx in range(self.hd_info.CU_num_y):
-                            self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
                             for cux_idx in range(self.hd_info.CU_num_x):
-                                self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx].append([])
                                 for xby_idx in range(self.hd_info.Xbar_num_y):
-                                    self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx].append([])
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
-                                        self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
-                                        for h in range(self.hd_info.Xbar_h):
-                                            #row = [0] * self.hd_info.Xbar_w
-                                            row = [[-1,-1,-1,-1] for i in range(self.hd_info.Xbar_w)]
-                                            self.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx].append(row)
-        self.crossbar_array = np.array(self.crossbar_array)
 
         self.xb_mapping_dict = dict()
         self.num_of_xb_in_pe = self.hd_info.Xbar_num * self.hd_info.CU_num
@@ -640,8 +623,8 @@ class SameColumnFirstMapping(object):
                 ## Inputs
                 strides = self.model_info.strides[nlayer]
                 inputs = []
-                o_height = self.model_info.input_h[nlayer] - self.model_info.filter_h[nlayer] + 1  # output feature map height
-                o_width = self.model_info.input_w[nlayer] - self.model_info.filter_w[nlayer] + 1   # output feature map width
+                o_height = self.model_info.input_h[nlayer+1]
+                o_width = self.model_info.input_w[nlayer+1]
                 for oh in range(o_height):
                     for ow in range(o_width):
                         num_input = oh * o_width + ow
@@ -669,11 +652,12 @@ class SameColumnFirstMapping(object):
                 
                 # num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
                 num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // cells_per_filter
-                if num_filter_per_pe > self.model_info.filter_n[nlayer]:
-                    num_filter_per_pe = self.model_info.filter_n[nlayer]
+                # if num_filter_per_pe > self.model_info.filter_n[nlayer]:
+                #     num_filter_per_pe = self.model_info.filter_n[nlayer]
                 this_layer_xb_mapping_idx = xbar_mapping_idx
 
-                for pe_n in range(ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)):
+                num_pe = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe) # 此layer用多少個PE
+                for pe_n in range(num_pe-1): # 不包含最右邊matrix分配到的PE
                     for xb_w_idx in range(mapping_width_num_xb_per_pe):
                         for xb_h_idx in range(mapping_height_num_xb_per_pe):
                             pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
@@ -682,12 +666,12 @@ class SameColumnFirstMapping(object):
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
 
-                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
+                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe: # 底部邊界
                                 block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
                                 block_height = self.hd_info.Xbar_h
 
-                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe:
+                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe: # 右邊邊界
                                 # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
                                 block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
                             else:
@@ -721,6 +705,58 @@ class SameColumnFirstMapping(object):
 
                             this_layer_xb_mapping_idx += 1
 
+                num_filter_last_pe = self.model_info.filter_n[nlayer] - (num_pe-1) * num_filter_per_pe # matrix最右邊的部份, 有多少個filter分配到這個pe
+                pe_n =  num_pe - 1 # 最後一個pe
+                for xb_w_idx in range(mapping_width_num_xb_per_pe):
+                    for xb_h_idx in range(mapping_height_num_xb_per_pe):
+                        pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
+                        rt_h, rt_w = pos[0], pos[1]
+                        pe_h, pe_w = pos[2], pos[3]
+                        cu_h, cu_w = pos[4], pos[5]
+                        xb_h, xb_w = pos[6], pos[7]
+
+                        if xb_h_idx + 1 == mapping_height_num_xb_per_pe: # 底部邊界
+                            block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
+                        else:
+                            block_height = self.hd_info.Xbar_h
+
+                        if xb_w_idx + 1 == mapping_width_num_xb_per_pe: # 右邊邊界
+                            # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                            #block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
+                            block_width = (num_filter_last_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
+                        else:
+                            block_width = self.hd_info.Xbar_w
+
+                        for bh in range(block_height):
+                            for bw in range(block_width):
+                                # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
+                                w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * cells_per_filter
+                                h = bh + xb_h_idx * self.hd_info.Xbar_h
+
+                                # nfilter = w // self.model_info.filter_bit
+                                # nbit = w % self.model_info.filter_bit
+                                nfilter = w // cells_per_filter
+                                start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                # end_bit = start_bit + self.hd_info.cell_bit_width
+                                # if end_bit >= self.model_info.filter_bit:
+                                #     end_bit = self.model_info.filter_bit
+                                # nbit = [i for i in range(start_bit, end_bit)]
+                                nbit = start_bit
+                                ngrid = h
+
+                                cell_h = bh
+                                cell_w = bw
+                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
+
+                        ## Inputs
+                        xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
+                        xbar_column = [i for i in range(block_width)]
+                        xbar_row = [i for i in range(block_height)]
+                        for inp in xbar_inputs:
+                            self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_row, xbar_column, inp))
+
+                        this_layer_xb_mapping_idx += 1
                 # next layer change pe
                 used_pe_num = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)
                 used_xbar_num = used_pe_num * self.num_of_xb_in_pe
@@ -729,7 +765,6 @@ class SameColumnFirstMapping(object):
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
                 ## Inputs
-                #inputs = []
                 nn = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     nn.append([0, h, 0, 0])
@@ -749,14 +784,14 @@ class SameColumnFirstMapping(object):
                 mapping_width_num_xb_per_pe = self.num_of_xb_in_pe // mapping_height_num_xb_per_pe
                 if mapping_width_num_xb_per_pe * self.hd_info.Xbar_w > matrix_width:
                     mapping_width_num_xb_per_pe = ceil(matrix_width / self.hd_info.Xbar_w)
-
                 # num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // self.model_info.filter_bit
                 num_filter_per_pe = mapping_width_num_xb_per_pe * self.hd_info.Xbar_w // cells_per_filter
-                if num_filter_per_pe > self.model_info.filter_n[nlayer]:
-                    num_filter_per_pe = self.model_info.filter_n[nlayer]
+                # if num_filter_per_pe > self.model_info.filter_n[nlayer]:
+                #     num_filter_per_pe = self.model_info.filter_n[nlayer]
                 this_layer_xb_mapping_idx = xbar_mapping_idx
 
-                for pe_n in range(ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)):
+                num_pe = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe) # 此layer用多少個PE
+                for pe_n in range(num_pe-1): # 不包含最右邊matrix分配到的PE
                     for xb_w_idx in range(mapping_width_num_xb_per_pe):
                         for xb_h_idx in range(mapping_height_num_xb_per_pe):
                             pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
@@ -765,12 +800,12 @@ class SameColumnFirstMapping(object):
                             cu_h, cu_w = pos[4], pos[5]
                             xb_h, xb_w = pos[6], pos[7]
 
-                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe:
+                            if xb_h_idx + 1 == mapping_height_num_xb_per_pe: # 底部邊界
                                 block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
                             else:
                                 block_height = self.hd_info.Xbar_h
 
-                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe: 
+                            if xb_w_idx + 1 == mapping_width_num_xb_per_pe: # 右邊邊界
                                 # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
                                 block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
                             else:
@@ -807,6 +842,58 @@ class SameColumnFirstMapping(object):
 
                             this_layer_xb_mapping_idx += 1
 
+                num_filter_last_pe = self.model_info.filter_n[nlayer] - (num_pe-1) * num_filter_per_pe # matrix最右邊的部份, 有多少個filter分配到這個pe
+                pe_n =  num_pe - 1 # 最後一個pe
+                for xb_w_idx in range(mapping_width_num_xb_per_pe):
+                    for xb_h_idx in range(mapping_height_num_xb_per_pe):
+                        pos = self.xb_mapping_dict[this_layer_xb_mapping_idx]
+                        rt_h, rt_w = pos[0], pos[1]
+                        pe_h, pe_w = pos[2], pos[3]
+                        cu_h, cu_w = pos[4], pos[5]
+                        xb_h, xb_w = pos[6], pos[7]
+
+                        if xb_h_idx + 1 == mapping_height_num_xb_per_pe: # 底部邊界
+                            block_height = matrix_height - xb_h_idx * self.hd_info.Xbar_h
+                        else:
+                            block_height = self.hd_info.Xbar_h
+
+                        if xb_w_idx + 1 == mapping_width_num_xb_per_pe: # 右邊邊界
+                            # block_width = (num_filter_per_pe * self.model_info.filter_bit) - xb_w_idx * self.hd_info.Xbar_w
+                            #block_width = (num_filter_per_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
+                            block_width = (num_filter_last_pe * cells_per_filter) - xb_w_idx * self.hd_info.Xbar_w
+                        else:
+                            block_width = self.hd_info.Xbar_w
+
+                        for bh in range(block_height):
+                            for bw in range(block_width):
+                                # w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * self.model_info.filter_bit
+                                w = bw + xb_w_idx * self.hd_info.Xbar_w + pe_n * num_filter_per_pe * cells_per_filter
+                                h = bh + xb_h_idx * self.hd_info.Xbar_h
+
+                                # nfilter = w // self.model_info.filter_bit
+                                # nbit = w % self.model_info.filter_bit
+                                nfilter = w // cells_per_filter
+                                start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
+                                # end_bit = start_bit + self.hd_info.cell_bit_width
+                                # if end_bit >= self.model_info.filter_bit:
+                                #     end_bit = self.model_info.filter_bit
+                                # nbit = [i for i in range(start_bit, end_bit)]
+                                nbit = start_bit
+                                ngrid = h
+
+                                cell_h = bh
+                                cell_w = bw
+                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
+                                self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
+
+                        ## Inputs
+                        xbar_inputs = inputs[:, xb_h_idx * self.hd_info.Xbar_h : xb_h_idx * self.hd_info.Xbar_h + block_height].tolist()
+                        xbar_column = [i for i in range(block_width)]
+                        xbar_row = [i for i in range(block_height)]
+                        for inp in xbar_inputs:
+                            self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w].append(MappingMetaData("fully", nlayer, xbar_row, xbar_column, inp))
+
+                        this_layer_xb_mapping_idx += 1
                 # next layer change pe
                 used_pe_num = ceil(self.model_info.filter_n[nlayer] / num_filter_per_pe)
                 used_xbar_num = used_pe_num * self.num_of_xb_in_pe
