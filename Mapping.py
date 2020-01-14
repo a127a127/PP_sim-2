@@ -297,7 +297,7 @@ class DefaultMapping(object):
     def __str__(self):
         return str(self.__dict__)
 
-class HighParallelismMapping(object):
+class HighParallelismMapping(object): # 同ou要內要同filter
     def __init__(self):
         model_config = ModelConfig()
         print("Model:", model_config.Model_type)
@@ -332,7 +332,7 @@ class HighParallelismMapping(object):
                                     for xbx_idx in range(self.hd_info.Xbar_num_x):
                                         self.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx].append([])
 
-        self.xb_mapping_dict = dict()
+        self.xb_mapping_dict = dict() # XB放的順序
         ctr =  0
         for ry in range(self.hd_info.Router_num_y):
             if ry % 2 == 0:
@@ -393,41 +393,37 @@ class HighParallelismMapping(object):
                 OU_num_x = ceil(matrix_width / self.hd_info.OU_w)
                 for ou_idx_x in range(OU_num_x):
                     for ou_idx_y in range(OU_num_y):
-                        pos = self.xb_mapping_dict[xbar_idx] # xbar mapping position
+                        # 一次map一個OU
+                        pos = self.xb_mapping_dict[xbar_idx]
                         rt_h, rt_w = pos[0], pos[1]
                         pe_h, pe_w = pos[2], pos[3]
                         cu_h, cu_w = pos[4], pos[5]
                         xb_h, xb_w = pos[6], pos[7]
 
                         # OU block size
-                        if ou_idx_y + 1 == OU_num_y:
+                        if ou_idx_y + 1 == OU_num_y: # 邊界處理
                             block_h = matrix_height - ou_idx_y * self.hd_info.OU_h
                         else:
                             block_h = self.hd_info.OU_h
-                        if ou_idx_x + 1 == OU_num_x: 
+                        if ou_idx_x + 1 == OU_num_x: # 邊界處理
                             block_w = matrix_width - ou_idx_x * self.hd_info.OU_w
                         else:
                             block_w = self.hd_info.OU_w
                         
                         ## Weight
-                        for b_h in range(block_h):            
+                        for b_h in range(block_h):
                             for b_w in range(block_w):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
                                 h = b_h + ou_idx_y * self.hd_info.OU_h
 
                                 nfilter = w // cells_per_filter
                                 start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                # end_bit = start_bit + self.hd_info.cell_bit_width
-                                # if end_bit >= self.model_info.filter_bit:
-                                #     end_bit = self.model_info.filter_bit
-                                # nbit = [i for i in range(start_bit, end_bit)]
                                 nbit = start_bit
                                 ngrid = h
 
                                 cell_h = xbar_height_start_idx + b_h
                                 cell_w = xbar_width_start_idx + b_w
 
-                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                                 self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
                             
                         ## Input
@@ -486,23 +482,14 @@ class HighParallelismMapping(object):
                             for b_w in range(block_w):
                                 w = b_w + ou_idx_x * self.hd_info.OU_w
                                 h = b_h + ou_idx_y * self.hd_info.OU_h
-
-                                # nfilter = w // self.model_info.filter_bit
-                                # nbit = w % self.model_info.filter_bit
                                 nfilter = w // cells_per_filter
                                 start_bit = w % cells_per_filter * self.hd_info.cell_bit_width
-                                # end_bit = start_bit + self.hd_info.cell_bit_width
-                                # if end_bit >= self.model_info.filter_bit:
-                                #     end_bit = self.model_info.filter_bit
-                                # nbit = [i for i in range(start_bit, end_bit)]
                                 nbit = start_bit
                                 ngrid = h
-
 
                                 cell_h = xbar_height_start_idx + b_h
                                 cell_w = xbar_width_start_idx + b_w
 
-                                #self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = CrossbarGridMetaData(nlayer, ngrid, nfilter, nbit)
                                 self.crossbar_array[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][cell_h][cell_w] = [nlayer, ngrid, nfilter, nbit]
                         
                         ## Input

@@ -14,6 +14,7 @@ class PE(object):
         self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
         self.eventQueuing_CU = [] # for perfomance analysis
         self.edram_rd_event = None
+        self.edram_rd_cu_idx = None
         self.edram_rd_cycle_ctr = 0
         self.data_to_ir_ing = False
 

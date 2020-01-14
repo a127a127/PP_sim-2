@@ -10,8 +10,8 @@ class HardwareMetaData(object):
 
         self.cell_bit_width = 2  # Alexnet: 2
 
-        self.Router_num_y = 10 # Alexnet: 10
-        self.Router_num_x = 10 # Alexnet: 10
+        self.Router_num_y = 10 # Alexnet: 10 MXIC 2
+        self.Router_num_x = 10 # Alexnet: 10 MXIC 3
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2

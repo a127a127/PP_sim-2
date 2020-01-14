@@ -14,9 +14,6 @@ class OrderGenerator(object):
         self.mp_info = mapping_information
         self.free_buffer_controller = FreeBufferController()
 
-        # mapping
-        self.layer_mapping_to_pe = self.mp_info.layer_mapping_to_pe
-
         self.cu_traverse_idx = []
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
@@ -83,6 +80,7 @@ class OrderGenerator(object):
                         data_feed_to_cu = [] # 一次edram read的資料
                         for xby_idx in range(self.hd_info.Xbar_num_y):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
+                                # 優化: 這邊每個ou都要找一次input, 有點蠢
                                 xbar_inputs = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
                                 xb_inputs = []
                                 for x_inp in xbar_inputs:
@@ -104,16 +102,16 @@ class OrderGenerator(object):
                                         # 不紀錄pading的值
                                         if w >= 0 and w < self.model_info.input_w[nlayer] and h >= 0 and h < self.model_info.input_h[nlayer]:
                                             data = [input_num, h, w, c]
-                                            if data not in data_feed_to_cu: # 這裡會search
+                                            if data not in data_feed_to_cu:
                                                 data_feed_to_cu.append(data)
                                 else: # padding == "VALID"
                                     for d in inp:
-                                        if d not in data_feed_to_cu: # 這裡會search
+                                        if d not in data_feed_to_cu:
                                             data_feed_to_cu.append(d)
 
                         if nlayer == 0:
                             eri_preceding_count = 0
-                        else: # 若非第一層要算dependency
+                        else: # 若非第一層要加dependency
                             eri_preceding_count = 0
                             start_append_idx = len(self.Computation_order)
                             for input_data in data_feed_to_cu: # 檢查每一筆資料的有dependency的event
@@ -176,6 +174,7 @@ class OrderGenerator(object):
                             for xbx_idx in range(self.hd_info.Xbar_num_x):
                                 xbar_inputs  = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
                                 xbar_weights = self.mp_info.crossbar_array[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx]
+                                # 優化: 這裡又找了一次
                                 xb_inputs = []
                                 for x_inp in xbar_inputs:
                                     if x_inp.nlayer == nlayer:
@@ -193,7 +192,6 @@ class OrderGenerator(object):
                                 num_ou_w = math.ceil(len(inp.xbar_column) / self.hd_info.OU_w)
                                 num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
 
-                                #num_ou_in_xb[(xby_idx, xbx_idx)] = num_ou
                                 xb_idx = xbx_idx + xby_idx * HardwareMetaData().Xbar_num_x
                                 num_ou_in_xb[xb_idx] = num_ou
                                 max_ou = max(num_ou, max_ou)
@@ -201,13 +199,12 @@ class OrderGenerator(object):
                                 num_input = inp.inputs[0][0]
 
                                 filter_list = list() # 此xbar 會計算到的 filter
-                                row_idx = inp.xbar_row[0] # 只需取一第一個row
+                                row_idx = inp.xbar_row[0] # 只需取一第一個row, 因為同ou同column要同一張filter
                                 for col_idx in inp.xbar_column:
                                     nfilter = xbar_weights[row_idx][col_idx][2]
                                     if nfilter not in filter_list:
                                         filter_list.append(nfilter)
                                 for nfilter in filter_list:
-                                    # dependecy matrix
                                     grid = self.pe_saa_mat[nlayer][num_input][nfilter]
                                     if grid == 0.0:
                                         self.pe_saa_mat[nlayer][num_input][nfilter] = []
@@ -551,7 +548,7 @@ class OrderGenerator(object):
                         for pey_idx in range(self.hd_info.PE_num_y):
                             for pex_idx in range(self.hd_info.PE_num_x):
                                 pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                                for mapping_data in self.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx]:
+                                for mapping_data in self.mp_info.layer_mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx]:
                                     if mapping_data.nlayer == nlayer:
                 ### Event: edram_rd_pool, data_transfer
                                         for inputs in mapping_data.inputs:
