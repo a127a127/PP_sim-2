@@ -31,14 +31,14 @@ class OrderGenerator(object):
                 self.pe_saa_mat.append(np.zeros((self.model_info.input_number[i], self.model_info.filter_n[i])).tolist())
                 if i+1 < self.model_info.layer_length:
                     if self.model_info.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1])).tolist())
                     else:
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "pooling":
                 self.pe_saa_mat.append([])
                 if i+1 < self.model_info.layer_length:
                     if self.model_info.layer_list[i+1].layer_type == "fully":
-                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1], 1, 1)).tolist())
+                        self.feature_mat.append(np.zeros((self.model_info.input_h[i+1] * self.model_info.input_w[i+1] * self.model_info.input_c[i+1])).tolist())
                     else:
                         self.feature_mat.append(np.zeros((self.model_info.input_h[i+1], self.model_info.input_w[i+1], self.model_info.input_c[i+1])).tolist())
             elif self.model_info.layer_list[i].layer_type == "fully":
@@ -52,6 +52,11 @@ class OrderGenerator(object):
         self.generate_order()
         if trace:
             self.trace_order()
+
+        for i in range(self.model_info.layer_length-1):
+            print("layer ", i)
+            print(self.feature_mat[i])
+        exit()
 
     def generate_order(self):
         for nlayer in range(self.model_info.layer_length):
@@ -115,26 +120,27 @@ class OrderGenerator(object):
                             eri_preceding_count = 0
                             start_append_idx = len(self.Computation_order)
                             for input_data in data_feed_to_cu: # 檢查每一筆資料的有dependency的event
-                                preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
-                                for pre_event in preceding_list: 
-                                    edram_wr_event            = self.Computation_order[pre_event]
-                                    data_transfer_source      = edram_wr_event.position_idx
-                                    data_transfer_destination = pe_pos
-                                    if data_transfer_source != data_transfer_destination: # edram write event發生在別的pe, 則多生data transfer event
-                                        ### Event: data_transfer
-                                        data_transfer_event_idx = len(self.Computation_order)
-                                        edram_wr_event.proceeding_event.append(data_transfer_event_idx)
-                                        data_transfer_preceding_count = 1 
-                                        data_transfer_inputs  = 0
-                                        data_transfer_outputs = edram_wr_event.outputs # [[h, w, c]]
-                                        event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
-                                        self.Computation_order.append(event)
+                                #preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
+                                pre_event = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] 
+                                
+                                edram_wr_event            = self.Computation_order[pre_event]
+                                data_transfer_source      = edram_wr_event.position_idx
+                                data_transfer_destination = pe_pos
+                                if data_transfer_source != data_transfer_destination: # edram write event發生在別的pe, 則多生data transfer event
+                                    ### Event: data_transfer
+                                    data_transfer_event_idx = len(self.Computation_order)
+                                    edram_wr_event.proceeding_event.append(data_transfer_event_idx)
+                                    data_transfer_preceding_count = 1 
+                                    data_transfer_inputs  = 0
+                                    data_transfer_outputs = edram_wr_event.outputs # [[h, w, c]]
+                                    event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
+                                    self.Computation_order.append(event)
 
-                                        # input requirement
-                                        pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                        for d in data_transfer_outputs:
-                                            pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
-                                            self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                    # input requirement
+                                    pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                    for d in data_transfer_outputs:
+                                        pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
 
                             ## dependency
                             eri_event_idx = len(self.Computation_order) 
@@ -143,14 +149,15 @@ class OrderGenerator(object):
                                 self.Computation_order[idx].proceeding_event.append(eri_event_idx)
                             # edram write event的dependency
                             for input_data in data_feed_to_cu:
-                                preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]]
-                                for pre_event in preceding_list:
-                                    edram_wr_event            = self.Computation_order[pre_event]
-                                    data_transfer_source      = edram_wr_event.position_idx
-                                    data_transfer_destination = pe_pos
-                                    if data_transfer_source == data_transfer_destination: 
-                                        self.Computation_order[pre_event].proceeding_event.append(eri_event_idx)
-                                    eri_preceding_count += 1
+                                #preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]]
+                                pre_event = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]]
+                                #for pre_event in preceding_list:
+                                edram_wr_event            = self.Computation_order[pre_event]
+                                data_transfer_source      = edram_wr_event.position_idx
+                                data_transfer_destination = pe_pos
+                                if data_transfer_source == data_transfer_destination: 
+                                    self.Computation_order[pre_event].proceeding_event.append(eri_event_idx)
+                                eri_preceding_count += 1
 
                         eri_event_idx = len(self.Computation_order)
                         eri_position_idx = cu_pos
@@ -302,15 +309,15 @@ class OrderGenerator(object):
                             # dependecy matrix
                             if nlayer+1 < self.model_info.layer_length:
                                 if self.model_info.layer_list[nlayer+1].layer_type != "fully":
-                                    if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
-                                        self.feature_mat[nlayer][window_h][window_w][nfilter] = []
-                                    self.feature_mat[nlayer][window_h][window_w][nfilter].append(edram_wr_event_idx)
+                                    # if self.feature_mat[nlayer][window_h][window_w][nfilter] == 0.0:
+                                    #     self.feature_mat[nlayer][window_h][window_w][nfilter] = []
+                                    self.feature_mat[nlayer][window_h][window_w][nfilter] = edram_wr_event_idx
                                 else:
                                     seq = window_w + window_h * windowlen_w + nfilter * windowlen_w * windowlen_h
                                     edram_wr_outputs  = [[seq, 0, 0]]
-                                    if self.feature_mat[nlayer][seq][0][0] == 0.0:
-                                        self.feature_mat[nlayer][seq][0][0] = []
-                                    self.feature_mat[nlayer][seq][0][0].append(edram_wr_event_idx)
+                                    # if self.feature_mat[nlayer][seq] == 0.0:
+                                    #     self.feature_mat[nlayer][seq] = []
+                                    self.feature_mat[nlayer][seq] = edram_wr_event_idx
                             event = EventMetaData("edram_wr", do_edram_wr_pos, edram_wr_preceding_count, [], nlayer, edram_wr_inputs, edram_wr_outputs)
                             self.Computation_order.append(event)
 
@@ -356,40 +363,44 @@ class OrderGenerator(object):
                             eri_preceding_count = 0
                             start_append_idx = len(self.Computation_order)
                             for input_data in data_feed_to_cu:
-                                preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
-                                for pre_event in preceding_list: 
-                                    edram_wr_event            = self.Computation_order[pre_event]
-                                    data_transfer_source      = edram_wr_event.position_idx
-                                    data_transfer_destination = pe_pos
-                                    if data_transfer_source != data_transfer_destination:
-                                        ### Event: data_transfer
-                                        data_transfer_event_idx = len(self.Computation_order)
-                                        edram_wr_event.proceeding_event.append(data_transfer_event_idx)
-                                        data_transfer_preceding_count = 1
-                                        data_transfer_inputs  = 0
-                                        data_transfer_outputs = edram_wr_event.outputs
-                                        event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
-                                        self.Computation_order.append(event)
+                                #preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
+                                #pre_event = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]]
+                                pre_event = self.feature_mat[nlayer-1][input_data[1]]
+                                #for pre_event in preceding_list: 
+                                edram_wr_event            = self.Computation_order[pre_event]
+                                data_transfer_source      = edram_wr_event.position_idx
+                                data_transfer_destination = pe_pos
+                                if data_transfer_source != data_transfer_destination:
+                                    ### Event: data_transfer
+                                    data_transfer_event_idx = len(self.Computation_order)
+                                    edram_wr_event.proceeding_event.append(data_transfer_event_idx)
+                                    data_transfer_preceding_count = 1
+                                    data_transfer_inputs  = 0
+                                    data_transfer_outputs = edram_wr_event.outputs
+                                    event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
+                                    self.Computation_order.append(event)
 
-                                        # input requirement
-                                        pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-                                        for d in data_transfer_outputs:
-                                            pos = d[0]
-                                            self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
+                                    # input requirement
+                                    pe_id = data_transfer_source[3] + data_transfer_source[2]*self.hd_info.PE_num_x + data_transfer_source[1]*self.hd_info.PE_num + data_transfer_source[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
+                                    for d in data_transfer_outputs:
+                                        pos = d[0]
+                                        self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
                             
                             # dependency
                             eri_event_idx = len(self.Computation_order)
                             for idx in range(start_append_idx, eri_event_idx):
                                 self.Computation_order[idx].proceeding_event.append(eri_event_idx)
                             for input_data in data_feed_to_cu:
-                                preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
-                                for pre_event in preceding_list:
-                                    edram_wr_event            = self.Computation_order[pre_event]
-                                    data_transfer_source      = edram_wr_event.position_idx
-                                    data_transfer_destination = pe_pos
-                                    if data_transfer_source == data_transfer_destination:
-                                        self.Computation_order[pre_event].proceeding_event.append(eri_event_idx)
-                                    eri_preceding_count += 1
+                                #preceding_list = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]] # [h][w][c]
+                                #pre_event = self.feature_mat[nlayer-1][input_data[1]][input_data[2]][input_data[3]]
+                                pre_event = self.feature_mat[nlayer-1][input_data[1]]
+                                #for pre_event in preceding_list:
+                                edram_wr_event            = self.Computation_order[pre_event]
+                                data_transfer_source      = edram_wr_event.position_idx
+                                data_transfer_destination = pe_pos
+                                if data_transfer_source == data_transfer_destination:
+                                    self.Computation_order[pre_event].proceeding_event.append(eri_event_idx)
+                                eri_preceding_count += 1
 
                         eri_event_idx = len(self.Computation_order)
                         eri_position_idx = cu_pos
@@ -538,9 +549,9 @@ class OrderGenerator(object):
 
                     # dependecy matrix
                     if nlayer+1 < self.model_info.layer_length:
-                        if self.feature_mat[nlayer][nfilter][0][0] == 0.0:
-                            self.feature_mat[nlayer][nfilter][0][0] = []
-                        self.feature_mat[nlayer][nfilter][0][0].append(edram_wr_event_idx)
+                        # if self.feature_mat[nlayer][nfilter] == 0.0:
+                        #     self.feature_mat[nlayer][nfilter] = []
+                        self.feature_mat[nlayer][nfilter] = edram_wr_event_idx
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 for rty_idx in range(self.hd_info.Router_num_y):
@@ -556,35 +567,35 @@ class OrderGenerator(object):
                                             start_append_idx = len(self.Computation_order)
                                             for input_data in inputs:
                                                 d = input_data[1:]
-                                                preceding_list = self.feature_mat[nlayer-1][d[0]][d[1]][d[2]]
-                                                for pre_event in preceding_list:
-                                                    edram_wr_event = self.Computation_order[pre_event]
-                                                    data_transfer_source      = edram_wr_event.position_idx
-                                                    data_transfer_destination = pe_pos
-                                                    if data_transfer_source != data_transfer_destination:
-                                                        ## Event: data_transfer
-                                                        data_transfer_event_idx = len(self.Computation_order)
-                                                        edram_wr_event.proceeding_event.append(data_transfer_event_idx)
-                                                        data_transfer_preceding_count = 1
-                                                        #data_transfer_inputs  = edram_wr_event.outputs
-                                                        data_transfer_inputs  = 0
-                                                        data_transfer_outputs = edram_wr_event.outputs
-                                                        event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
-                                                        self.Computation_order.append(event)
+                                                pre_event = self.feature_mat[nlayer-1][d[0]][d[1]][d[2]]
+                                                #for pre_event in preceding_list:
+                                                edram_wr_event = self.Computation_order[pre_event]
+                                                data_transfer_source      = edram_wr_event.position_idx
+                                                data_transfer_destination = pe_pos
+                                                if data_transfer_source != data_transfer_destination:
+                                                    ## Event: data_transfer
+                                                    data_transfer_event_idx = len(self.Computation_order)
+                                                    edram_wr_event.proceeding_event.append(data_transfer_event_idx)
+                                                    data_transfer_preceding_count = 1
+                                                    #data_transfer_inputs  = edram_wr_event.outputs
+                                                    data_transfer_inputs  = 0
+                                                    data_transfer_outputs = edram_wr_event.outputs
+                                                    event = EventMetaData("data_transfer", [data_transfer_source, data_transfer_destination], data_transfer_preceding_count, [], nlayer-1, data_transfer_inputs, data_transfer_outputs)
+                                                    self.Computation_order.append(event)
 
                                             # dependency
                                             erp_event_idx = len(self.Computation_order)
                                             for input_data in inputs:
                                                 d = input_data[1:]
-                                                preceding_list = self.feature_mat[nlayer-1][d[0]][d[1]][d[2]]
+                                                pre_event = self.feature_mat[nlayer-1][d[0]][d[1]][d[2]]
                                                 
-                                                for pre_event in preceding_list:
-                                                    edram_wr_event = self.Computation_order[pre_event]
-                                                    data_transfer_source      = edram_wr_event.position_idx
-                                                    data_transfer_destination = pe_pos
-                                                    if data_transfer_source == data_transfer_destination:
-                                                        self.Computation_order[pre_event].proceeding_event.append(erp_event_idx)
-                                                    erp_preceding_count += 1
+                                                #for pre_event in preceding_list:
+                                                edram_wr_event = self.Computation_order[pre_event]
+                                                data_transfer_source      = edram_wr_event.position_idx
+                                                data_transfer_destination = pe_pos
+                                                if data_transfer_source == data_transfer_destination:
+                                                    self.Computation_order[pre_event].proceeding_event.append(erp_event_idx)
+                                                erp_preceding_count += 1
 
                                             for idx in range(start_append_idx, erp_event_idx):
                                                 self.Computation_order[idx].proceeding_event.append(erp_event_idx)
@@ -628,15 +639,16 @@ class OrderGenerator(object):
 
                                             if nlayer+1 < self.model_info.layer_length:
                                                 if self.model_info.layer_list[nlayer+1].layer_type != "fully":
-                                                    if self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] == 0.0:
-                                                        self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]] = []
-                                                    self.feature_mat[nlayer][edram_wr_output_sequence[0][0]][edram_wr_output_sequence[0][1]][edram_wr_output_sequence[0][2]].append(edram_wr_event_idx)
+                                                    h, w, c = edram_wr_output_sequence[0][0], edram_wr_output_sequence[0][1], edram_wr_output_sequence[0][2]
+                                                    # if self.feature_mat[nlayer][h][w][c] == 0.0:
+                                                    #     self.feature_mat[nlayer][h][w][c] = []
+                                                    self.feature_mat[nlayer][h][w][c] = edram_wr_event_idx
                                                 else:
                                                     seq = edram_wr_output_sequence[0][0] * self.model_info.input_w[nlayer+1] + edram_wr_output_sequence[0][1] + edram_wr_output_sequence[0][2] * self.model_info.input_h[nlayer+1] * self.model_info.input_w[nlayer+1]
                                                     edram_wr_output_sequence  = [[seq, 0, 0]]
-                                                    if self.feature_mat[nlayer][seq][0][0] == 0.0:
-                                                        self.feature_mat[nlayer][seq][0][0] = []
-                                                    self.feature_mat[nlayer][seq][0][0].append(edram_wr_event_idx)
+                                                    # if self.feature_mat[nlayer][seq][0][0] == 0.0:
+                                                    #     self.feature_mat[nlayer][seq][0][0] = []
+                                                    self.feature_mat[nlayer][seq] = edram_wr_event_idx
                                             event = EventMetaData("edram_wr", edram_wr_position_idx, edram_wr_preceding_count, [], nlayer, edram_wr_input_sequence, edram_wr_output_sequence)
                                             self.Computation_order.append(event)
 
