@@ -310,7 +310,6 @@ class Controller(object):
                     else: # 資料全到, do edram read
                         if self.trace:
                             print("\tdo edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
-                            print(self.Computation_order.index(event), event)
                         pe.data_to_ir_ing = True
                         pe.state = True
 
@@ -410,8 +409,6 @@ class Controller(object):
                                 data = d[1:]
                                 try:
                                     self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                                    if [nlayer, data] == [4, [140, 0, 0]]:
-                                        print("rm [4, [140, 0, 0]]")
                                 except ValueError:
                                     print("Data not in buffer:", [nlayer, data])
                                     exit()
@@ -863,10 +860,9 @@ class Controller(object):
                 pass
                 #print("put packet data:", pk)
 
+            if not self.isPipeLine:
+                self.this_layer_event_ctr += 1
             for pro_event_idx in pk.pro_event_list:
-                if not self.isPipeLine:
-                    self.this_layer_event_ctr += 1
-
                 pro_event = self.Computation_order[pro_event_idx]
                 pro_event.data_is_transfer -= 1
 
@@ -882,7 +878,7 @@ class Controller(object):
             src = event.position_idx[0]
             des = event.position_idx[1]
 
-            pro_event_list = [event.proceeding_event[0]]
+            pro_event_list = event.proceeding_event
             if self.Computation_order[pro_event_list[0]].event_type == "edram_rd_ir":
                 data = [event.nlayer+1, event.outputs[0]]
             elif self.Computation_order[pro_event_list[0]].event_type == "edram_rd_pool":
@@ -918,6 +914,7 @@ class Controller(object):
                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                     if pro_event.event_type == "edram_rd_ir":
                         if self.trace:
+                            pass
                             print("\ttrigger edram read")
                         cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
                         cu_idx = cux + cuy * self.hd_info.CU_num_x
@@ -926,6 +923,7 @@ class Controller(object):
                             self.trigger_edram_rd.append(des_pe)
                     elif pro_event.event_type == "edram_rd_pool":
                         if self.trace:
+                            pass
                             print("\ttrigger pooling edram read")
                         des_pe.edram_rd_pool_trigger.append([pro_event, []])
                         if des_pe not in self.trigger_pool_rd:
