@@ -21,10 +21,10 @@ class PE(object):
         ### for cu operation
         self.cu_op_list = []
 
-        ### for buffer size analysis
         self.edram_buffer = OnChipBuffer(input_bit)
         self.edram_buffer_i = OnChipBuffer(input_bit)
         self.input_require = []
+        self.buffer_size_util = [] # [cycle, size]
         
         ### events per cycle
         # 要在一個cycle完成最多可能來自所有CU的資料

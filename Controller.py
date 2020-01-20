@@ -105,7 +105,8 @@ class Controller(object):
             self.buffer_size_i.append([])
         self.max_buffer_size = 0 # num of data
         self.max_buffer_size_i = 0 # num of data
-        self.buffer_record_freq =  1
+        #self.buffer_record_freq =  1
+        self.check_buffer_pe_set = set()
 
         # execute event
         self.erp_rd      = []
@@ -256,9 +257,13 @@ class Controller(object):
 
             ### Buffer utilization
             staa = time.time()
-            if self.cycle_ctr % self.buffer_record_freq == 0:
-                self.buffer_util()
-
+            # if self.cycle_ctr % self.buffer_record_freq == 0:
+            #     self.buffer_util()
+            # buffer utilization
+            for pe in self.check_buffer_pe_set:
+                pe.edram_buffer_i.buffer_size_util[0].append(self.cycle_ctr)
+                pe.edram_buffer_i.buffer_size_util[1].append(len(pe.edram_buffer_i.buffer))
+            self.check_buffer_pe_set = set()
             t_buf += time.time() - staa
 
             ### Finish
@@ -360,6 +365,7 @@ class Controller(object):
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                         data = d[1:]
                                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                        self.check_buffer_pe_set.add(self.PE_array[pe_id])
                             elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
                                 for d in event.inputs:
                                     pos = d[1]
@@ -367,11 +373,14 @@ class Controller(object):
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                         data = d[1:]
                                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                        self.check_buffer_pe_set.add(self.PE_array[pe_id])
                         else:
                             pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             else: # CU傳資料到IR
                 pe.edram_rd_cycle_ctr += 1
                 if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
+                    if self.trace:
+                        print("\tfinish edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
                     pe.this_cycle_read_data = num_data % self.edram_read_data
                     self.done_event += 1
                     if not self.isPipeLine:
@@ -401,18 +410,15 @@ class Controller(object):
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                 data = d[1:]
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                self.check_buffer_pe_set.add(self.PE_array[pe_id])
                     elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
                         for d in event.inputs:
                             pos = d[1]
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                                 data = d[1:]
-                                try:
-                                    self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                                except ValueError:
-                                    print("Data not in buffer:", [nlayer, data])
-                                    exit()
-
+                                self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                self.check_buffer_pe_set.add(self.PE_array[pe_id])
                 else:
                     pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             # 下個cycle還要不要檢查此pe
@@ -587,12 +593,12 @@ class Controller(object):
                         pe.activation_trigger.append([pro_event, []])
                         if pe not in self.trigger_act:
                             self.trigger_act.append(pe)
-                '''
+
                 # Free buffer (ideal)
                 for d in rm_data_list:
                     if [event.nlayer, d] in pe.edram_buffer_i.buffer:
                         pe.edram_buffer_i.buffer.remove([event.nlayer, d])
-                '''
+                        self.check_buffer_pe_set.add(pe)
 
             pe.pe_saa_erp = pe_saa_erp
             if pe.pe_saa_erp:
@@ -674,7 +680,9 @@ class Controller(object):
         erp = []
         for pe in self.erp_wr:
             if not pe.edram_wr_erp:
+                print("不會發生")
                 continue
+
             pe.state = True
             if self.edram_write_data <= len(pe.edram_wr_erp):
                 do_wr_num = self.edram_write_data
@@ -729,6 +737,8 @@ class Controller(object):
                                 self.trigger_pool_rd.append(pe)
                         elif pro_event.event_type == "data_transfer":
                             self.data_transfer_trigger.append([pro_event, []])
+            
+            self.check_buffer_pe_set.add(pe)
 
             if pe.edram_wr_erp:
                 erp.append(pe)
@@ -801,8 +811,8 @@ class Controller(object):
                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                         data = d[1:]
                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
-                
-            
+                        self.check_buffer_pe_set.add(self.PE_array[pe_id])
+
             if pe.edram_rd_pool_erp:
                 erp.append(pe)
             '''
@@ -850,6 +860,8 @@ class Controller(object):
 
             pe.edram_buffer.put(pk.data)
             pe.edram_buffer_i.put(pk.data)
+            self.check_buffer_pe_set.add(pe)
+
             if self.trace:
                 pass
                 #print("put packet data:", pk)
@@ -936,6 +948,7 @@ class Controller(object):
                 data = event.outputs[0]
                 if [event.nlayer, data] in self.PE_array[pe_id].edram_buffer_i.buffer:
                     self.PE_array[pe_id].edram_buffer_i.buffer.remove([event.nlayer, data])
+                    self.check_buffer_pe_set.add(self.PE_array[pe_id])
             else:
                 nlayer = event.nlayer+1
                 if self.ordergenerator.model_info.layer_list[nlayer].layer_type != "fully":
@@ -944,12 +957,14 @@ class Controller(object):
                         self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                         if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                             self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
+                            self.check_buffer_pe_set.add(self.PE_array[pe_id])
                 else:
                     for d in event.outputs:
                         pos = d[0]
                         self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                         if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
                             self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
+                            self.check_buffer_pe_set.add(self.PE_array[pe_id])
 
     def fetch(self):
         des_dict = dict()
@@ -1447,6 +1462,46 @@ class Controller(object):
         plt.clf()
 
     def buffer_analysis(self):
+        ### time history
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_ideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                util = pe.edram_buffer_i.buffer_size_util
+                if len(util[0]) == 0:
+                    continue
+                writer.writerow(["PE"+str(self.PE_array.index(pe))])
+                writer.writerow(util[0])
+                writer.writerow(util[1])
+        
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_nonideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                util = pe.edram_buffer.buffer_size_util
+                if len(util[0]) == 0:
+                    continue
+                writer.writerow(["PE"+str(self.PE_array.index(pe))])
+                writer.writerow(util[0])
+                writer.writerow(util[1])
+
+        ### utilization
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_ideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                if pe.edram_buffer_i.maximal_usage == 0:
+                    continue
+                pe_id = self.PE_array.index(pe)
+                writer.writerow([pe_id, pe.edram_buffer_i.maximal_usage])
+        
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_nonideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                if pe.edram_buffer.maximal_usage == 0:
+                    continue
+                pe_id = self.PE_array.index(pe)
+                writer.writerow([pe_id, pe.edram_buffer.maximal_usage])
+
+
+    def buffer_analysis_old(self):
         max_buffer_need = 0
         for i in range(len(self.PE_array)):
             max_buffer_need = max(self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, max_buffer_need)

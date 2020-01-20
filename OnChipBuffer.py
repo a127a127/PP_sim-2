@@ -13,6 +13,8 @@ class OnChipBuffer():
         
         self.maximal_usage = 0
 
+        self.buffer_size_util = [[], []] # [cycle, size]
+
     def check(self, data):
         for d in self.buffer:
             if d == data:
@@ -46,9 +48,6 @@ class OnChipBuffer():
             return True
         else:
             return False
-    
-    def count(self):
-        return len(self.buffer)
 
     def __str__(self):
         return str(self.__dict__)
