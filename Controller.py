@@ -741,22 +741,16 @@ class Controller(object):
             for event in pe.edram_rd_pool_erp.copy():
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
                     continue
-                #isData_ready = True
                 fetch_data = []
                 for inp in event.inputs:
                     data = inp[1:]
-                    #print(event.nlayer, data)
                     if not pe.edram_buffer.check([event.nlayer, data]):
                         # Data not in buffer
                         if self.trace:
                             print("\tData not ready for edram_rd_pool. Data: layer", event.nlayer, event.event_type, [event.nlayer, data])
                         fetch_data.append(data)
-                        #isData_ready = False
-                        #break
 
-                #if not isData_ready:
                 if fetch_data:
-                    #event.data_is_transfer += len(event.inputs)
                     event.data_is_transfer += len(fetch_data)
                     self.fetch_array.append([FetchEvent(event), fetch_data])
                     continue
@@ -867,7 +861,7 @@ class Controller(object):
                 pro_event.data_is_transfer -= 1
 
     def event_transfer(self):
-        for event in self.data_transfer_erp.copy():
+        for event in self.data_transfer_erp.copy(): 
             self.done_event += 1
             if self.trace:
                 pass
@@ -965,12 +959,10 @@ class Controller(object):
             if FE.cycles_counter == FE.fetch_cycle:
                 src  = (0, FE.event.position_idx[1], -1, -1)
                 des  = FE.event.position_idx[0:4]
-                #if FE.event.event_type == "edram_rd_ir" or FE.event.event_type == "edram_rd_pool":
                 if not self.isPipeLine:
                     self.this_layer_event_ctr -= len(fetch_data)
                 if des not in des_dict:
                     des_dict[des] = []
-                #for inp in FE.event.inputs:
                 for data in fetch_data:
                     #data = inp[1:]
                     data = [FE.event.nlayer, data]

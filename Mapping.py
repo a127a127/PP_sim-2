@@ -251,8 +251,6 @@ class DefaultMapping(object):
     
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
-                #o_height = self.model_info.input_h[nlayer] // self.model_info.pooling_h[nlayer]
-                #o_width = self.model_info.input_w[nlayer] // self.model_info.pooling_w[nlayer]
                 o_height = self.model_info.input_h[nlayer+1]
                 o_width = self.model_info.input_w[nlayer+1]
                 inputs = []
@@ -290,6 +288,7 @@ class DefaultMapping(object):
                         this_input = inputs[pe_n * input_per_pe : (pe_n+1) * input_per_pe].tolist()
                     xbar_column = [-1]
                     xbar_row = [-1]
+
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w].append(MappingMetaData("pooling", nlayer, xbar_row, xbar_column, this_input))
                 pe_idx += pe_total_num
