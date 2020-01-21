@@ -14,7 +14,6 @@ def main():
     scheduling = int(sys.argv[2])
 
     ### Mapping ##
-    #a = input("按一下開始mapping")
     start_mapping_time = time.time()
     print("--- Mapping ---")
     print("Mapping policy:  ", end="")
@@ -42,7 +41,6 @@ def main():
         print("Pipeline")
         scheduling_str = "Pipeline"
     print()
-
     ### dir ###
     if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling_str):
             os.makedirs('./statistics/'+mapping_str+'/'+scheduling_str)
@@ -51,12 +49,11 @@ def main():
     isGenerateOrder = True
 
     ### Trace ###
-    isTrace_order      = False
+    isTrace_order      = True
     isTrace_controller = False
 
     ### Generate computation order graph ### 
     if isGenerateOrder:
-        #a = input("按一下開始生order")
         start_order_time = time.time()
         print("--- Generate computation order graph ---")
 
@@ -65,13 +62,6 @@ def main():
         end_order_time = time.time()
         print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
 
-        #a = input("存擋order")
-        # print("Store order_generator to file \"ComputationOrder\"")
-        # start_store = time.time()
-        # with open('ComputationOrder', 'wb') as fp:
-        #     pickle.dump(order_generator, fp)
-        # end_store = time.time()
-        # print("--- Store computation order in %s seconds ---\n" %(end_store - start_store))
     else:
         print("Load order_generator from file \"ComputationOrder\"")
         start_load = time.time()
@@ -85,7 +75,6 @@ def main():
     del mapping_information
 
     ## Power and performance simulation ###
-    #a = input("按一下開始模擬")
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
 
@@ -96,7 +85,6 @@ def main():
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    #a = input("按一下輸出統計資料")
     controller.print_statistics_result()
 
 def power_break_down():

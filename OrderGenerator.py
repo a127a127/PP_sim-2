@@ -119,7 +119,6 @@ class OrderGenerator(object):
         if trace:
             self.trace_order()
 
-
     def generate_order(self):
         for nlayer in range(self.model_info.layer_length):
             print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
@@ -757,9 +756,9 @@ class OrderGenerator(object):
         print("data_transfer_ctr", data_transfer_ctr)
         print("total", len(self.Computation_order))
 
-        if True:
-            for e in self.Computation_order:
-                print(self.Computation_order.index(e), e)
+        # if True:
+        #     for e in self.Computation_order:
+        #         print(self.Computation_order.index(e), e)
                 # if self.Computation_order.index(e) == 10:
                 #     break
 

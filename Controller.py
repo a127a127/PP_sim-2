@@ -444,9 +444,12 @@ class Controller(object):
                     ou_num_dict = cu.cu_op_event.outputs
                     for xb_idx in ou_num_dict:
                         ou_num = ou_num_dict[xb_idx]
+                        self.Total_energy_dac += self.hd_info.Energy_ou_dac * ou_num
                         self.Total_energy_crossbar += self.hd_info.Energy_ou_crossbar * ou_num
-                        self.Total_energy_adc += self.hd_info.Energy_ou_dac * ou_num
+                        self.Total_energy_adc += self.hd_info.Energy_ou_adc * ou_num
                         self.Total_energy_cu_shift_and_add += self.hd_info.Energy_ou_ssa * ou_num
+
+                        pe.CU_energy += ou_num * (self.hd_info.Energy_ou_dac+self.hd_info.Energy_ou_crossbar+self.hd_info.Energy_ou_adc+self.hd_info.Energy_ou_ssa)
 
                     cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
                     self.cu_state_for_plot[0].append(self.cycle_ctr)
@@ -845,7 +848,10 @@ class Controller(object):
             self.interconnect.step()
             self.Total_energy_interconnect += self.interconnect.step_energy_consumption
         # Packets arrive: Store data, trigger event
-        arrived_packet = self.interconnect.get_arrived_packet()
+        #arrived_packet = self.interconnect.get_arrived_packet()
+        arrived_packet = self.interconnect.arrived_list
+        self.interconnect.packet_in_module_ctr -= len(arrived_packet)
+        self.interconnect.arrived_list = []
         for pk in arrived_packet:
             if self.trace:
                 pass
@@ -1124,21 +1130,381 @@ class Controller(object):
             self.non_pipeline_stage()
 
         self.freq = 1
-        print("output buffer utilization...")
-        self.buffer_analysis()
         print("Energy breakdown:")
         self.energy_breakdown()
-        print("output performance anaylsis...")
-        self.performance_statistics()
+        print("output buffer utilization...")
+        self.buffer_analysis()
         print("output pe utilization...")
         self.pe_utilization()
         print("output cu utilization...")
         self.cu_utilization()
         print("output xb utilization...")
         self.crossbar_utilization()
+        print("output performance anaylsis...")
+        self.performance_statistics()
+
+    def energy_breakdown(self):
+        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
+                                self.Total_energy_adc + \
+                                self.Total_energy_dac + \
+                                self.Total_energy_crossbar + \
+                                self.Total_energy_ir_in_cu + \
+                                self.Total_energy_or_in_cu
+        self.Total_energy_pe = self.Total_energy_cu + \
+                                self.Total_energy_edram_buffer + \
+                                self.Total_energy_bus + \
+                                self.Total_energy_activation + \
+                                self.Total_energy_pe_shift_and_add + \
+                                self.Total_energy_pooling + \
+                                self.Total_energy_or
+        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
+
+        print("\tTotal:", self.Total_energy, "nJ")
+        print("\tChip level")
+        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
+        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
+        print()
+        print("\tPE level")
+        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
+        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
+        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
+        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
+        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
+        print()
+        print("\tCU level")
+        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
+        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
+        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
+        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
+        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
+        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
+        print()
+
+        # Chip pie
+        print("Chip energy breakdown")
+        labels = 'PE', 'Interconnect'
+        value = [self.Total_energy_pe, self.Total_energy_interconnect]
+        plt.pie(value , labels = labels, autopct='%1.1f%%')
+        plt.axis('equal')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_chip.png')
+        plt.clf()
+
+        # PE breakdown
+        print("PE energy breakdown")
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "CU", "Buffer", "Bus", "Shift and add", "OR", "Activation", "Pooling"])
+            for pe in self.PE_array:
+                arr = ["PE"+str(self.PE_array.index(pe))]
+                arr.append(pe.CU_energy)
+                arr.append(pe.Edram_buffer_energy)
+                arr.append(pe.Bus_energy)
+                arr.append(pe.Shift_and_add_energy)
+                arr.append(pe.Or_energy)
+                arr.append(pe.Activation_energy)
+                arr.append(pe.Pooling_energy)
+                writer.writerow(arr)
+        
+        # PE breakdown (percentage)
+        print("PE energy breakdown (percentage)")
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE_percentage.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "CU", "Buffer", "Bus", "Shift and add", "OR", "Activation", "Pooling"])
+            for pe in self.PE_array:
+                this_pe_energy = pe.CU_energy + pe.Edram_buffer_energy + pe.Bus_energy + \
+                                 pe.Shift_and_add_energy + pe.Or_energy + \
+                                 pe.Activation_energy + pe.Pooling_energy
+                arr = ["PE"+str(self.PE_array.index(pe))]
+                if this_pe_energy == 0:
+                    for i in range(7):
+                        arr.append(0)
+                else:
+                    arr.append(pe.CU_energy / this_pe_energy)
+                    arr.append(pe.Edram_buffer_energy / this_pe_energy)
+                    arr.append(pe.Bus_energy / this_pe_energy)
+                    arr.append(pe.Shift_and_add_energy / this_pe_energy)
+                    arr.append(pe.Or_energy / this_pe_energy)
+                    arr.append(pe.Activation_energy / this_pe_energy)
+                    arr.append(pe.Pooling_energy / this_pe_energy)
+                writer.writerow(arr)
+
+    def buffer_analysis(self):
+        ### time history
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_ideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                util = pe.edram_buffer_i.buffer_size_util
+                if len(util[0]) == 0:
+                    continue
+                writer.writerow(["PE"+str(self.PE_array.index(pe))])
+                writer.writerow(util[0])
+                writer.writerow(util[1])
+        
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_nonideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                util = pe.edram_buffer.buffer_size_util
+                if len(util[0]) == 0:
+                    continue
+                writer.writerow(["PE"+str(self.PE_array.index(pe))])
+                writer.writerow(util[0])
+                writer.writerow(util[1])
+
+        ### utilization
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_ideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                if pe.edram_buffer_i.maximal_usage == 0:
+                    continue
+                pe_id = self.PE_array.index(pe)
+                writer.writerow([pe_id, pe.edram_buffer_i.maximal_usage])
+        
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_nonideal.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe in self.PE_array:
+                if pe.edram_buffer.maximal_usage == 0:
+                    continue
+                pe_id = self.PE_array.index(pe)
+                writer.writerow([pe_id, pe.edram_buffer.maximal_usage])
+
+    def pe_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.pe_state_for_plot[0]), self.freq):
+                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
+        '''
+        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)/2))
+        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('PE index')
+        plt.ylim(-1, len(self.PE_array))
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png', bbox_inches='tight')
+        plt.clf()
+        '''
+
+    def cu_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.cu_state_for_plot[0]), self.freq):
+                writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
+        
+        '''
+        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num/10))
+        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('CU index')
+        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num)
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num, self.hd_info.CU_num))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png', bbox_inches='tight')
+        plt.clf()
+        '''
+
+    def crossbar_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, len(self.xb_state_for_plot[0]), self.freq):
+                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
+        '''
+        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num/10))
+        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('XB index')
+        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num)
+        plt.xlim(0, self.cycle_ctr)
+        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num, self.hd_info.Xbar_num))
+        plt.xticks(range(0, self.cycle_ctr, 10))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png', bbox_inches='tight')
+        plt.clf()
+        '''
 
     def performance_statistics(self):
-        '''
+        # PE breakdown
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Performance_CU.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "Pure computation", "Pure idle", "Wait resource", "Wait transfer"])
+            for pe in self.PE_array:
+                for cu in pe.CU_array:
+                    arr = ["PE"+str(self.PE_array.index(pe))+", CU"+str(pe.CU_array.index(cu))]
+                    arr.append(cu.pure_computation_time)
+                    pure_idle_time = self.cycle_ctr - cu.pure_computation_time - cu.wait_resource_time - cu.wait_transfer_time
+                    arr.append(pure_idle_time)
+                    arr.append(cu.wait_resource_time)
+                    arr.append(cu.wait_transfer_time)
+                    writer.writerow(arr)
+
+    def non_pipeline_stage(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr):
+                writer.writerow([row+1, self.pipeline_stage_record[row]])
+
+
+    # 舊的無用畫圖function
+    def buffer_analysis_old(self):
+        max_buffer_need = 0
+        for i in range(len(self.PE_array)):
+            max_buffer_need = max(self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, max_buffer_need)
+            max_buffer_need = max(self.PE_array[i].edram_buffer_i.maximal_usage * self.input_bit/8/1000, max_buffer_need)
+        ### Utilization
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr // self.buffer_record_freq):
+                c = [(row+1)*self.buffer_record_freq] # cycle
+                for i in range(len(self.PE_array)):
+                    c.append(self.buffer_size[i][row])
+                writer.writerow(c)
+        self.buffer_size = np.array(self.buffer_size)
+        for i in range(len(self.PE_array)):
+            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('Buffer size(KB)')
+        plt.legend(loc='best', prop={'size': 6}, bbox_to_anchor=(1.01,1.0))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization.png')
+        plt.clf()
+
+        ### Maximal usage
+        for i in range(len(self.PE_array)):
+            plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
+        plt.legend(["Maximal usage"])
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Buffer Size(KB)')
+        plt.ylim((0, max_buffer_need))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage.png')
+        plt.clf()
+
+        ### Utilization (ideal)
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer_i.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr // self.buffer_record_freq):
+                c = [(row+1)*self.buffer_record_freq]
+                for i in range(len(self.PE_array)):
+                    c.append(self.buffer_size_i[i][row])
+                writer.writerow(c)
+        self.buffer_size_i = np.array(self.buffer_size_i)
+        for i in range(len(self.PE_array)):
+            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
+            #plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i], label="PE"+str(i)) #, c=self.color[i])
+        
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('Cycle')
+        plt.ylabel('Buffer size(KB)')
+        plt.legend(loc='best', prop={'size': 6}, bbox_to_anchor=(1.01,1.0))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_i.png')
+        plt.clf()
+
+        ### Maximal usage (ideal)
+        for i in range(len(self.PE_array)):
+            plt.bar(i, self.PE_array[i].edram_buffer_i.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
+        plt.legend(["Maximal usage"])
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.xlabel('PE index')
+        plt.ylabel('Buffer Size(KB)')
+        plt.ylim((0, max_buffer_need))
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage_i.png')
+        plt.clf()
+
+    def energy_breakdown_old(self):
+        # PE breakdown
+        total_pe_num = len(self.PE_array)
+        idx = np.arange(total_pe_num)
+        CU_energy, Edram_buffer_energy = list(), list()
+        Bus_energy, Shift_and_add_energy = list(), list()
+        Or_energy, Activation_energy, Pooling_energy = list(), list(), list()
+        for pe in self.PE_array:
+            CU_energy.append(pe.CU_energy)
+            Edram_buffer_energy.append(pe.Edram_buffer_energy)
+            Bus_energy.append(pe.Bus_energy)
+            Shift_and_add_energy.append(pe.Shift_and_add_energy)
+            Or_energy.append(pe.Or_energy)
+            Activation_energy.append(pe.Activation_energy)
+            Pooling_energy.append(pe.Pooling_energy)
+        CU_energy, Edram_buffer_energy = np.array(CU_energy), np.array(Edram_buffer_energy)
+        Bus_energy, Shift_and_add_energy = np.array(Bus_energy), np.array(Shift_and_add_energy)
+        Or_energy, Activation_energy = np.array(Or_energy), np.array(Activation_energy)
+        Pooling_energy = np.array(Pooling_energy)
+        bar_width = 1
+        plt.bar(idx, CU_energy,  width=bar_width)
+        energy_sum = CU_energy
+        plt.bar(idx, Edram_buffer_energy, bottom=energy_sum,  width=bar_width)
+        energy_sum += Edram_buffer_energy
+        plt.bar(idx, Bus_energy, bottom=energy_sum,  width=bar_width)
+        energy_sum += Bus_energy
+        plt.bar(idx, Shift_and_add_energy, bottom=energy_sum,  width=bar_width)
+        energy_sum += Shift_and_add_energy
+        plt.bar(idx, Or_energy, bottom=energy_sum,  width=bar_width)
+        energy_sum += Or_energy
+        plt.bar(idx, Activation_energy, bottom=energy_sum,  width=bar_width)
+        energy_sum += Activation_energy
+        plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=bar_width)
+        plt.xlabel('PE index')
+        plt.ylabel('Energy (nJ)')
+        plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.png')
+        plt.clf()
+
+        # PE breakdown (percentage)
+        for i in range(len(self.PE_array)):
+            sum_energy = CU_energy[i] + Edram_buffer_energy[i] + Bus_energy[i] + \
+                         Shift_and_add_energy[i] + Or_energy[i] + \
+                         Activation_energy[i] + Pooling_energy[i]
+            if sum_energy == 0:
+                CU_energy[i], Edram_buffer_energy[i] = 0, 0
+                Bus_energy[i], Shift_and_add_energy[i] = 0, 0
+                Or_energy[i], Activation_energy[i] = 0, 0
+                Pooling_energy[i] = 0
+            else:
+                CU_energy[i], Edram_buffer_energy[i] = CU_energy[i]*100/sum_energy, Edram_buffer_energy[i]*100/sum_energy
+                Bus_energy[i], Shift_and_add_energy[i] = Bus_energy[i]*100/sum_energy, Shift_and_add_energy[i]*100/sum_energy
+                Or_energy[i], Activation_energy[i] = Or_energy[i]*100/sum_energy, Activation_energy[i]*100/sum_energy
+                Pooling_energy[i] = Pooling_energy[i]*100/sum_energy
+        
+        # PE breakdown (percentage)
+        plt.bar(idx, CU_energy,  width=0.8)
+        energy_sum = CU_energy
+        plt.bar(idx, Edram_buffer_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Edram_buffer_energy
+        plt.bar(idx, Bus_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Bus_energy
+        plt.bar(idx, Shift_and_add_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Shift_and_add_energy
+        plt.bar(idx, Or_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Or_energy
+        plt.bar(idx, Activation_energy, bottom=energy_sum,  width=0.8)
+        energy_sum += Activation_energy
+        plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=0.8)
+        plt.xlabel('PE index')
+        plt.ylabel('Energy (%)')
+        plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE_percentage.png')
+        plt.clf()
+
+    def energy_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(0, self.cycle_ctr, self.freq):
+                writer.writerow([row+1, self.energy_utilization[row]])
+        plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
+        plt.title(self.mapping_str+", "+self.scheduling_str)
+        plt.ylabel('Energy (nJ)')
+        plt.xlabel('Cycle')
+        plt.ylim([0, 20])
+        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/energy_utilization.png')
+        plt.clf()
+
+    def performance_old(self):
         ## PE
         total_pe_num = len(self.PE_array)
         idx = np.arange(total_pe_num)
@@ -1179,7 +1545,7 @@ class Controller(object):
         plt.ylabel('Cycle')
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Bottleneck_PE.png')
         plt.clf()
-        '''
+
         ## CU
         total_pe_num = len(self.PE_array)
         idx = np.arange(total_pe_num)
@@ -1222,6 +1588,7 @@ class Controller(object):
         plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Bottleneck_CU.png')
         plt.clf()
 
+        
         # print("CU Bottleneck analysis:")
         # print("\tTotal pure_idle:", pure_idle_time_total)
         # print("\tTotal wait_transfer:", wait_transfer_time_total)
@@ -1338,307 +1705,3 @@ class Controller(object):
         print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print()
         '''
-
-    def energy_breakdown(self):
-        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
-                                self.Total_energy_adc + \
-                                self.Total_energy_dac + \
-                                self.Total_energy_crossbar + \
-                                self.Total_energy_ir_in_cu + \
-                                self.Total_energy_or_in_cu
-        self.Total_energy_pe = self.Total_energy_cu + \
-                                self.Total_energy_edram_buffer + \
-                                self.Total_energy_bus + \
-                                self.Total_energy_activation + \
-                                self.Total_energy_pe_shift_and_add + \
-                                self.Total_energy_pooling + \
-                                self.Total_energy_or
-        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
-
-        print("\tTotal:", self.Total_energy, "nJ")
-        print("\tChip level")
-        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
-        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
-        print()
-        print("\tPE level")
-        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
-        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
-        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
-        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
-        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
-        print()
-        print("\tCU level")
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
-        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
-        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
-        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
-        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
-        print()
-
-        # Chip pie
-        labels = 'PE', 'Interconnect'
-        value = [self.Total_energy_pe, self.Total_energy_interconnect]
-        plt.pie(value , labels = labels, autopct='%1.1f%%')
-        plt.axis('equal')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_chip.png')
-        plt.clf()
-
-        # PE breakdown
-        total_pe_num = len(self.PE_array)
-        idx = np.arange(total_pe_num)
-        CU_energy, Edram_buffer_energy = list(), list()
-        Bus_energy, Shift_and_add_energy = list(), list()
-        Or_energy, Activation_energy, Pooling_energy = list(), list(), list()
-        for pe in self.PE_array:
-            CU_energy.append(pe.CU_energy)
-            Edram_buffer_energy.append(pe.Edram_buffer_energy)
-            Bus_energy.append(pe.Bus_energy)
-            Shift_and_add_energy.append(pe.Shift_and_add_energy)
-            Or_energy.append(pe.Or_energy)
-            Activation_energy.append(pe.Activation_energy)
-            Pooling_energy.append(pe.Pooling_energy)
-        CU_energy, Edram_buffer_energy = np.array(CU_energy), np.array(Edram_buffer_energy)
-        Bus_energy, Shift_and_add_energy = np.array(Bus_energy), np.array(Shift_and_add_energy)
-        Or_energy, Activation_energy = np.array(Or_energy), np.array(Activation_energy)
-        Pooling_energy = np.array(Pooling_energy)
-
-        bar_width = 1
-        plt.bar(idx, CU_energy,  width=bar_width)
-        energy_sum = CU_energy
-        plt.bar(idx, Edram_buffer_energy, bottom=energy_sum,  width=bar_width)
-        energy_sum += Edram_buffer_energy
-        plt.bar(idx, Bus_energy, bottom=energy_sum,  width=bar_width)
-        energy_sum += Bus_energy
-        plt.bar(idx, Shift_and_add_energy, bottom=energy_sum,  width=bar_width)
-        energy_sum += Shift_and_add_energy
-        plt.bar(idx, Or_energy, bottom=energy_sum,  width=bar_width)
-        energy_sum += Or_energy
-        plt.bar(idx, Activation_energy, bottom=energy_sum,  width=bar_width)
-        energy_sum += Activation_energy
-        plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=bar_width)
-        plt.xlabel('PE index')
-        plt.ylabel('Energy (nJ)')
-        plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.png')
-        plt.clf()
-
-        # PE breakdown (percentage)
-        for i in range(len(self.PE_array)):
-            sum_energy = CU_energy[i] + Edram_buffer_energy[i] + Bus_energy[i] + \
-                         Shift_and_add_energy[i] + Or_energy[i] + \
-                         Activation_energy[i] + Pooling_energy[i]
-            if sum_energy == 0:
-                CU_energy[i], Edram_buffer_energy[i] = 0, 0
-                Bus_energy[i], Shift_and_add_energy[i] = 0, 0
-                Or_energy[i], Activation_energy[i] = 0, 0
-                Pooling_energy[i] = 0
-            else:
-                CU_energy[i], Edram_buffer_energy[i] = CU_energy[i]*100/sum_energy, Edram_buffer_energy[i]*100/sum_energy
-                Bus_energy[i], Shift_and_add_energy[i] = Bus_energy[i]*100/sum_energy, Shift_and_add_energy[i]*100/sum_energy
-                Or_energy[i], Activation_energy[i] = Or_energy[i]*100/sum_energy, Activation_energy[i]*100/sum_energy
-                Pooling_energy[i] = Pooling_energy[i]*100/sum_energy
-
-        plt.bar(idx, CU_energy,  width=0.8)
-        energy_sum = CU_energy
-        plt.bar(idx, Edram_buffer_energy, bottom=energy_sum,  width=0.8)
-        energy_sum += Edram_buffer_energy
-        plt.bar(idx, Bus_energy, bottom=energy_sum,  width=0.8)
-        energy_sum += Bus_energy
-        plt.bar(idx, Shift_and_add_energy, bottom=energy_sum,  width=0.8)
-        energy_sum += Shift_and_add_energy
-        plt.bar(idx, Or_energy, bottom=energy_sum,  width=0.8)
-        energy_sum += Or_energy
-        plt.bar(idx, Activation_energy, bottom=energy_sum,  width=0.8)
-        energy_sum += Activation_energy
-        plt.bar(idx, Pooling_energy, bottom=energy_sum,  width=0.8)
-        plt.xlabel('PE index')
-        plt.ylabel('Energy (%)')
-        plt.legend(["CU_energy", "Edram_buffer_energy", "Bus_energy", "Shift_and_add_energy", "Or_energy", "Activation_energy", "Pooling_energy"])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE_percentage.png')
-        plt.clf()
-
-    def buffer_analysis(self):
-        ### time history
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_ideal.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for pe in self.PE_array:
-                util = pe.edram_buffer_i.buffer_size_util
-                if len(util[0]) == 0:
-                    continue
-                writer.writerow(["PE"+str(self.PE_array.index(pe))])
-                writer.writerow(util[0])
-                writer.writerow(util[1])
-        
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_nonideal.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for pe in self.PE_array:
-                util = pe.edram_buffer.buffer_size_util
-                if len(util[0]) == 0:
-                    continue
-                writer.writerow(["PE"+str(self.PE_array.index(pe))])
-                writer.writerow(util[0])
-                writer.writerow(util[1])
-
-        ### utilization
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_ideal.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for pe in self.PE_array:
-                if pe.edram_buffer_i.maximal_usage == 0:
-                    continue
-                pe_id = self.PE_array.index(pe)
-                writer.writerow([pe_id, pe.edram_buffer_i.maximal_usage])
-        
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_nonideal.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for pe in self.PE_array:
-                if pe.edram_buffer.maximal_usage == 0:
-                    continue
-                pe_id = self.PE_array.index(pe)
-                writer.writerow([pe_id, pe.edram_buffer.maximal_usage])
-
-
-    def buffer_analysis_old(self):
-        max_buffer_need = 0
-        for i in range(len(self.PE_array)):
-            max_buffer_need = max(self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, max_buffer_need)
-            max_buffer_need = max(self.PE_array[i].edram_buffer_i.maximal_usage * self.input_bit/8/1000, max_buffer_need)
-        ### Utilization
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(self.cycle_ctr // self.buffer_record_freq):
-                c = [(row+1)*self.buffer_record_freq] # cycle
-                for i in range(len(self.PE_array)):
-                    c.append(self.buffer_size[i][row])
-                writer.writerow(c)
-        self.buffer_size = np.array(self.buffer_size)
-        for i in range(len(self.PE_array)):
-            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('Buffer size(KB)')
-        plt.legend(loc='best', prop={'size': 6}, bbox_to_anchor=(1.01,1.0))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization.png')
-        plt.clf()
-
-        ### Maximal usage
-        for i in range(len(self.PE_array)):
-            plt.bar(i, self.PE_array[i].edram_buffer.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
-        plt.legend(["Maximal usage"])
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('PE index')
-        plt.ylabel('Buffer Size(KB)')
-        plt.ylim((0, max_buffer_need))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage.png')
-        plt.clf()
-
-        ### Utilization (ideal)
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/OnchipBuffer_i.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(self.cycle_ctr // self.buffer_record_freq):
-                c = [(row+1)*self.buffer_record_freq]
-                for i in range(len(self.PE_array)):
-                    c.append(self.buffer_size_i[i][row])
-                writer.writerow(c)
-        self.buffer_size_i = np.array(self.buffer_size_i)
-        for i in range(len(self.PE_array)):
-            plt.plot(range(self.buffer_record_freq, self.cycle_ctr+1, self.buffer_record_freq), self.buffer_size_i[i] * self.input_bit/8/1000, label="PE"+str(i)) #, c=self.color[i])
-            #plt.plot(range(1, self.cycle_ctr+1), self.buffer_size_i[i], label="PE"+str(i)) #, c=self.color[i])
-        
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('Buffer size(KB)')
-        plt.legend(loc='best', prop={'size': 6}, bbox_to_anchor=(1.01,1.0))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_i.png')
-        plt.clf()
-
-        ### Maximal usage (ideal)
-        for i in range(len(self.PE_array)):
-            plt.bar(i, self.PE_array[i].edram_buffer_i.maximal_usage * self.input_bit/8/1000, color='b', width=0.8)
-        plt.legend(["Maximal usage"])
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('PE index')
-        plt.ylabel('Buffer Size(KB)')
-        plt.ylim((0, max_buffer_need))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_maximal_usage_i.png')
-        plt.clf()
-
-    def energy_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, self.freq):
-                writer.writerow([row+1, self.energy_utilization[row]])
-        plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.ylabel('Energy (nJ)')
-        plt.xlabel('Cycle')
-        plt.ylim([0, 20])
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/energy_utilization.png')
-        plt.clf()
-
-    def pe_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.pe_state_for_plot[0]), self.freq):
-                writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
-        '''
-        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)/2))
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('PE index')
-        plt.ylim(-1, len(self.PE_array))
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
-
-    def cu_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.cu_state_for_plot[0]), self.freq):
-                writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
-        
-        '''
-        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num/10))
-        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('CU index')
-        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num)
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num, self.hd_info.CU_num))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
-
-    def crossbar_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.xb_state_for_plot[0]), self.freq):
-                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
-        '''
-        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num/10))
-        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('XB index')
-        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num)
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num, self.hd_info.Xbar_num))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
-
-    def non_pipeline_stage(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(self.cycle_ctr):
-                writer.writerow([row+1, self.pipeline_stage_record[row]])
