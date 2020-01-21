@@ -47,9 +47,10 @@ class Interconnect(object):
             self.busy_router.append((rt_y, rt_x))
 
     def step(self):
-        if self.packet_in_module_ctr == 0:
-           return
         self.step_energy_consumption = 0
+        if self.packet_in_module_ctr == 0:
+            return
+
         packet_transfer = []
 
         br = []
