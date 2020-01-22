@@ -169,7 +169,7 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
-            if self.cycle_ctr % 1000 == 0:
+            if self.cycle_ctr % 10000 == 0:
                 if self.done_event == 0:
                     pass
                 else:
@@ -1138,8 +1138,8 @@ class Controller(object):
         self.pe_utilization()
         print("output cu utilization...")
         self.cu_utilization()
-        print("output xb utilization...")
-        self.crossbar_utilization()
+        #print("output xb utilization...")
+        #self.crossbar_utilization()
         print("output performance anaylsis...")
         self.performance_statistics()
 

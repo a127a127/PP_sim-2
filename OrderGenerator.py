@@ -89,12 +89,24 @@ class OrderGenerator(object):
                         if x_inp.nlayer == 0:
                             continue
                         else:
-                            for inp in x_inp.inputs:
-                                data = inp[1:] # num_inp不需要
-                                if self.model_info.layer_list[x_inp.nlayer].layer_type != "fully":
-                                    self.transfer_mat[x_inp.nlayer-1][data[0]][data[1]][data[2]].add(pe_pos)
-                                else:
-                                    self.transfer_mat[x_inp.nlayer-1][data[0]].add(pe_pos)
+                            if self.model_info.layer_list[x_inp.nlayer].padding == "SAME":
+                                for inp in x_inp.inputs:
+                                    h = inp[1] - self.model_info.pad[x_inp.nlayer]
+                                    w = inp[2] - self.model_info.pad[x_inp.nlayer]
+                                    c = inp[3]
+                                    if w >= 0 and w < self.model_info.input_w[x_inp.nlayer] and h >= 0 and h < self.model_info.input_h[x_inp.nlayer]:
+                                        data = [h, w, c]
+                                        if self.model_info.layer_list[x_inp.nlayer].layer_type != "fully":
+                                            self.transfer_mat[x_inp.nlayer-1][data[0]][data[1]][data[2]].add(pe_pos)
+                                        else:
+                                            self.transfer_mat[x_inp.nlayer-1][data[0]].add(pe_pos)
+                            else:
+                                for inp in x_inp.inputs:
+                                    data = inp[1:] # num_inp不需要
+                                    if self.model_info.layer_list[x_inp.nlayer].layer_type != "fully":
+                                        self.transfer_mat[x_inp.nlayer-1][data[0]][data[1]][data[2]].add(pe_pos)
+                                    else:
+                                        self.transfer_mat[x_inp.nlayer-1][data[0]].add(pe_pos)
 
         for rty_idx in range(self.hd_info.Router_num_y):
             for rtx_idx in range(self.hd_info.Router_num_x):
