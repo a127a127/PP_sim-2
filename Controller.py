@@ -273,8 +273,7 @@ class Controller(object):
                     pass
                 else: # 資料傳到了, 檢查資料是否都已在buffer中？
                     fetch_data = []
-                    for inp in event.inputs: 
-                        data = inp[1:] # inp: [num_input, fm_h, fm_w, fm_c]
+                    for data in event.inputs: 
                         if not pe.edram_buffer.check([event.nlayer, data]): # Data not in buffer
                             if self.trace:
                                 print("\tData not ready for edram read. Data: layer", event.nlayer, data, "pos:", event.position_idx)
@@ -325,19 +324,17 @@ class Controller(object):
                             nlayer = event.nlayer
                             if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
                                 for d in event.inputs:
-                                    pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                                    pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                                     self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                        data = d[1:]
-                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                         self.check_buffer_pe_set.add(self.PE_array[pe_id])
                             elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
                                 for d in event.inputs:
-                                    pos = d[1]
+                                    pos = d[0]
                                     self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                                     if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                        data = d[1:]
-                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                        self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                         self.check_buffer_pe_set.add(self.PE_array[pe_id])
                         else:
                             pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
@@ -370,19 +367,17 @@ class Controller(object):
                     nlayer = event.nlayer
                     if self.ordergenerator.model_info.layer_list[nlayer].layer_type == "convolution":
                         for d in event.inputs:
-                            pos = d[2] + d[1]*self.ordergenerator.model_info.input_w[nlayer] + d[3]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
+                            pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                data = d[1:]
-                                self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                 self.check_buffer_pe_set.add(self.PE_array[pe_id])
                     elif self.ordergenerator.model_info.layer_list[nlayer].layer_type == "fully":
                         for d in event.inputs:
-                            pos = d[1]
+                            pos = d[0]
                             self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
                             if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                                data = d[1:]
-                                self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
+                                self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                 self.check_buffer_pe_set.add(self.PE_array[pe_id])
                 else:
                     pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
@@ -1135,7 +1130,7 @@ class Controller(object):
         
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_nonideal.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["PE", "Size(KB)"])
+            writer.writerow(["", "Size(KB)"])
             for pe in self.PE_array:
                 if pe.edram_buffer.maximal_usage == 0:
                     continue

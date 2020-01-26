@@ -173,19 +173,19 @@ class OrderGenerator(object):
                                 # inp紀錄的位置為padding後的位置
                                 if self.model_info.layer_list[nlayer].padding == "SAME":
                                     for d in inp:
-                                        input_num = d[0]
                                         h = d[1] - self.model_info.pad[nlayer]
                                         w = d[2] - self.model_info.pad[nlayer]
                                         c = d[3]
                                         # 不紀錄pading的值
                                         if w >= 0 and w < self.model_info.input_w[nlayer] and h >= 0 and h < self.model_info.input_h[nlayer]:
-                                            data = [input_num, h, w, c]
+                                            data = [h, w, c]
                                             if data not in data_feed_to_cu:
                                                 data_feed_to_cu.append(data)
                                 else: # padding == "VALID"
                                     for d in inp:
-                                        if d not in data_feed_to_cu:
-                                            data_feed_to_cu.append(d)
+                                        data = d[1:]
+                                        if data not in data_feed_to_cu:
+                                            data_feed_to_cu.append(data)
 
                         eri_event_idx = len(self.Computation_order)
                         if nlayer == 0:
@@ -194,11 +194,10 @@ class OrderGenerator(object):
                             eri_preceding_count = len(data_feed_to_cu)
                             # add dependency
                             for data in data_feed_to_cu:
-                                data = data[1:] # [h, w, c]
                                 pre_event_idx = self.transfer_mat[nlayer-1][data[0]][data[1]][data[2]][pe_pos]
                                 self.Computation_order[pre_event_idx].proceeding_event.append(eri_event_idx)
                         eri_position_idx = cu_pos
-                        eri_input_sequence = data_feed_to_cu # [[num_input, h, w, c]]
+                        eri_input_sequence = data_feed_to_cu # [[h, w, c]]
                         eri_output_sequence = 0
                         event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_input_sequence, eri_output_sequence)
                         self.Computation_order.append(event)
@@ -207,7 +206,7 @@ class OrderGenerator(object):
                         pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
                                 cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
                         for d in eri_input_sequence:
-                            pos = d[2] + d[1]*self.model_info.input_w[nlayer] + d[3]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
+                            pos = d[1] + d[0]*self.model_info.input_w[nlayer] + d[2]*self.model_info.input_w[nlayer]*self.model_info.input_h[nlayer] # w + h*width + c*height*width
                             self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
 
                 ### Event: cu_operation
@@ -433,8 +432,9 @@ class OrderGenerator(object):
                                     inp = []
 
                                 for d in inp:
-                                    if d not in data_feed_to_cu:
-                                        data_feed_to_cu.append(d)
+                                    data = d[1:]
+                                    if data not in data_feed_to_cu:
+                                        data_feed_to_cu.append(data)
 
                         eri_event_idx = len(self.Computation_order)
                         if nlayer == 0:
@@ -443,7 +443,6 @@ class OrderGenerator(object):
                             eri_preceding_count = len(data_feed_to_cu)
                             # add dependency
                             for data in data_feed_to_cu:
-                                data = data[1:] # [h, w, c]
                                 pre_event_idx = self.transfer_mat[nlayer-1][data[0]][pe_pos]
                                 self.Computation_order[pre_event_idx].proceeding_event.append(eri_event_idx)
                         eri_position_idx = cu_pos
@@ -456,7 +455,7 @@ class OrderGenerator(object):
                         pe_id = cu_pos[3] + cu_pos[2]*self.hd_info.PE_num_x + \
                                 cu_pos[1]*self.hd_info.PE_num + cu_pos[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
                         for d in eri_input_sequence:
-                            pos = d[1]
+                            pos = d[0]
                             self.free_buffer_controller.input_require[pe_id][nlayer][pos] += 1
 
                 ### Event: cu_operation
