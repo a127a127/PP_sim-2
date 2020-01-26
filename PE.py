@@ -53,24 +53,22 @@ class PE(object):
         self.wait_transfer_time = 0
         self.wait_resource_time = 0
         self.pure_computation_time = 0
-        # self.saa_pure_idle_time = 0
-        # self.saa_wait_transfer_time = 0
-        # self.saa_wait_resource_time = 0
-        # self.saa_pure_computation_time = 0
-
-        # self.pooling_pure_idle_time = 0
-        # self.pooling_wait_transfer_time = 0
-        # self.pooling_wait_resource_time = 0
-        # self.pooling_pure_computation_time = 0
 
         ### Energy
-        self.CU_energy            = 0.
-        self.Edram_buffer_energy  = 0.
-        self.Bus_energy           = 0.
-        self.Shift_and_add_energy = 0.
-        self.Or_energy            = 0.
-        self.Activation_energy    = 0.
-        self.Pooling_energy       = 0.
+        self.Edram_buffer_energy     = 0.
+        self.Bus_energy              = 0.
+        self.PE_shift_and_add_energy = 0.
+        self.Or_energy               = 0.
+        self.Activation_energy       = 0.
+        self.Pooling_energy          = 0.
+
+        self.CU_energy               = 0.
+        self.CU_shift_and_add_energy = 0.
+        self.CU_dac_energy           = 0.
+        self.CU_adc_energy           = 0.
+        self.CU_crossbar_energy      = 0.
+        self.CU_IR_energy            = 0.
+        self.CU_OR_energy            = 0.
 
     def gen_cu(self):
         rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 

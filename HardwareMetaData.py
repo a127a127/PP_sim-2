@@ -42,17 +42,17 @@ class HardwareMetaData(object):
         #self.CU_Input_Reg_size  = 2 # nKB
         #self.CU_Output_Reg_size = 256 # nKB
 
-        # Leakage
-        self.eDRAM_buffer_leakage = 0
-        self.Router_leakage       = 0
-        self.Act_leakage          = 0
-        self.PE_SAA_leakage       = 0
-        self.Pool_leakage         = 0
-        self.DAC_leakage          = 0
-        self.MUX_leakage          = 0
-        self.SA_leakage           = 0
-        self.Crossbar_leakage     = 0
-        self.CU_SAA_leakage       = 0
+        # Leakage (沒資料)
+        # self.eDRAM_buffer_leakage = 0
+        # self.Router_leakage       = 0
+        # self.Act_leakage          = 0
+        # self.PE_SAA_leakage       = 0
+        # self.Pool_leakage         = 0
+        # self.DAC_leakage          = 0
+        # self.MUX_leakage          = 0
+        # self.SA_leakage           = 0
+        # self.Crossbar_leakage     = 0
+        # self.CU_SAA_leakage       = 0
 
         # Dynamic Energy (nJ)
         self.Energy_edram_buffer  = 20.7 * 0.01 / 1.2 / 256 # per bit

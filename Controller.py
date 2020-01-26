@@ -50,19 +50,6 @@ class Controller(object):
                         self.PE_array.append(pe)
 
         # Energy
-        self.Total_energy_edram_buffer = 0
-        self.Total_energy_bus = 0
-        self.Total_energy_router = 0
-        self.Total_energy_activation = 0
-        self.Total_energy_pe_shift_and_add = 0
-        self.Total_energy_cu_shift_and_add = 0
-        self.Total_energy_pooling = 0
-        self.Total_energy_or = 0
-        self.Total_energy_adc = 0
-        self.Total_energy_dac = 0
-        self.Total_energy_crossbar = 0
-        self.Total_energy_ir_in_cu = 0
-        self.Total_energy_or_in_cu = 0
         self.Total_energy_interconnect = 0
 
         # Interconnect
@@ -86,26 +73,17 @@ class Controller(object):
             self.cycles_each_layer = []
             print("events_each_layer:", self.events_each_layer)
 
-        # Statistics
-        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        self.mem_acc_ctr = 0
-        self.data_transfer_ctr = 0
-        self.act_xb_ctr = 0
-        self.pe_saa_stall_cycle = 0
-
         # Utilization
         self.pe_state_for_plot = [[], []]
         self.cu_state_for_plot = [[], []]
         self.xb_state_for_plot = [[], []]
         self.buffer_size = []
         self.buffer_size_i = []
-        # self.energy_utilization = []
         for i in range(len(self.PE_array)):
             self.buffer_size.append([])
             self.buffer_size_i.append([])
         self.max_buffer_size = 0 # num of data
         self.max_buffer_size_i = 0 # num of data
-        #self.buffer_record_freq =  1
         self.check_buffer_pe_set = set()
 
         # execute event
@@ -125,9 +103,6 @@ class Controller(object):
         self.trigger_act      = []
         self.trigger_pool_rd  = []
         self.trigger_pool     = []
-
-        # for performance analysis
-        self.eventQueuing_PE = []
 
         self.trigger_next_layer = False
 
@@ -149,8 +124,6 @@ class Controller(object):
                     # for performance analysis
                     if cu_idx not in pe.eventQueuing_CU: 
                         pe.eventQueuing_CU.append(cu_idx)
-                    if pe not in self.eventQueuing_PE:
-                        self.eventQueuing_PE.append(pe)
             if e.nlayer != 0:
                 break
 
@@ -184,7 +157,6 @@ class Controller(object):
                     t_ = time.time()
 
             self.cycle_ctr += 1
-            self.act_xb_ctr = 0
             if not self.isPipeLine:
                 self.this_layer_cycle_ctr += 1
             if self.trace:
@@ -257,12 +229,11 @@ class Controller(object):
 
             ### Buffer utilization
             staa = time.time()
-            # if self.cycle_ctr % self.buffer_record_freq == 0:
-            #     self.buffer_util()
-            # buffer utilization
             for pe in self.check_buffer_pe_set:
                 pe.edram_buffer_i.buffer_size_util[0].append(self.cycle_ctr)
                 pe.edram_buffer_i.buffer_size_util[1].append(len(pe.edram_buffer_i.buffer))
+                pe.edram_buffer.buffer_size_util[0].append(self.cycle_ctr)
+                pe.edram_buffer.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
             self.check_buffer_pe_set = set()
             t_buf += time.time() - staa
 
@@ -318,16 +289,10 @@ class Controller(object):
                         pe.data_to_ir_ing = True
                         pe.state = True
 
-                        # 計算耗能
-                        energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit * num_data
-                        energy_bus = self.hd_info.Energy_bus * self.input_bit * num_data
-                        energy_ir_in_cu = self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
-                        self.Total_energy_edram_buffer += energy_edram_buffer
-                        self.Total_energy_bus += energy_bus
-                        self.Total_energy_ir_in_cu += energy_ir_in_cu
-                        pe.Edram_buffer_energy += energy_edram_buffer
-                        pe.Bus_energy += energy_bus
-                        pe.CU_energy += energy_ir_in_cu
+                        # Energy
+                        pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
+                        pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * num_data
+                        pe.CU_IR_energy += self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
 
                         # 要幾個cycle讀完
                         pe.edram_read_cycles = ceil(num_data / self.edram_read_data)
@@ -444,12 +409,10 @@ class Controller(object):
                     ou_num_dict = cu.cu_op_event.outputs
                     for xb_idx in ou_num_dict:
                         ou_num = ou_num_dict[xb_idx]
-                        self.Total_energy_dac += self.hd_info.Energy_ou_dac * ou_num
-                        self.Total_energy_crossbar += self.hd_info.Energy_ou_crossbar * ou_num
-                        self.Total_energy_adc += self.hd_info.Energy_ou_adc * ou_num
-                        self.Total_energy_cu_shift_and_add += self.hd_info.Energy_ou_ssa * ou_num
-
-                        pe.CU_energy += ou_num * (self.hd_info.Energy_ou_dac+self.hd_info.Energy_ou_crossbar+self.hd_info.Energy_ou_adc+self.hd_info.Energy_ou_ssa)
+                        pe.CU_dac_energy += self.hd_info.Energy_ou_dac * ou_num
+                        pe.CU_crossbar_energy += self.hd_info.Energy_ou_crossbar * ou_num
+                        pe.CU_adc_energy += self.hd_info.Energy_ou_adc * ou_num
+                        pe.CU_shift_and_add_energy += self.hd_info.Energy_ou_ssa * ou_num
 
                     cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
                     self.cu_state_for_plot[0].append(self.cycle_ctr)
@@ -517,24 +480,6 @@ class Controller(object):
                     cu.wait_resource_time += 1
                 else:
                     cu.pure_computation_time += 1
-
-                '''
-                if not cu.state: # CU idle
-                    if not cu.edram_rd_ir_erp: # CU idle, 且event pool是空的
-                        cu.pure_idle_time += 1
-                    else: # CU idle, 有event在event pool裡面, 這些event不能開始做, 肯定是資料沒到的拉
-                        cu.wait_transfer_time += 1
-                else: # CU busy
-                    isEventWaiting = False
-                    for event in cu.edram_rd_ir_erp:
-                        if event.data_is_transfer == 0: # 有event資料已經ready但還不能做
-                            isEventWaiting = True
-                            break
-                    if isEventWaiting:
-                        cu.wait_resource_time += 1
-                    else:
-                        cu.pure_computation_time += 1
-                '''
             if pe.cu_op_list:
                 erp.append(pe)
         self.erp_cu_op = erp
@@ -572,15 +517,10 @@ class Controller(object):
                 saa_amount = len(event.inputs[0]) # inputs[0]: 前面的cu index
                 rm_data_list = event.inputs[1]    # 要移除的資料
 
-                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit * saa_amount
-                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * saa_amount
-                self.Total_energy_pe_shift_and_add += self.hd_info.Energy_shift_and_add * saa_amount
-                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * saa_amount
-                self.Total_energy_or += self.hd_info.Energy_or * self.input_bit * saa_amount
-
+                # Energy
                 pe.Or_energy += self.hd_info.Energy_or * self.input_bit * saa_amount
                 pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * saa_amount
-                pe.Shift_and_add_energy += self.hd_info.Energy_shift_and_add * saa_amount
+                pe.PE_shift_and_add_energy += self.hd_info.Energy_shift_and_add * saa_amount
                 pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * saa_amount
                 pe.Or_energy += self.hd_info.Energy_or * self.input_bit * saa_amount
 
@@ -606,29 +546,6 @@ class Controller(object):
             pe.pe_saa_erp = pe_saa_erp
             if pe.pe_saa_erp:
                 erp.append(pe)
-            '''
-            # bottleneck analysis
-            if not pe.state_pe_saa[0]:
-                # 因為都是從0開使使用, 0 idle代表全部idle
-                if not pe.pe_saa_erp:
-                    # pe saa idle, 且event pool是空的
-                    pe.saa_pure_idle_time += 1
-                else:
-                    # pe saa idle, 有event在event pool裡面, 這些event不能開始做, 肯定是資料沒到的拉
-                    pe.saa_wait_transfer_time += 1
-            else:
-                # SAA busy
-                isEventWaiting = False
-                for event in pe.pe_saa_erp:
-                    if event.data_is_transfer == 0:
-                        # 有event資料已經ready但還不能做
-                        isEventWaiting = True
-                        break
-                if isEventWaiting:
-                    pe.saa_wait_resource_time += 1
-                else:
-                    pe.saa_pure_computation_time += 1
-            '''
         self.erp_pe_saa = erp
  
     def event_act(self):
@@ -652,15 +569,10 @@ class Controller(object):
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
 
-                energy_or = self.hd_info.Energy_or * self.input_bit
-                energy_bus = self.hd_info.Energy_bus * self.input_bit
-                energy_activation = self.hd_info.Energy_activation
-                self.Total_energy_or += energy_or
-                self.Total_energy_bus +=energy_bus
-                self.Total_energy_activation += energy_activation
-                pe.Or_energy += energy_or
-                pe.Bus_energy += energy_bus
-                pe.Activation_energy += energy_activation
+                # Energy
+                pe.Or_energy += self.hd_info.Energy_or * self.input_bit
+                pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
+                pe.Activation_energy += self.hd_info.Energy_activation
 
                 ### add next event counter: edram_wr
                 for proceeding_index in event.proceeding_event:
@@ -682,10 +594,6 @@ class Controller(object):
     def event_edram_wr(self):
         erp = []
         for pe in self.erp_wr:
-            if not pe.edram_wr_erp:
-                print("不會發生")
-                continue
-
             pe.state = True
             if self.edram_write_data <= len(pe.edram_wr_erp):
                 do_wr_num = self.edram_write_data
@@ -702,14 +610,9 @@ class Controller(object):
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
                 
-                energy_bus = self.hd_info.Energy_bus * self.input_bit
-                energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit
-
-                self.Total_energy_bus += energy_bus
-                self.Total_energy_edram_buffer += energy_edram_buffer
-
-                pe.Bus_energy += energy_bus
-                pe.Edram_buffer_energy += energy_edram_buffer
+                # Energy
+                pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
+                pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit
 
                 if len(event.outputs[0]) == 4: #and event.outputs[0][3] == "u": # same layer transfer
                     pe.edram_buffer.put([event.nlayer, event.outputs[0]])
@@ -778,15 +681,9 @@ class Controller(object):
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
 
-                energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit * num_data
-                energy_bus = self.hd_info.Energy_bus * self.input_bit * num_data
-
-                self.Total_energy_edram_buffer += energy_edram_buffer
-                self.Total_energy_bus += self.hd_info.Energy_bus * self.input_bit * num_data
-                self.Total_energy_pooling += self.hd_info.Energy_pooling
-
-                pe.Edram_buffer_energy += energy_edram_buffer
-                pe.Bus_energy += energy_bus
+                # Energy
+                pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
+                pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * num_data
                 pe.Pooling_energy += self.hd_info.Energy_pooling
 
                 pe.state = True
@@ -818,29 +715,7 @@ class Controller(object):
 
             if pe.edram_rd_pool_erp:
                 erp.append(pe)
-            '''
-            # bottleneck analysis
-            if not pe.state_edram_rd_pool:
-                # Pooling unit idle
-                if not pe.edram_rd_pool_erp:
-                    # Pooling unit idle, 且event pool是空的
-                    pe.pooling_pure_idle_time += 1
-                else:
-                    # Pooling unit idle, 有event在event pool裡面, 這些event不能開始做, 因為資料沒到
-                    pe.pooling_wait_transfer_time += 1
-            else:
-                # Pooling unit busy
-                isEventWaiting = False
-                for event in pe.edram_rd_pool_erp:
-                    if event.data_is_transfer == 0:
-                        # 有event資料已經ready但還不能做
-                        isEventWaiting = True
-                        break
-                if isEventWaiting:
-                    pe.pooling_wait_resource_time += 1
-                else:
-                    pe.pooling_pure_computation_time += 1
-            '''
+
         self.erp_pool_rd = erp
 
     def process_interconnect(self):
@@ -861,8 +736,8 @@ class Controller(object):
             pe_idx = pex + pey * self.hd_info.PE_num_x + rtx * self.hd_info.PE_num + rty * self.hd_info.PE_num * self.hd_info.Router_num_x
             pe = self.PE_array[pe_idx]
 
-            self.Total_energy_edram_buffer += self.hd_info.Energy_edram_buffer * self.input_bit # write
-            pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit
+            # Energy
+            pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit # write
 
             pe.edram_buffer.put(pk.data)
             pe.edram_buffer_i.put(pk.data)
@@ -908,11 +783,8 @@ class Controller(object):
 
             self.interconnect.input_packet(packet)
 
-            energy_edram_buffer = self.hd_info.Energy_edram_buffer * self.input_bit
-
-            self.Total_energy_edram_buffer += energy_edram_buffer # read
-
-            src_pe.Edram_buffer_energy += energy_edram_buffer
+            # Energy
+            src_pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit # read
 
             ### add next event counter
             des_pe_id = des[3] + des[2] * self.hd_info.PE_num_x + \
@@ -1120,118 +992,116 @@ class Controller(object):
         self.trigger_pool = []
 
     def print_statistics_result(self):
+        self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+        self.Edram_buffer_energy     = 0.
+        self.Bus_energy              = 0.
+        self.PE_shift_and_add_energy = 0.
+        self.Or_energy               = 0.
+        self.Activation_energy       = 0.
+        self.Pooling_energy          = 0.
+
+        self.CU_shift_and_add_energy = 0.
+        self.CU_dac_energy           = 0.
+        self.CU_adc_energy           = 0.
+        self.CU_crossbar_energy      = 0.
+        self.CU_IR_energy            = 0.
+        self.CU_OR_energy            = 0.
+
+        for pe in self.PE_array:
+            self.Edram_buffer_energy     += pe.Edram_buffer_energy
+            self.Bus_energy              += pe.Bus_energy
+            self.PE_shift_and_add_energy += pe.PE_shift_and_add_energy
+            self.Or_energy               += pe.Or_energy
+            self.Activation_energy       += pe.Activation_energy
+            self.Pooling_energy          += pe.Pooling_energy
+            self.CU_shift_and_add_energy += pe.CU_shift_and_add_energy
+            self.CU_dac_energy           += pe.CU_dac_energy
+            self.CU_adc_energy           += pe.CU_adc_energy
+            self.CU_crossbar_energy      += pe.CU_crossbar_energy
+            self.CU_IR_energy            += pe.CU_IR_energy
+            self.CU_OR_energy            += pe.CU_OR_energy
+        self.Total_energy = self.Edram_buffer_energy + self.Bus_energy + self.PE_shift_and_add_energy + \
+                            self.Or_energy + self.Activation_energy + self.Pooling_energy + \
+                            self.CU_shift_and_add_energy + self.CU_dac_energy + self.CU_adc_energy + \
+                            self.CU_crossbar_energy + self.CU_IR_energy + self.CU_OR_energy + \
+                            self.Total_energy_interconnect
+
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
         print("Cycles time:", self.hd_info.cycle_time, "ns\n")
         print()
-        
-        if not self.isPipeLine:
-            self.non_pipeline_stage()
 
-        self.freq = 1
         print("Energy breakdown:")
-        self.energy_breakdown()
+        self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
         print("output pe utilization...")
         self.pe_utilization()
         print("output cu utilization...")
         self.cu_utilization()
-        #print("output xb utilization...")
-        #self.crossbar_utilization()
         print("output performance anaylsis...")
         self.performance_statistics()
+        self.output_result()
 
-    def energy_breakdown(self):
-        self.Total_energy_cu = self.Total_energy_cu_shift_and_add + \
-                                self.Total_energy_adc + \
-                                self.Total_energy_dac + \
-                                self.Total_energy_crossbar + \
-                                self.Total_energy_ir_in_cu + \
-                                self.Total_energy_or_in_cu
-        self.Total_energy_pe = self.Total_energy_cu + \
-                                self.Total_energy_edram_buffer + \
-                                self.Total_energy_bus + \
-                                self.Total_energy_activation + \
-                                self.Total_energy_pe_shift_and_add + \
-                                self.Total_energy_pooling + \
-                                self.Total_energy_or
-        self.Total_energy = self.Total_energy_pe + self.Total_energy_interconnect
+    def output_result(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Result.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["Cycles", self.cycle_ctr])
+            writer.writerow(["Total energy consumption(nJ)", self.Total_energy])
+            writer.writerow([])
+            writer.writerow(["", "Energy(nJ)"])
+            writer.writerow(["Interconnect", self.Total_energy_interconnect])
 
-        print("\tTotal:", self.Total_energy, "nJ")
-        print("\tChip level")
-        print("\t\tPE: %.4e (%.2f%%)" %(self.Total_energy_pe, self.Total_energy_pe/self.Total_energy*100))
-        print("\t\tInterconnect: %.4e (%.2f%%)" %(self.Total_energy_interconnect, self.Total_energy_interconnect/self.Total_energy*100))
-        print()
-        print("\tPE level")
-        print("\t\tCU: %.4e (%.2f%%)" %(self.Total_energy_cu, self.Total_energy_cu/self.Total_energy_pe*100))
-        print("\t\tEdram Buffer: %.4e (%.2f%%)" %(self.Total_energy_edram_buffer, self.Total_energy_edram_buffer/self.Total_energy_pe*100))
-        print("\t\tBus: %.4e (%.2f%%)" %(self.Total_energy_bus, self.Total_energy_bus/self.Total_energy_pe*100))
-        print("\t\tActivation: %.4e (%.2f%%)" %(self.Total_energy_activation, self.Total_energy_activation/self.Total_energy_pe*100))
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_pe_shift_and_add, self.Total_energy_pe_shift_and_add/self.Total_energy_pe*100))
-        print("\t\tPooling: %.4e (%.2f%%)" %(self.Total_energy_pooling, self.Total_energy_pooling/self.Total_energy_pe*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or, self.Total_energy_or/self.Total_energy_pe*100))
-        print()
-        print("\tCU level")
-        print("\t\tShift and Add: %.4e (%.2f%%)" %(self.Total_energy_cu_shift_and_add, self.Total_energy_cu_shift_and_add/self.Total_energy_cu*100))
-        print("\t\tADC: %.4e (%.2f%%)" %(self.Total_energy_adc, self.Total_energy_adc/self.Total_energy_cu*100))
-        print("\t\tDAC: %.4e (%.2f%%)" %(self.Total_energy_dac, self.Total_energy_dac/self.Total_energy_cu*100))
-        print("\t\tCrossbar Array: %.4e (%.2f%%)" %(self.Total_energy_crossbar, self.Total_energy_crossbar/self.Total_energy_cu*100))
-        print("\t\tIR: %.4e (%.2f%%)" %(self.Total_energy_ir_in_cu, self.Total_energy_ir_in_cu/self.Total_energy_cu*100))
-        print("\t\tOR: %.4e (%.2f%%)" %(self.Total_energy_or_in_cu, self.Total_energy_or_in_cu/self.Total_energy_cu*100))
-        print()
+            writer.writerow(["Edram Buffer", self.Edram_buffer_energy])
+            writer.writerow(["Bus", self.Bus_energy])
+            writer.writerow(["PE Shift and Add", self.PE_shift_and_add_energy])
+            writer.writerow(["OR", self.Or_energy])
+            writer.writerow(["Activation", self.Activation_energy])
+            writer.writerow(["Pooling", self.Pooling_energy])
 
-        # Chip pie
-        print("Chip energy breakdown")
-        labels = 'PE', 'Interconnect'
-        value = [self.Total_energy_pe, self.Total_energy_interconnect]
-        plt.pie(value , labels = labels, autopct='%1.1f%%')
-        plt.axis('equal')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_chip.png')
-        plt.clf()
+            writer.writerow(["CU Shift and Add", self.CU_shift_and_add_energy])
+            writer.writerow(["DAC", self.CU_dac_energy])
+            writer.writerow(["ADC", self.CU_adc_energy])
+            writer.writerow(["Crossbar Array", self.CU_crossbar_energy])
+            writer.writerow(["IR", self.CU_IR_energy])
+            writer.writerow(["OR", self.CU_OR_energy])
 
+    def PE_energy_breakdown(self):
         # PE breakdown
         print("PE energy breakdown")
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["", "CU", "Buffer", "Bus", "Shift and add", "OR", "Activation", "Pooling"])
+            writer.writerow(["", "Buffer", "Bus", "PE Shift and add", "OR", "Activation", "Pooling",
+                             "CU Shift and add", "DAC", "ADC", "Crossbar", "IR", "OR"
+                            ])
             for pe in self.PE_array:
                 arr = ["PE"+str(self.PE_array.index(pe))]
-                arr.append(pe.CU_energy)
                 arr.append(pe.Edram_buffer_energy)
                 arr.append(pe.Bus_energy)
-                arr.append(pe.Shift_and_add_energy)
+                arr.append(pe.PE_shift_and_add_energy)
                 arr.append(pe.Or_energy)
                 arr.append(pe.Activation_energy)
                 arr.append(pe.Pooling_energy)
-                writer.writerow(arr)
-        
-        # PE breakdown (percentage)
-        print("PE energy breakdown (percentage)")
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE_percentage.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["", "CU", "Buffer", "Bus", "Shift and add", "OR", "Activation", "Pooling"])
-            for pe in self.PE_array:
-                this_pe_energy = pe.CU_energy + pe.Edram_buffer_energy + pe.Bus_energy + \
-                                 pe.Shift_and_add_energy + pe.Or_energy + \
-                                 pe.Activation_energy + pe.Pooling_energy
-                arr = ["PE"+str(self.PE_array.index(pe))]
-                if this_pe_energy == 0:
-                    for i in range(7):
-                        arr.append(0)
-                else:
-                    arr.append(pe.CU_energy / this_pe_energy)
-                    arr.append(pe.Edram_buffer_energy / this_pe_energy)
-                    arr.append(pe.Bus_energy / this_pe_energy)
-                    arr.append(pe.Shift_and_add_energy / this_pe_energy)
-                    arr.append(pe.Or_energy / this_pe_energy)
-                    arr.append(pe.Activation_energy / this_pe_energy)
-                    arr.append(pe.Pooling_energy / this_pe_energy)
+
+                arr.append(pe.CU_shift_and_add_energy)
+                arr.append(pe.CU_dac_energy)
+                arr.append(pe.CU_adc_energy)
+                arr.append(pe.CU_crossbar_energy)
+                arr.append(pe.CU_IR_energy)
+                arr.append(pe.CU_OR_energy)
                 writer.writerow(arr)
 
     def buffer_analysis(self):
+        # num轉KB
+        for pe in self.PE_array:
+            for i in range(len(pe.edram_buffer_i.buffer_size_util[1])):
+                pe.edram_buffer_i.buffer_size_util[1][i] *= self.input_bit/8/1000
+            for i in range(len(pe.edram_buffer.buffer_size_util[1])):
+                pe.edram_buffer.buffer_size_util[1][i] *= self.input_bit/8/1000
+            pe.edram_buffer_i.maximal_usage *= self.input_bit/8/1000
+            pe.edram_buffer.maximal_usage *= self.input_bit/8/1000
+
         ### time history
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history_ideal.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -1256,77 +1126,33 @@ class Controller(object):
         ### utilization
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_ideal.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(["", "Size(KB)"])
             for pe in self.PE_array:
                 if pe.edram_buffer_i.maximal_usage == 0:
                     continue
                 pe_id = self.PE_array.index(pe)
-                writer.writerow([pe_id, pe.edram_buffer_i.maximal_usage])
+                writer.writerow(["PE"+str(pe_id), pe.edram_buffer_i.maximal_usage])
         
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization_nonideal.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(["PE", "Size(KB)"])
             for pe in self.PE_array:
                 if pe.edram_buffer.maximal_usage == 0:
                     continue
                 pe_id = self.PE_array.index(pe)
-                writer.writerow([pe_id, pe.edram_buffer.maximal_usage])
+                writer.writerow(["PE"+str(pe_id), pe.edram_buffer.maximal_usage])
 
     def pe_utilization(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            for row in range(0, len(self.pe_state_for_plot[0]), self.freq):
+            for row in range(len(self.pe_state_for_plot[0])):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
-        '''
-        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)/2))
-        plt.scatter(self.pe_state_for_plot[0], self.pe_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('PE index')
-        plt.ylim(-1, len(self.PE_array))
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
 
     def cu_utilization(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            for row in range(0, len(self.cu_state_for_plot[0]), self.freq):
+            for row in range(len(self.cu_state_for_plot[0])):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
-        
-        '''
-        #plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num/10))
-        plt.scatter(self.cu_state_for_plot[0], self.cu_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('CU index')
-        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num)
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num, self.hd_info.CU_num))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
-
-    def crossbar_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(0, len(self.xb_state_for_plot[0]), self.freq):
-                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
-        '''
-        plt.figure(figsize=(self.cycle_ctr/20, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num/10))
-        plt.scatter(self.xb_state_for_plot[0], self.xb_state_for_plot[1], s=2, c='blue')
-        plt.title(self.mapping_str+", "+self.scheduling_str)
-        plt.xlabel('Cycle')
-        plt.ylabel('XB index')
-        plt.ylim(-1, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num)
-        plt.xlim(0, self.cycle_ctr)
-        plt.yticks(range(0, len(self.PE_array)*self.hd_info.CU_num*self.hd_info.Xbar_num, self.hd_info.Xbar_num))
-        plt.xticks(range(0, self.cycle_ctr, 10))
-        plt.savefig('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.png', bbox_inches='tight')
-        plt.clf()
-        '''
 
     def performance_statistics(self):
         # PE breakdown
@@ -1343,14 +1169,14 @@ class Controller(object):
                     arr.append(cu.wait_transfer_time)
                     writer.writerow(arr)
 
-    def non_pipeline_stage(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for row in range(self.cycle_ctr):
-                writer.writerow([row+1, self.pipeline_stage_record[row]])
-
 
     # 舊的無用畫圖function
+    def crossbar_utilization(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/XB_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(len(self.xb_state_for_plot[0])):
+                writer.writerow([self.xb_state_for_plot[0][row], self.xb_state_for_plot[1][row]])
+
     def buffer_analysis_old(self):
         max_buffer_need = 0
         for i in range(len(self.PE_array)):
@@ -1494,7 +1320,7 @@ class Controller(object):
     def energy_utilization(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            for row in range(0, self.cycle_ctr, self.freq):
+            for row in range(self.cycle_ctr):
                 writer.writerow([row+1, self.energy_utilization[row]])
         plt.bar(range(1, self.cycle_ctr+1), self.energy_utilization)
         plt.title(self.mapping_str+", "+self.scheduling_str)
@@ -1705,3 +1531,9 @@ class Controller(object):
         print("(" + str(pure_computation_time_total/total_pe_num/self.cycle_ctr*100) + "%)")
         print()
         '''
+
+    def non_pipeline_stage(self):
+        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/stage.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in range(self.cycle_ctr):
+                writer.writerow([row+1, self.pipeline_stage_record[row]])
