@@ -291,7 +291,7 @@ class Controller(object):
                         # Energy
                         pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
                         pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * num_data
-                        pe.CU_IR_energy += self.hd_info.Energy_ir_in_cu * self.input_bit * num_data
+                        pe.CU_IR_energy += self.hd_info.Energy_ir_in_cu * self.input_bit * num_data # write
 
                         # 要幾個cycle讀完
                         pe.edram_read_cycles = ceil(num_data / self.edram_read_data)
@@ -408,6 +408,9 @@ class Controller(object):
                         pe.CU_crossbar_energy += self.hd_info.Energy_ou_crossbar * ou_num
                         pe.CU_adc_energy += self.hd_info.Energy_ou_adc * ou_num
                         pe.CU_shift_and_add_energy += self.hd_info.Energy_ou_ssa * ou_num
+                        
+                        pe.CU_IR_energy += self.hd_info.Energy_ir_in_cu * ou_num * self.hd_info.OU_h 
+                        pe.CU_OR_energy += self.hd_info.Energy_or_in_cu * ou_num * self.hd_info.OU_w * self.hd_info.ADC_resolution
 
                     cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
                     self.cu_state_for_plot[0].append(self.cycle_ctr)
@@ -483,7 +486,7 @@ class Controller(object):
         for pe in self.erp_rd:
             for cu_idx in pe.idle_eventQueuing_CU:
                 cu = pe.CU_array[cu_idx]
-                cu.wait_transfer_time += 1
+                cu.wait_transfer_time += 1 # CU在等資料傳到
             if pe.edram_rd_event:
                 event = pe.edram_rd_event
                 cuy, cux = event.position_idx[4], event.position_idx[5]
