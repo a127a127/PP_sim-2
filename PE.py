@@ -62,7 +62,6 @@ class PE(object):
         self.Activation_energy       = 0.
         self.Pooling_energy          = 0.
 
-        self.CU_energy               = 0.
         self.CU_shift_and_add_energy = 0.
         self.CU_dac_energy           = 0.
         self.CU_adc_energy           = 0.

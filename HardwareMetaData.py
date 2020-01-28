@@ -8,24 +8,35 @@ class HardwareMetaData(object):
         cfg = ConfigParser()
         cfg.read('./configs/hardware.ini')
 
-        self.cell_bit_width = 2  # Alexnet: 2
+        self.cell_bit_width = 2
 
-        self.Router_num_y = 10 # Alexnet: 10 MXIC 2
-        self.Router_num_x = 10 # Alexnet: 10 MXIC 3
+        model_type = 0
+        if model_type == 0: # Lenet; 12 PEs
+            self.Router_num_y = 2
+            self.Router_num_x = 2
+        elif model_type == 1: # Cifar10; 5 PEs
+            self.Router_num_y = 1
+            self.Router_num_x = 2
+        elif model_type == 2: # DeepID; 8 PEs
+            self.Router_num_y = 1
+            self.Router_num_x = 2
+        elif model_type == 3: # Caffenet
+            self.Router_num_y = 10
+            self.Router_num_x = 10
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num_y = 4 # Alexnet: 4
-        self.CU_num_x = 3 # Alexnet: 3
+        self.CU_num_y = 4
+        self.CU_num_x = 3
         self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = 4  # Alexnet: 4
-        self.Xbar_num_x = 2  # Alexnet: 2
+        self.Xbar_num_y = 2
+        self.Xbar_num_x = 4
         self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
-        self.Xbar_h = 128 #128 #10
-        self.Xbar_w = 128 #128 #10
-        self.OU_h = 9 #9 #5
-        self.OU_w = 8 #8 #5
+        self.Xbar_h = 128
+        self.Xbar_w = 128
+        self.OU_h = 9
+        self.OU_w = 8
 
         self.Frequency = 1.2 # GHz
         self.ADC_resolution = 3 # bits

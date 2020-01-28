@@ -2,23 +2,23 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 0
+        model_type = 4
         if model_type == 0: # Lenet
             self.Model_type = "Lenet"
             self.layer_list = [
                 LayerMetaData("convolution",   6, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
-                LayerMetaData("convolution",  16, 5, 5,  6, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("convolution",  16, 5, 5,  6, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
                 LayerMetaData("convolution", 120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 120),
-                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  84),
-                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  10)
+                # LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 120),
+                # LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  84),
+                # LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  10)
                 ]
             self.input_n = 1
             self.input_h = 32
             self.input_w = 32
             self.input_c = 1
-            self.input_bit = 1
+            self.input_bit = 16
             self.filter_bit = 16
 
         elif model_type == 1: # Cifar10 model from 子賢paper
@@ -37,7 +37,7 @@ class ModelConfig(object):
             self.input_h = 32
             self.input_w = 32
             self.input_c = 3
-            self.input_bit = 1
+            self.input_bit = 16
             self.filter_bit = 16
 
         elif model_type == 2: # DeepID
@@ -57,7 +57,7 @@ class ModelConfig(object):
             self.input_h = 39
             self.input_w = 31
             self.input_c = 1
-            self.input_bit = 1
+            self.input_bit = 16
             self.filter_bit = 16
 
         elif model_type == 3: # Caffenet
@@ -85,30 +85,33 @@ class ModelConfig(object):
         elif model_type == 4: # Test0
             self.Model_type = "Test0"
             self.layer_list = [
-                LayerMetaData("convolution",   1, 2, 2, 1, 1, 'VALID', 0, 0, 0,  0),
-                #LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
-                LayerMetaData("convolution",   1, 2, 2, 1, 1, 'VALID', 0, 0, 0,  0),
+                LayerMetaData("convolution",     2, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution",    16, 5, 5,  2, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
+                LayerMetaData("convolution",   120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
                 ]
             self.input_n = 1
-            self.input_h = 4
-            self.input_w = 4
+            self.input_h = 24
+            self.input_w = 24
             self.input_c = 1
             self.input_bit = 1
             self.filter_bit = 16
         elif model_type == 5: # Test1
             self.Model_type = "Test1"
             self.layer_list = [
-                LayerMetaData("convolution", 20, 5, 5,  3, 1, 'VALID', 0, 0, 0,  0),
-                LayerMetaData("convolution", 10, 2, 2, 20, 1, 'VALID', 0, 0, 0,  0),
-                #LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,  0),
-                LayerMetaData("fully",        0, 0, 0,  0, 0,       0, 0, 0, 0, 10)
+                LayerMetaData("convolution",   6, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                LayerMetaData("convolution",   16, 5, 5,  6, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
+                LayerMetaData("convolution", 120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 120),
+                LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 84),
                 ]
             self.input_n = 1
-            self.input_h = 7
-            self.input_w = 7
-            self.input_c = 3
-            self.input_bit = 2
-            self.filter_bit = 4
+            self.input_h = 32
+            self.input_w = 32
+            self.input_c = 1
+            self.input_bit = 1
+            self.filter_bit = 16
         elif model_type == 6: # TestModelConfig2
             self.Model_type = "Test2"
             self.layer_list = [

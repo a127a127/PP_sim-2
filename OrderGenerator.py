@@ -269,10 +269,10 @@ class OrderGenerator(object):
                         for window_w in range(windowlen_w):
                             num_input = window_h * windowlen_w + window_w
                             preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter] 
-                            pe_saa_preceding_count = len(preceding_list)#0 # append pe_saa前有幾個event先append了
                             first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event
                             do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2]
                             start_append_idx = len(self.Computation_order)
+                            pe_saa_preceding_count = 0
 
                 ### Event: edram_wr, data_transfer (for pe_saa)
                             preceding_cu = dict()
@@ -280,8 +280,11 @@ class OrderGenerator(object):
                                 if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: # data in other pe
                                     if self.Computation_order[pre_event_idx].position_idx not in preceding_cu:
                                         preceding_cu[self.Computation_order[pre_event_idx].position_idx] = [pre_event_idx]
+                                        pe_saa_preceding_count += 1
                                     else:
                                         preceding_cu[self.Computation_order[pre_event_idx].position_idx].append(pre_event_idx)
+                                else:
+                                    pe_saa_preceding_count += 1
                             for cu_idx in preceding_cu:
                                 edram_wr_event_idx = len(self.Computation_order)
                                 for pre_event_idx in preceding_cu[cu_idx]:
@@ -514,10 +517,10 @@ class OrderGenerator(object):
                 for nfilter in range(self.model_info.filter_n[nlayer]):
                     num_input = 0
                     preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter]
-                    pe_saa_preceding_count = len(preceding_list) # append pe_saa前有幾個event先append了
                     first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event
                     do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2]
                     start_append_idx = len(self.Computation_order)
+                    pe_saa_preceding_count = 0
 
                 ### Event: edram_wr, data_transfer (for pe_saa)
                     preceding_cu = dict()
@@ -525,8 +528,11 @@ class OrderGenerator(object):
                         if self.Computation_order[pre_event_idx].position_idx[:-2] != do_pe_saa_pos: # data in other pe
                             if self.Computation_order[pre_event_idx].position_idx not in preceding_cu:
                                 preceding_cu[self.Computation_order[pre_event_idx].position_idx] = [pre_event_idx]
+                                pe_saa_preceding_count += 1
                             else:
                                 preceding_cu[self.Computation_order[pre_event_idx].position_idx].append(pre_event_idx)
+                        else:
+                            pe_saa_preceding_count += 1
                     for cu_idx in preceding_cu:
                         edram_wr_event_idx = len(self.Computation_order)
                         for pre_event_idx in preceding_cu[cu_idx]:
