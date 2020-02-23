@@ -1,6 +1,9 @@
-from Mapping import DefaultMapping
-from Mapping import HighParallelismMapping
+#from Mapping import DefaultMapping
+#from Mapping import HighParallelismMapping
+
 from Mapping import SameColumnFirstMapping
+from Mapping import SameRowFirstMapping
+from Mapping import ParallelsimMapping
 
 from OrderGenerator import OrderGenerator
 from Controller import Controller
@@ -19,18 +22,34 @@ def main():
     print("Mapping policy:  ", end="")
     if mapping == 0: # DefaultMapping
         print("Default Mapping")
-        mapping_information = DefaultMapping()
-        mapping_str = "Default_Mapping"
+        exit()
+        #mapping_information = DefaultMapping()
+        #mapping_str = "Default_Mapping"
     elif mapping == 1: # HighParallelismMapping
         print("High Parallelism Mapping")
-        mapping_information = HighParallelismMapping()
-        mapping_str = "High_Parallelism_Mapping"
+        exit()
+        #mapping_information = HighParallelismMapping()
+        #mapping_str = "High_Parallelism_Mapping"
     elif mapping == 2: # SameColumnFirstMapping
         print("Same Column First Mapping")
         mapping_information = SameColumnFirstMapping()
         mapping_str = "Same_Column_First_Mapping"
+    elif mapping == 3: # SameRowFirstMapping
+        print("Same Row First Mapping")
+        mapping_information = SameRowFirstMapping()
+        mapping_str = "Same_Row_First_Mapping"
+    elif mapping == 4: # ParallelsimMapping
+        print("Parallelsim Mapping")
+        mapping_information = ParallelsimMapping(2)
+        mapping_str = "Parallelsim_Mapping"
+
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
+
+    #lp = mapping_information.layer_mapping_to_xbar[0][1][0][0][0][0][0][0][0]
+    #lp = mapping_information.layer_mapping_to_pe[0][0][1][1][1]
+    #print(lp[0])
+    #exit()
 
     ### Scheduling ###
     print("Scheduling policy: ", end="")
@@ -49,7 +68,7 @@ def main():
     isGenerateOrder = True
 
     ### Trace ###
-    isTrace_order      = True
+    isTrace_order      = False
     isTrace_controller = False
 
     ### Generate computation order graph ### 
@@ -71,8 +90,8 @@ def main():
         print("--- Load computation order in %s seconds ---\n" %(end_load - start_load))
 
     ## delete mapping data
-    del order_generator.mp_info
-    del mapping_information
+    # del order_generator.mp_info
+    # del mapping_information
 
     ## Power and performance simulation ###
     start_simulation_time = time.time()
