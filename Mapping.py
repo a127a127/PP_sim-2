@@ -89,8 +89,8 @@ class SameColumnFirstMapping(object):
                     Cols = len(Filters) * cells_per_weight
                     for h in range(mapping_height_num_xb):
                         # 一次map一個xb
-                        for inp in inputs:
-                            Inp = inp[h * HW().Xbar_h : (h+1) * HW().Xbar_h].tolist()
+                        inp = inputs[:, h * HW().Xbar_h : (h+1) * HW().Xbar_h].tolist()
+                        for Inp in inp:
                             self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][nlayer].append(MappingMetaData(Inp, Cols, Filters))
                         
                         # 算下一個XB的位置
@@ -184,8 +184,8 @@ class SameColumnFirstMapping(object):
                     Cols = len(Filters) * cells_per_weight
                     for h in range(mapping_height_num_xb):
                         # 一次map一個xb
-                        for inp in inputs:
-                            Inp = inp[h * HW().Xbar_h : (h+1) * HW().Xbar_h].tolist()
+                        inp = inputs[:, h * HW().Xbar_h : (h+1) * HW().Xbar_h].tolist()
+                        for Inp in inp:
                             self.layer_mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_h][cu_w][xb_h][xb_w][nlayer].append(MappingMetaData(Inp, Cols, Filters))
                         
                         # 算下一個XB的位置
@@ -722,7 +722,6 @@ class ParallelsimMapping(object):
                                                         rt_h += 1
                                                         if rt_h >= HW().Router_num_y:
                                                             rt_h, rt_w = 0, 0
-                
                 # next layer next PE
                 if cu_h != 0 or  cu_w != 0 or xb_h != 0 or xb_w != 0:
                     pe_w += 1
