@@ -32,10 +32,10 @@ class Controller(object):
         self.hd_info = HardwareMetaData()
         self.input_bit = self.ordergenerator.model_info.input_bit
         self.cycle_ctr = 0
-        self.edram_read_cycles = ceil(
-            self.hd_info.Xbar_num * self.hd_info.Xbar_h *
-            self.input_bit * self.hd_info.eDRAM_read_latency /
-            self.hd_info.cycle_time) # edram read to ir需要幾個cycle
+        # self.edram_read_cycles = ceil(
+        #     self.hd_info.Xbar_num * self.hd_info.Xbar_h *
+        #     self.input_bit * self.hd_info.eDRAM_read_latency /
+        #     self.hd_info.cycle_time) # edram read to ir需要幾個cycle
         self.edram_read_data  = floor(self.hd_info.eDRAM_read_bits / self.input_bit) # 1個cycle可以讀多少data
         self.edram_write_data = floor(self.hd_info.eDRAM_write_bits / self.input_bit) # 1個cycle可以寫多少data
         self.done_event = 0
@@ -49,11 +49,9 @@ class Controller(object):
                         pe = PE(pe_pos, ModelConfig().input_bit)
                         self.PE_array.append(pe)
 
-        # Energy
-        self.Total_energy_interconnect = 0
-
-        # Interconnect
         self.fetch_array = []
+        # Interconnect
+        self.Total_energy_interconnect = 0
         self.interconnect = Interconnect(self.hd_info.Router_num_y, self.hd_info.Router_num_x, self.input_bit)
         self.interconnect_step = self.hd_info.Router_flit_size / self.input_bit * self.hd_info.cycle_time * self.hd_info.Frequency # scaling from ISAAC
         self.interconnect_step = floor(self.interconnect_step)
@@ -105,7 +103,8 @@ class Controller(object):
         self.trigger_pool     = []
 
         self.trigger_next_layer = False
-
+        
+        self.ccc = 0
     def run(self):
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
@@ -142,6 +141,8 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
+            if self.cycle_ctr == 100: 
+                exit()
             if self.cycle_ctr % 10000 == 0:
                 if self.done_event == 0:
                     pass
@@ -531,9 +532,15 @@ class Controller(object):
                         if self.trace:
                             pass
                             #print("\t\tProceeding event is triggered.", pro_event.event_type, pro_event.position_idx)
-                        pe.activation_trigger.append([pro_event, []])
-                        if pe not in self.trigger_act:
-                            self.trigger_act.append(pe)
+                        if pro_event.event_type == "activation":
+                            pe.activation_trigger.append([pro_event, []])
+                            if pe not in self.trigger_act:
+                                self.trigger_act.append(pe)
+
+                        elif pro_event.event_type == "edram_wr":
+                            pe.edram_wr_trigger.append([pro_event, []])
+                            if pe not in self.trigger_edram_wr:
+                                self.trigger_edram_wr.append(pe)
 
                 # Free buffer (ideal)
                 for d in rm_data_list:
