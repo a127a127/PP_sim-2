@@ -272,6 +272,7 @@ class SameColumnFirstMapping(object):
                 if input_per_pe == 0:
                     input_per_pe = 1
                 
+                next_layer_id = (rt_h, rt_w, pe_h, pe_w)
                 rt_h, rt_w, pe_h, pe_w = pool_pe_id[0], pool_pe_id[1], pool_pe_id[2], pool_pe_id[3]
                 for pe_n in range(used_pe_num):
                     if pe_n != 0:
@@ -299,6 +300,9 @@ class SameColumnFirstMapping(object):
 
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer].append(this_input)
+
+                    rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
+
 
     def __str__(self):
         return str(self.__dict__)
@@ -568,6 +572,7 @@ class SameRowFirstMapping(object):
                 if input_per_pe == 0:
                     input_per_pe = 1
                 
+                next_layer_id = (rt_h, rt_w, pe_h, pe_w)
                 rt_h, rt_w, pe_h, pe_w = pool_pe_id[0], pool_pe_id[1], pool_pe_id[2], pool_pe_id[3]
                 for pe_n in range(used_pe_num):
                     if pe_n != 0:
@@ -595,6 +600,8 @@ class SameRowFirstMapping(object):
 
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer].append(this_input)
+
+                rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 
     def __str__(self):
         return str(self.__dict__)
@@ -861,6 +868,7 @@ class ParallelsimMapping(object):
                 if input_per_pe == 0:
                     input_per_pe = 1
                 
+                next_layer_id = (rt_h, rt_w, pe_h, pe_w)
                 rt_h, rt_w, pe_h, pe_w = pool_pe_id[0], pool_pe_id[1], pool_pe_id[2], pool_pe_id[3]
                 for pe_n in range(used_pe_num):
                     if pe_n != 0:
@@ -888,6 +896,8 @@ class ParallelsimMapping(object):
 
                     if this_input:
                         self.layer_mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer].append(this_input)
+
+                rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 
     def __str__(self):
         return str(self.__dict__)

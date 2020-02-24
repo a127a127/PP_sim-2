@@ -512,7 +512,7 @@ class Controller(object):
                 
                 pe.state = True
                 #pe.pe_saa_erp.remove(event)
-                saa_amount = len(event.inputs[0]) # inputs[0]: 前面的cu index
+                saa_amount = event.inputs[0] # inputs[0]: 前面的cu index
                 rm_data_list = event.inputs[1]    # 要移除的資料
 
                 # Energy

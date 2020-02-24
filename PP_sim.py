@@ -46,10 +46,10 @@ def main():
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
-    #lp = mapping_information.layer_mapping_to_xbar[0][1][0][0][0][0][0][0][0]
-    #lp = mapping_information.layer_mapping_to_pe[0][0][1][1][1]
-    #print(lp[0])
-    #exit()
+    # lp = mapping_information.layer_mapping_to_xbar[0][0][0][0][0][0][0][0][0]
+    # lp = mapping_information.layer_mapping_to_pe[0][0][0][0][1]
+    # print(lp[0])
+    # exit()
 
     ### Scheduling ###
     print("Scheduling policy: ", end="")
@@ -89,6 +89,7 @@ def main():
         end_load = time.time()
         print("--- Load computation order in %s seconds ---\n" %(end_load - start_load))
 
+    # exit()
     ## delete mapping data
     # del order_generator.mp_info
     # del mapping_information
