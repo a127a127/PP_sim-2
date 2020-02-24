@@ -2,7 +2,7 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 4
+        model_type = 0
         if model_type == 0: # Lenet
             self.Model_type = "Lenet"
             self.layer_list = [
@@ -10,9 +10,9 @@ class ModelConfig(object):
                 LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
                 LayerMetaData("convolution",  16, 5, 5,  6, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
                 LayerMetaData("convolution", 120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
-                # LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 120),
-                # LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  84),
-                # LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  10)
+                LayerMetaData("fully",         0, 0, 0, 0,  0,       0, 0, 0, 0, 120),
+                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  84),
+                LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  10)
                 ]
             self.input_n = 1
             self.input_h = 32
@@ -85,16 +85,18 @@ class ModelConfig(object):
         elif model_type == 4: # Test0
             self.Model_type = "Test0"
             self.layer_list = [
-                LayerMetaData("convolution",     2, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
-                LayerMetaData("convolution",    16, 5, 5,  2, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
-                LayerMetaData("convolution",   120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("convolution",     12, 3, 3,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
+                #LayerMetaData("convolution",    16, 3, 3,  12, 1, 'VALID', 0, 0, 0,   0), # 16 , 5, 5, 6
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0,   64),
+                #LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0,   2),
+                #LayerMetaData("convolution",   120, 5, 5, 16, 1, 'VALID', 0, 0, 0,   0),
                 ]
             self.input_n = 1
-            self.input_h = 24
-            self.input_w = 24
+            self.input_h = 10
+            self.input_w = 1
             self.input_c = 1
-            self.input_bit = 1
+            self.input_bit = 16
             self.filter_bit = 16
         elif model_type == 5: # Test1
             self.Model_type = "Test1"

@@ -1,5 +1,5 @@
 from HardwareMetaData import HardwareMetaData as HW
-from configs.ModelConfig import ModelConfig
+from ModelConfig import ModelConfig
 from Model import Model
 from FreeBufferController import FreeBufferController
 from PE import PE
@@ -694,7 +694,7 @@ class OrderGenerator(object):
         print("data_transfer_ctr", data_transfer_ctr)
         print("total", len(self.Computation_order))
 
-        if True:
+        if False:
             for e in self.Computation_order:
                 print(self.Computation_order.index(e), e)
 

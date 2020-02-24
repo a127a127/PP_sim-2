@@ -1,4 +1,4 @@
-from configs.ModelConfig import ModelConfig
+from ModelConfig import ModelConfig
 from Model import Model
 from HardwareMetaData import HardwareMetaData
 import numpy as np

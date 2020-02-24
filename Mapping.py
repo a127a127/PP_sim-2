@@ -1,5 +1,5 @@
 from HardwareMetaData import HardwareMetaData as HW
-from configs.ModelConfig import ModelConfig
+from ModelConfig import ModelConfig
 from Model import Model
 from MappingMetaData import MappingMetaData
 import sys
