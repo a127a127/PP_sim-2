@@ -26,11 +26,12 @@ class OnChipBuffer():
             self.buffer.remove(data)
             self.buffer.append(data)
             return
-        if len(self.buffer) < self.num_of_data:
-            self.buffer.append(data)
-        else: # FIFO
-            self.buffer.popleft()
-            self.buffer.append(data)
+        self.buffer.append(data)
+        # if len(self.buffer) < self.num_of_data:
+        #     self.buffer.append(data)
+        # else: # FIFO
+        #     self.buffer.popleft()
+        #     self.buffer.append(data)
         
         self.maximal_usage = max(self.maximal_usage, len(self.buffer))
 

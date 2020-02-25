@@ -114,8 +114,8 @@ class Controller(object):
                     cu_idx = cux + cuy * self.hd_info.CU_num_x
                     pe = self.PE_array[pe_idx]
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(e)
-                    e.data_is_transfer += len(e.inputs)
-                    self.fetch_array.append([FetchEvent(e), e.inputs])
+                    #e.data_is_transfer += len(e.inputs)
+                    #self.fetch_array.append([FetchEvent(e), e.inputs])
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
@@ -266,11 +266,19 @@ class Controller(object):
                 cu = pe.CU_array[cu_idx]
                 event = cu.edram_rd_ir_erp.popleft()
                 pe.edram_rd_event = event
+                if event.nlayer == 0:
+                    fetch_data = []
+                    for data in event.inputs:
+                        if not pe.edram_buffer.check([event.nlayer, data]):
+                            fetch_data.append(data)
+                    if fetch_data: # 有資料不在buffer要fetch
+                        event.data_is_transfer += len(fetch_data)
+                        self.fetch_array.append([FetchEvent(event), fetch_data])
             else:
                 cu_idx = pe.edram_rd_cu_idx
                 event = pe.edram_rd_event
                 cu = pe.CU_array[cu_idx]
-
+            
             num_data = len(event.inputs)
             if not pe.data_to_ir_ing: # 還沒開始從CU傳資料到IR
                 if event.data_is_transfer != 0: # 資料是否還在transfer？
@@ -453,7 +461,7 @@ class Controller(object):
                     else:
                         if self.trace:
                             pass
-                            #print("\tcu operation")
+                            print("\tcu operation")
                             #print("\tcu.position", cu.position)
                             #print("\t",cu.cu_op_event)
                 
