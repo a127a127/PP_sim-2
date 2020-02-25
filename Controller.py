@@ -590,12 +590,12 @@ class Controller(object):
                                 self.trigger_edram_wr.append(pe)
 
                 # Free buffer (ideal)
-                for d in rm_data_list:
-                    try:
-                        pe.edram_buffer_i.buffer.remove([event.nlayer, d])
-                        self.check_buffer_pe_set.add(pe)
-                    except ValueError:
-                        pass
+                # for d in rm_data_list:
+                #     try:
+                #         pe.edram_buffer_i.buffer.remove([event.nlayer, d])
+                #         self.check_buffer_pe_set.add(pe)
+                #     except ValueError:
+                #         pass
                     # if [event.nlayer, d] in pe.edram_buffer_i.buffer:
                     #     pe.edram_buffer_i.buffer.remove([event.nlayer, d])
                     #     self.check_buffer_pe_set.add(pe)
@@ -796,8 +796,10 @@ class Controller(object):
             # Energy
             pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit # write
 
-            pe.edram_buffer.put(pk.data)
-            pe.edram_buffer_i.put(pk.data)
+            if len(pk.data[1]) == 3:
+                pe.edram_buffer.put(pk.data)
+                pe.edram_buffer_i.put(pk.data)
+
             self.check_buffer_pe_set.add(pe)
 
             if self.trace:
