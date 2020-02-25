@@ -14,6 +14,7 @@ def main():
     start_time = time.time()
     mapping = int(sys.argv[1])
     scheduling = int(sys.argv[2])
+    paral = int(sys.argv[3])
 
     ### Mapping ##
     start_mapping_time = time.time()
@@ -38,9 +39,9 @@ def main():
         mapping_information = SameRowFirstMapping()
         mapping_str = "Same_Row_First_Mapping"
     elif mapping == 4: # ParallelsimMapping
-        print("Parallelsim Mapping")
-        mapping_information = ParallelsimMapping(2)
-        mapping_str = "Parallelsim_Mapping"
+        print("Parallelsim Mapping"+sys.argv[3])
+        mapping_information = ParallelsimMapping(paral)
+        mapping_str = "Parallelsim_Mapping"+sys.argv[3]
 
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
