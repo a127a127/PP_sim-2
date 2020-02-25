@@ -103,12 +103,29 @@ class Controller(object):
 
         self.trigger_next_layer = False
         
-    def run(self):
-        pe_fetch_dict =[]
-        for pe_idx in range(len(self.PE_array)):
-            pe_fetch_dict.append([])
+        self.mp_info = ordergenerator.mp_info
+        
+        # 把input feature map放到buffer中
+        for pe in self.PE_array:
+            rty_idx, rtx_idx = pe.position[0], pe.position[1]
+            pey_idx, pex_idx = pe.position[2], pe.position[3]
+            for cuy_idx in range(self.hd_info.CU_num_y):
+                for cux_idx in range(self.hd_info.CU_num_x):
+                    for xby_idx in range(self.hd_info.Xbar_num_y):
+                        for xbx_idx in range(self.hd_info.Xbar_num_x):
+                            mapping = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx][0] # layer0
+                            for mp in mapping:
+                                for inp in mp.inputs:
+                                    data = [0, inp[1:]]
+                                    if data not in pe.edram_buffer.buffer:
+                                        pe.edram_buffer.buffer.append(data)
+                                        pe.edram_buffer_i.buffer.append(data)
 
-        print("A")
+    def run(self):
+        # pe_fetch_dict =[]
+        # for pe_idx in range(len(self.PE_array)):
+        #     pe_fetch_dict.append([])
+
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
                 if e.preceding_event_count == 0:
@@ -118,17 +135,17 @@ class Controller(object):
                     cu_idx = cux + cuy * self.hd_info.CU_num_x
                     pe = self.PE_array[pe_idx]
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(e)
-                    e.data_is_transfer += len(e.inputs)
-                    event_index = self.Computation_order.index(e)
-                    for data in e.inputs:
-                        n = True
-                        for d in pe_fetch_dict[pe_idx]:
-                            if data == d[0]:
-                                d[1].append(event_index)
-                                n = False
-                                break
-                        if n:   
-                            pe_fetch_dict[pe_idx].append([data, [event_index]])
+                    # e.data_is_transfer += len(e.inputs)
+                    # event_index = self.Computation_order.index(e)
+                    # for data in e.inputs:
+                    #     n = True
+                    #     for d in pe_fetch_dict[pe_idx]:
+                    #         if data == d[0]:
+                    #             d[1].append(event_index)
+                    #             n = False
+                    #             break
+                    #     if n:   
+                    #         pe_fetch_dict[pe_idx].append([data, [event_index]])
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
@@ -141,19 +158,17 @@ class Controller(object):
             if e.nlayer != 0:
                 break
         
-        print("B")
-        
-        self.cycle_ctr += self.hd_info.Fetch_cycle
-        for pe_idx in range(len(pe_fetch_dict)):
-            des = self.PE_array[pe_idx].position
-            src = (0, des[1], -1, -1)
+        # self.cycle_ctr += self.hd_info.Fetch_cycle
+        # for pe_idx in range(len(pe_fetch_dict)):
+        #     des = self.PE_array[pe_idx].position
+        #     src = (0, des[1], -1, -1)
 
-            for d in pe_fetch_dict[pe_idx]:
-                data = [0, d[0]]
-                pro_event_idx = d[1]
-                packet = Packet(src, des, data, pro_event_idx)
-                self.interconnect.input_packet(packet)
-        print("C")
+        #     for d in pe_fetch_dict[pe_idx]:
+        #         data = [0, d[0]]
+        #         pro_event_idx = d[1]
+        #         packet = Packet(src, des, data, pro_event_idx)
+        #         self.interconnect.input_packet(packet)
+        
         t_edram = 0
         t_cuop = 0
         t_pesaa = 0
@@ -270,6 +285,7 @@ class Controller(object):
             ### Finish
             if self.done_event == len(self.Computation_order):
                 break
+
 
     def buffer_util(self):
         pe_idx = 0
