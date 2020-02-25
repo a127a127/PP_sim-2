@@ -109,6 +109,7 @@ class Controller(object):
         for pe in self.PE_array:
             rty_idx, rtx_idx = pe.position[0], pe.position[1]
             pey_idx, pex_idx = pe.position[2], pe.position[3]
+            feature_m = np.zeros((ModelConfig().input_h, ModelConfig().input_w, ModelConfig().input_c))
             for cuy_idx in range(self.hd_info.CU_num_y):
                 for cux_idx in range(self.hd_info.CU_num_x):
                     for xby_idx in range(self.hd_info.Xbar_num_y):
@@ -116,10 +117,15 @@ class Controller(object):
                             mapping = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx][0] # layer0
                             for mp in mapping:
                                 for inp in mp.inputs:
-                                    data = [0, inp[1:]]
-                                    if data not in pe.edram_buffer.buffer:
-                                        pe.edram_buffer.buffer.append(data)
-                                        pe.edram_buffer_i.buffer.append(data)
+                                    feature_m[inp[1]][inp[2]][inp[3]] = 1
+
+            for h in range(feature_m.shape[0]):
+                for w in range(feature_m.shape[1]):
+                    for c in range(feature_m.shape[2]):
+                        if feature_m[h][w][c] == 1:
+                            data = [0, [h, w, c]]
+                            pe.edram_buffer.buffer.append(data)
+                            pe.edram_buffer_i.buffer.append(data)
 
     def run(self):
         # pe_fetch_dict =[]
@@ -285,7 +291,6 @@ class Controller(object):
             ### Finish
             if self.done_event == len(self.Computation_order):
                 break
-
 
     def buffer_util(self):
         pe_idx = 0
