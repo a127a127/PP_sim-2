@@ -103,12 +103,12 @@ class Controller(object):
 
         self.trigger_next_layer = False
         
-        self.ccc = 0
     def run(self):
         pe_fetch_dict =[]
         for pe_idx in range(len(self.PE_array)):
             pe_fetch_dict.append([])
 
+        print("A")
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
                 if e.preceding_event_count == 0:
@@ -129,7 +129,6 @@ class Controller(object):
                                 break
                         if n:   
                             pe_fetch_dict[pe_idx].append([data, [event_index]])
-                    #self.fetch_array.append([FetchEvent(e), e.inputs])
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
@@ -142,6 +141,8 @@ class Controller(object):
             if e.nlayer != 0:
                 break
         
+        print("B")
+        
         self.cycle_ctr += self.hd_info.Fetch_cycle
         for pe_idx in range(len(pe_fetch_dict)):
             des = self.PE_array[pe_idx].position
@@ -152,7 +153,7 @@ class Controller(object):
                 pro_event_idx = d[1]
                 packet = Packet(src, des, data, pro_event_idx)
                 self.interconnect.input_packet(packet)
-
+        print("C")
         t_edram = 0
         t_cuop = 0
         t_pesaa = 0
@@ -169,8 +170,6 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
-            if self.cycle_ctr == 100:
-                exit()
             if self.cycle_ctr % 100000 == 0:
                 if self.done_event == 0:
                     pass
@@ -181,8 +180,6 @@ class Controller(object):
                     print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
                     print("buffer", t_buf, "pool", t_poo, "other", t_oth)
                     print("t:", time.time()-t_)
-                    print("ccc", self.ccc)
-                    self.ccc = 0
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
                     t_oth = 0
@@ -287,7 +284,6 @@ class Controller(object):
 
     def event_edram_rd(self):
         erp = []
-        self.ccc += len(self.erp_rd)
         for pe in self.erp_rd:
             # 正在處理哪一個event
             if not pe.edram_rd_event:
