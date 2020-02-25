@@ -105,6 +105,10 @@ class Controller(object):
         
         self.ccc = 0
     def run(self):
+        pe_fetch_dict =[]
+        for pe_idx in range(len(self.PE_array)):
+            pe_fetch_dict.append([])
+
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
                 if e.preceding_event_count == 0:
@@ -114,7 +118,17 @@ class Controller(object):
                     cu_idx = cux + cuy * self.hd_info.CU_num_x
                     pe = self.PE_array[pe_idx]
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(e)
-                    #e.data_is_transfer += len(e.inputs)
+                    e.data_is_transfer += len(e.inputs)
+                    event_index = self.Computation_order.index(e)
+                    for data in e.inputs:
+                        n = True
+                        for d in pe_fetch_dict[pe_idx]:
+                            if data == d[0]:
+                                d[1].append(event_index)
+                                n = False
+                                break
+                        if n:   
+                            pe_fetch_dict[pe_idx].append([data, [event_index]])
                     #self.fetch_array.append([FetchEvent(e), e.inputs])
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
@@ -127,6 +141,17 @@ class Controller(object):
                         pe.eventQueuing_CU.append(cu_idx)
             if e.nlayer != 0:
                 break
+        
+        self.cycle_ctr += self.hd_info.Fetch_cycle
+        for pe_idx in range(len(pe_fetch_dict)):
+            des = self.PE_array[pe_idx].position
+            src = (0, des[1], -1, -1)
+
+            for d in pe_fetch_dict[pe_idx]:
+                data = [0, d[0]]
+                pro_event_idx = d[1]
+                packet = Packet(src, des, data, pro_event_idx)
+                self.interconnect.input_packet(packet)
 
         t_edram = 0
         t_cuop = 0
@@ -144,6 +169,8 @@ class Controller(object):
         start_time = time.time()
         layer = 0
         while True:
+            if self.cycle_ctr == 100:
+                exit()
             if self.cycle_ctr % 100000 == 0:
                 if self.done_event == 0:
                     pass
@@ -154,6 +181,8 @@ class Controller(object):
                     print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
                     print("buffer", t_buf, "pool", t_poo, "other", t_oth)
                     print("t:", time.time()-t_)
+                    print("ccc", self.ccc)
+                    self.ccc = 0
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
                     t_oth = 0
@@ -199,7 +228,7 @@ class Controller(object):
             t_tr += time.time() - staa
 
             staa = time.time()
-            self.fetch()
+            #self.fetch()
             t_fe += time.time() - staa
 
             ### Pipeline stage control ###
@@ -258,6 +287,7 @@ class Controller(object):
 
     def event_edram_rd(self):
         erp = []
+        self.ccc += len(self.erp_rd)
         for pe in self.erp_rd:
             # 正在處理哪一個event
             if not pe.edram_rd_event:
@@ -266,14 +296,14 @@ class Controller(object):
                 cu = pe.CU_array[cu_idx]
                 event = cu.edram_rd_ir_erp.popleft()
                 pe.edram_rd_event = event
-                if event.nlayer == 0:
-                    fetch_data = []
-                    for data in event.inputs:
-                        if not pe.edram_buffer.check([event.nlayer, data]):
-                            fetch_data.append(data)
-                    if fetch_data: # 有資料不在buffer要fetch
-                        event.data_is_transfer += len(fetch_data)
-                        self.fetch_array.append([FetchEvent(event), fetch_data])
+                # if event.nlayer == 0:
+                #     fetch_data = []
+                #     for data in event.inputs:
+                #         if not pe.edram_buffer.check([event.nlayer, data]): # Q1: 這很慢
+                #             fetch_data.append(data)
+                #     if fetch_data: # 有資料不在buffer要fetch
+                #         event.data_is_transfer += len(fetch_data)
+                #         self.fetch_array.append([FetchEvent(event), fetch_data])
             else:
                 cu_idx = pe.edram_rd_cu_idx
                 event = pe.edram_rd_event
@@ -614,7 +644,6 @@ class Controller(object):
                     pass
                     print("\tdo edram_wr, pe_pos:", pe.position, "layer:", event.nlayer, \
                     ",order index:", self.Computation_order.index(event), "data:", event.outputs)
-
                 
                 # Energy
                 pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit
@@ -853,37 +882,38 @@ class Controller(object):
                             self.check_buffer_pe_set.add(self.PE_array[pe_id])
 
     def fetch(self):
-        des_dict = dict()
-        for FE_d in self.fetch_array.copy():
-            FE, fetch_data = FE_d[0], FE_d[1]
-            FE.cycles_counter += 1
-            if FE.cycles_counter == FE.fetch_cycle:
-                src  = (0, FE.event.position_idx[1], -1, -1)
-                des  = FE.event.position_idx[0:4]
-                # if not self.isPipeLine:
-                #     self.this_layer_event_ctr -= len(fetch_data)
-                if des not in des_dict:
-                    des_dict[des] = []
-                for data in fetch_data:
-                    #data = inp[1:]
-                    data = [FE.event.nlayer, data]
-                    pro_event_idx = self.Computation_order.index(FE.event)
+        pass
+        # des_dict = dict()
+        # for FE_d in self.fetch_array.copy():
+        #     FE, fetch_data = FE_d[0], FE_d[1]
+        #     FE.cycles_counter += 1
+        #     if FE.cycles_counter == FE.fetch_cycle:
+        #         src  = (0, FE.event.position_idx[1], -1, -1)
+        #         des  = FE.event.position_idx[0:4]
+        #         # if not self.isPipeLine:
+        #         #     self.this_layer_event_ctr -= len(fetch_data)
+        #         if des not in des_dict:
+        #             des_dict[des] = []
+        #         for data in fetch_data:
+        #             #data = inp[1:]
+        #             data = [FE.event.nlayer, data]
+        #             pro_event_idx = self.Computation_order.index(FE.event)
 
-                    isDataInDict = False
-                    for data_pro_event in des_dict[des]:
-                        if data == data_pro_event[0]:
-                            data_pro_event[1].append(pro_event_idx)
-                            isDataInDict = True
-                            break
-                    if not isDataInDict:
-                        des_dict[des].append([data, [pro_event_idx]])
-                self.fetch_array.remove(FE_d)
-        for des in des_dict:
-            src = (0, des[1], -1, -1)
-            for data_pro_event in des_dict[des]:
-                data, pro_event_idx = data_pro_event[0], data_pro_event[1]
-                packet = Packet(src, des, data, pro_event_idx)
-                self.interconnect.input_packet(packet)
+        #             isDataInDict = False
+        #             for data_pro_event in des_dict[des]:
+        #                 if data == data_pro_event[0]:
+        #                     data_pro_event[1].append(pro_event_idx)
+        #                     isDataInDict = True
+        #                     break
+        #             if not isDataInDict:
+        #                 des_dict[des].append([data, [pro_event_idx]])
+        #         self.fetch_array.remove(FE_d)
+        # for des in des_dict:
+        #     src = (0, des[1], -1, -1)
+        #     for data_pro_event in des_dict[des]:
+        #         data, pro_event_idx = data_pro_event[0], data_pro_event[1]
+        #         packet = Packet(src, des, data, pro_event_idx)
+        #         self.interconnect.input_packet(packet)
 
     def trigger(self):
         ## Trigger interconnect

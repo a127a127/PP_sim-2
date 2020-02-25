@@ -22,10 +22,10 @@ class OnChipBuffer():
         return False
     
     def put(self, data): # put a data to buffer
-        if data in self.buffer:
-            self.buffer.remove(data)
-            self.buffer.append(data)
-            return
+        # if data in self.buffer:
+        #     self.buffer.remove(data)
+        #     self.buffer.append(data)
+        #     return
         self.buffer.append(data)
         # if len(self.buffer) < self.num_of_data:
         #     self.buffer.append(data)
