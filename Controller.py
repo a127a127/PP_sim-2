@@ -445,9 +445,8 @@ class Controller(object):
                     if self.trace:
                         pass
                         print("\tcu operation start", "pos:", cu.cu_op_event.position_idx)
-                    pe.data_to_ir_ing = False
                     cu.finish_cycle = self.cycle_ctr - 1 + cu.cu_op_event.inputs + 2 # +2: pipeline 最後兩個 stage
-
+                    # pe.data_to_ir_ing = False
                     ## Energy
                     ou_num_dict = cu.cu_op_event.outputs
                     for xb_idx in ou_num_dict:
@@ -811,6 +810,8 @@ class Controller(object):
             for pro_event_idx in pk.pro_event_list:
                 pro_event = self.Computation_order[pro_event_idx]
                 pro_event.data_is_transfer -= 1
+            
+            del pk
 
     def event_transfer(self):
         for event in self.data_transfer_erp.copy(): 
