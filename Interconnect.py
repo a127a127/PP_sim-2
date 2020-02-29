@@ -85,12 +85,6 @@ class Interconnect(object):
 
         self.busy_router = br
 
-    def get_arrived_packet(self):
-        A = self.arrived_list.copy()
-        self.packet_in_module_ctr -= len(A)
-        self.arrived_list = []
-        return A
-
     def busy(self):
         if self.packet_in_module_ctr == 0:
             return False

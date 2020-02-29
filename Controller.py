@@ -9,7 +9,7 @@ from Packet import Packet
 
 import numpy as np
 from math import ceil, floor
-import os, csv, copy
+import os, csv, copy, sys
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -779,11 +779,7 @@ class Controller(object):
             self.interconnect.step()
             self.Total_energy_interconnect += self.interconnect.step_energy_consumption
         # Packets arrive: Store data, trigger event
-        #arrived_packet = self.interconnect.get_arrived_packet()
-        arrived_packet = self.interconnect.arrived_list
-        self.interconnect.packet_in_module_ctr -= len(arrived_packet)
-        self.interconnect.arrived_list = []
-        for pk in arrived_packet:
+        for pk in self.interconnect.arrived_list:
             if self.trace:
                 pass
                 print("\tArrived packet:", pk)
@@ -798,113 +794,99 @@ class Controller(object):
             if len(pk.data[1]) == 3:
                 pe.edram_buffer.put(pk.data)
                 pe.edram_buffer_i.put(pk.data)
-
-            self.check_buffer_pe_set.add(pe)
+                self.check_buffer_pe_set.add(pe)
 
             if self.trace:
                 pass
                 #print("put packet data:", pk)
 
-            # if not self.isPipeLine:
-            #     self.this_layer_event_ctr += 1
             for pro_event_idx in pk.pro_event_list:
                 pro_event = self.Computation_order[pro_event_idx]
                 pro_event.data_is_transfer -= 1
-            
-            del pk
+
+        self.interconnect.packet_in_module_ctr -= len(self.interconnect.arrived_list)
+        self.interconnect.arrived_list = []
 
     def event_transfer(self):
-        for event in self.data_transfer_erp.copy(): 
+        for event in self.data_transfer_erp:
             self.done_event += 1
             if not self.isPipeLine:
                 self.this_layer_event_ctr += 1
+
             if self.trace:
                 pass
                 print("\tdo data_transfer, layer:", event.nlayer, ",order index:", self.Computation_order.index(event), \
                        "pos:", event.position_idx, "data:", event.outputs)
-            self.data_transfer_erp.remove(event)
-
+            
+            # src, des
             src = event.position_idx[0]
-            des = event.position_idx[1]
-
-            pro_event_list = event.proceeding_event
-            if self.Computation_order[pro_event_list[0]].event_type == "edram_rd_ir":
-                data = [event.nlayer+1, event.outputs[0]]
-            elif self.Computation_order[pro_event_list[0]].event_type == "edram_rd_pool":
-                data = [event.nlayer+1, event.outputs[0]]
-            elif self.Computation_order[pro_event_list[0]].event_type == "pe_saa":
-                data = [event.nlayer, event.outputs[0]]
-            else:
-                print("transfer proceeding event type error.\n exit.")
-                exit()
-            packet = Packet(src, des, data, pro_event_list)
             src_pe_id = src[3] + src[2] * self.hd_info.PE_num_x + \
                         src[1] * self.hd_info.PE_num + \
                         src[0] * self.hd_info.PE_num * self.hd_info.Router_num_x
             src_pe = self.PE_array[src_pe_id]
+            des = event.position_idx[1]
+            des_pe_id = des[3] + des[2] * self.hd_info.PE_num_x + \
+                        des[1] * self.hd_info.PE_num + \
+                        des[0] * self.hd_info.PE_num * self.hd_info.Router_num_x
+            des_pe = self.PE_array[des_pe_id]
 
+            # data
+            pro_event_list = event.proceeding_event
+            event_type = self.Computation_order[pro_event_list[0]].event_type
+            if event_type == "edram_rd_ir" or event_type == "edram_rd_pool":
+                data = [event.nlayer+1, event.outputs[0]]
+            elif event_type == "pe_saa":
+                data = [event.nlayer, event.outputs[0]]
+
+            packet = Packet(src, des, data, pro_event_list)
             self.interconnect.input_packet(packet)
 
             # Energy
             src_pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit # read
 
             ### add next event counter
-            des_pe_id = des[3] + des[2] * self.hd_info.PE_num_x + \
-                        des[1] * self.hd_info.PE_num + \
-                        des[0] * self.hd_info.PE_num * self.hd_info.Router_num_x
-            des_pe = self.PE_array[des_pe_id]
-            for proceeding_index in event.proceeding_event: # 這個loop只會執行一次(一個transfer後都只接一個event)
+            for proceeding_index in pro_event_list:
                 pro_event = self.Computation_order[proceeding_index]
                 pro_event.current_number_of_preceding_event += 1
                 pro_event.data_is_transfer += 1
                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                     if pro_event.event_type == "edram_rd_ir":
-                        if self.trace:
-                            pass
-                            print("\ttrigger edram read")
                         cuy, cux = pro_event.position_idx[4], pro_event.position_idx[5]
                         cu_idx = cux + cuy * self.hd_info.CU_num_x
                         des_pe.edram_rd_ir_trigger.append([pro_event, [cu_idx]])
                         if des_pe not in self.trigger_edram_rd:
                             self.trigger_edram_rd.append(des_pe)
                     elif pro_event.event_type == "edram_rd_pool":
-                        if self.trace:
-                            pass
-                            print("\ttrigger pooling edram read")
                         des_pe.edram_rd_pool_trigger.append([pro_event, []])
                         if des_pe not in self.trigger_pool_rd:
                             self.trigger_pool_rd.append(des_pe)
                     elif pro_event.event_type == "pe_saa":
-                        if self.trace:
-                            print("\ttrigger pe saa")
                         des_pe.pe_saa_trigger.append([pro_event, []])
                         if des_pe not in self.trigger_pe_saa:
                             self.trigger_pe_saa.append(des_pe)
-            
+
             # Free buffer (ideal)
-            pe_id = src[3] + src[2]*self.hd_info.PE_num_x + \
-                    src[1]*self.hd_info.PE_num + src[0]*self.hd_info.PE_num*self.hd_info.Router_num_x
-            if len(event.outputs[0]) == 4:  #and event.outputs[0][3] == "u": # same layer data transfer
-                data = event.outputs[0]
-                if [event.nlayer, data] in self.PE_array[pe_id].edram_buffer_i.buffer:
-                    self.PE_array[pe_id].edram_buffer_i.buffer.remove([event.nlayer, data])
-                    self.check_buffer_pe_set.add(self.PE_array[pe_id])
+            if event_type == "pe_saa": # same layer data transfer
+                if data in self.PE_array[src_pe_id].edram_buffer_i.buffer:
+                    self.PE_array[src_pe_id].edram_buffer_i.buffer.remove(data)
+                    self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
             else:
-                nlayer = event.nlayer+1
-                if self.ordergenerator.model_info.layer_list[nlayer].layer_type != "fully":
-                    for d in event.outputs:
-                        pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[nlayer] + d[2]*self.ordergenerator.model_info.input_w[nlayer]*self.ordergenerator.model_info.input_h[nlayer] # w + h*width + c*height*width
-                        self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                        if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                            self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
-                            self.check_buffer_pe_set.add(self.PE_array[pe_id])
+                if self.ordergenerator.model_info.layer_list[event.nlayer+1].layer_type != "fully":
+                    d = event.outputs[0]
+                    pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[event.nlayer+1] + d[2]*self.ordergenerator.model_info.input_w[event.nlayer+1]*self.ordergenerator.model_info.input_h[event.nlayer+1] # w + h*width + c*height*width
+                    self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
+                    if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
+                        self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
+                        self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
                 else:
-                    for d in event.outputs:
-                        pos = d[0]
-                        self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] -= 1
-                        if self.ordergenerator.free_buffer_controller.input_require[pe_id][nlayer][pos] == 0:
-                            self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
-                            self.check_buffer_pe_set.add(self.PE_array[pe_id])
+                    d = event.outputs[0]
+                    pos = d[0]
+                    self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
+                    if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
+                        self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
+                        self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
+
+        self.data_transfer_erp = []
 
     def fetch(self):
         pass
