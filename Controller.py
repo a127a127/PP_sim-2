@@ -92,6 +92,8 @@ class Controller(object):
         self.erp_pool_rd = []
         self.erp_pool    = []
 
+        self.check_state_pe = set()
+
         # Trigger pe
         self.trigger_edram_rd = []
         self.trigger_cu_op    = []
@@ -250,15 +252,15 @@ class Controller(object):
 
             ### Record PE State ###
             staa = time.time()
-            for pe in self.PE_array:
-                if pe.state:
-                    self.pe_state_for_plot[0].append(self.cycle_ctr)
-                    self.pe_state_for_plot[1].append(self.PE_array.index(pe))
+            for pe in self.check_state_pe:
+                self.pe_state_for_plot[0].append(self.cycle_ctr)
+                self.pe_state_for_plot[1].append(self.PE_array.index(pe))
+            self.check_state_pe = set()
             t_st += time.time() - staa
 
             ### Reset PE ###
+            staa = time.time()
             for pe in self.PE_array:
-                pe.state = False
                 pe.this_cycle_read_data = 0
             t_oth += time.time() - staa
 
@@ -319,7 +321,7 @@ class Controller(object):
                     if self.trace:
                         print("\tdo edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
                     pe.data_to_ir_ing = True
-                    pe.state = True
+                    self.check_state_pe.add(pe)
 
                     # Energy
                     pe.Edram_buffer_energy += self.hd_info.Energy_edram_buffer * self.input_bit * num_data
@@ -343,7 +345,7 @@ class Controller(object):
                         pe.edram_rd_event = None #可處理下一個
                         pe.edram_rd_cu_idx = None
                         pe.data_to_ir_ing = False
-                        cu.state = True
+                        # cu.state = True
 
                         # trigger cu operation
                         proceeding_index = event.proceeding_event[0] # 只會trigger一個cu operation
@@ -373,6 +375,7 @@ class Controller(object):
                         pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             else: # CU傳資料到IR
                 pe.edram_rd_cycle_ctr += 1
+                self.check_state_pe.add(pe)
                 if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
                     if self.trace:
                         print("\tfinish edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
@@ -385,7 +388,7 @@ class Controller(object):
                     pe.edram_rd_event = None
                     pe.edram_rd_cu_idx = None
                     pe.data_to_ir_ing = False
-                    cu.state = True
+                    #cu.state = True
 
                     # trigger cu operation
                     proceeding_index = event.proceeding_event[0] # 只會trigger一個cu operation
@@ -424,7 +427,8 @@ class Controller(object):
     def event_cu_op(self):
         erp = []
         for pe in self.erp_cu_op:
-            pe.state = True
+            #pe.state = True
+            self.check_state_pe.add(pe)
             for cu in pe.cu_op_list.copy():
                 if cu.finish_cycle == 0 and cu.cu_op_event != 0: # cu operation start
                     if self.trace:
@@ -530,6 +534,8 @@ class Controller(object):
         erp = []
         for pe in self.erp_pe_saa:
             pe_saa_erp = []
+            #pe.state = True
+            self.check_state_pe.add(pe)
             for event in pe.pe_saa_erp: # 1個cycle全部做完
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
                     pe_saa_erp.append(event)
@@ -542,10 +548,10 @@ class Controller(object):
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
                 
-                pe.state = True
+                
                 #pe.pe_saa_erp.remove(event)
                 saa_amount = event.inputs[0] # inputs[0]: 前面的cu index
-                rm_data_list = event.inputs[1]    # 要移除的資料
+                #rm_data_list = event.inputs[1]    # 要移除的資料
 
                 # Energy
                 pe.Or_energy += self.hd_info.Energy_or * self.input_bit * saa_amount
@@ -594,7 +600,8 @@ class Controller(object):
         for pe in self.erp_act:
             if not pe.activation_erp:
                 continue
-            pe.state = True
+            #pe.state = True
+            self.check_state_pe.add(pe)
             if pe.activation_epc <= len(pe.activation_erp):
                 do_act_num = pe.activation_epc
             else:
@@ -635,7 +642,8 @@ class Controller(object):
     def event_edram_wr(self):
         erp = []
         for pe in self.erp_wr:
-            pe.state = True
+            #pe.state = True
+            self.check_state_pe.add(pe)
             if self.edram_write_data <= len(pe.edram_wr_erp):
                 do_wr_num = self.edram_write_data
             else:
@@ -695,6 +703,7 @@ class Controller(object):
         erp = []
         for pe in self.erp_pool_rd:
             pool_read_data = self.edram_read_data - pe.this_cycle_read_data # 這個cycle pooling還能夠read多少資料
+            self.check_state_pe.add(pe)
             for event in pe.edram_rd_pool_erp.copy():
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
                     continue
