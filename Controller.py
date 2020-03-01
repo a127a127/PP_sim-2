@@ -72,7 +72,7 @@ class Controller(object):
 
         # Utilization
         self.pe_state_for_plot = [[], []]
-        self.cu_state_for_plot = [[], []]
+        # self.cu_state_for_plot = [[], []]
         self.xb_state_for_plot = [[], []]
         self.buffer_size = []
         self.buffer_size_i = []
@@ -128,10 +128,6 @@ class Controller(object):
                             pe.edram_buffer_i.buffer.append(data)
 
     def run(self):
-        # pe_fetch_dict =[]
-        # for pe_idx in range(len(self.PE_array)):
-        #     pe_fetch_dict.append([])
-
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
                 if e.preceding_event_count == 0:
@@ -141,17 +137,6 @@ class Controller(object):
                     cu_idx = cux + cuy * self.hd_info.CU_num_x
                     pe = self.PE_array[pe_idx]
                     pe.CU_array[cu_idx].edram_rd_ir_erp.append(e)
-                    # e.data_is_transfer += len(e.inputs)
-                    # event_index = self.Computation_order.index(e)
-                    # for data in e.inputs:
-                    #     n = True
-                    #     for d in pe_fetch_dict[pe_idx]:
-                    #         if data == d[0]:
-                    #             d[1].append(event_index)
-                    #             n = False
-                    #             break
-                    #     if n:   
-                    #         pe_fetch_dict[pe_idx].append([data, [event_index]])
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
@@ -263,7 +248,6 @@ class Controller(object):
             self.trigger()
             t_tr += time.time() - staa
 
-            staa = time.time()
             ### Record PE State ###
             staa = time.time()
             for pe in self.PE_array:
@@ -280,6 +264,7 @@ class Controller(object):
 
             ### Buffer utilization
             staa = time.time()
+
             for pe in self.check_buffer_pe_set:
                 pe.edram_buffer_i.buffer_size_util[0].append(self.cycle_ctr)
                 pe.edram_buffer_i.buffer_size_util[1].append(len(pe.edram_buffer_i.buffer))
@@ -460,8 +445,8 @@ class Controller(object):
                         pe.CU_OR_energy += self.hd_info.Energy_or_in_cu * ou_num * self.hd_info.OU_w * self.hd_info.ADC_resolution
 
                     cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
-                    self.cu_state_for_plot[0].append(self.cycle_ctr)
-                    self.cu_state_for_plot[1].append(cu_id)
+                    # self.cu_state_for_plot[0].append(self.cycle_ctr)
+                    # self.cu_state_for_plot[1].append(cu_id)
                     for xb_idx in ou_num_dict:
                         xb_id = cu_id * self.hd_info.Xbar_num + xb_idx
                         ou_num = ou_num_dict[xb_idx]
@@ -512,8 +497,8 @@ class Controller(object):
                             #print("\t",cu.cu_op_event)
                 
                 cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
-                self.cu_state_for_plot[0].append(self.cycle_ctr)
-                self.cu_state_for_plot[1].append(cu_id)
+                # self.cu_state_for_plot[0].append(self.cycle_ctr)
+                # self.cu_state_for_plot[1].append(cu_id)
 
                 # performance analysis
                 isEventWaiting = False
@@ -1083,8 +1068,8 @@ class Controller(object):
         self.buffer_analysis()
         print("output pe utilization...")
         self.pe_utilization()
-        print("output cu utilization...")
-        self.cu_utilization()
+        # print("output cu utilization...")
+        # self.cu_utilization()
         print("output performance anaylsis...")
         self.performance_statistics()
         self.output_result()
