@@ -84,13 +84,12 @@ class Controller(object):
         self.check_buffer_pe_set = set()
 
         # execute event
-        self.erp_rd      = []
-        self.erp_cu_op   = []
-        self.erp_pe_saa  = []
-        self.erp_act     = []
-        self.erp_wr      = []
-        self.erp_pool_rd = []
-        self.erp_pool    = []
+        self.erp_rd      = set()
+        self.erp_cu_op   = set()
+        self.erp_pe_saa  = set()
+        self.erp_act     = set()
+        self.erp_wr      = set()
+        self.erp_pool_rd = set()
 
         self.check_state_pe = set()
 
@@ -142,8 +141,8 @@ class Controller(object):
 
                     if cu_idx not in pe.idle_eventQueuing_CU:
                         pe.idle_eventQueuing_CU.append(cu_idx)
-                    if pe not in self.erp_rd:
-                        self.erp_rd.append(pe)
+                    
+                    self.erp_rd.add(pe)
 
                     # for performance analysis
                     if cu_idx not in pe.eventQueuing_CU: 
@@ -291,7 +290,7 @@ class Controller(object):
             pe_idx += 1
 
     def event_edram_rd(self):
-        erp = []
+        erp = set()
         for pe in self.erp_rd:
             # 正在處理哪一個event
             if not pe.edram_rd_event:
@@ -419,13 +418,13 @@ class Controller(object):
                     pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             # 下個cycle還要不要檢查此pe
             if pe.edram_rd_event: # 有event正在處理
-                erp.append(pe)
+                erp.add(pe)
             elif pe.idle_eventQueuing_CU:
-                erp.append(pe)
+                erp.add(pe)
         self.erp_rd = erp
 
     def event_cu_op(self):
-        erp = []
+        erp = set()
         for pe in self.erp_cu_op:
             #pe.state = True
             self.check_state_pe.add(pe)
@@ -469,8 +468,8 @@ class Controller(object):
                         cu_idx = pe.CU_array.index(cu)
                         if cu.edram_rd_ir_erp:
                             pe.idle_eventQueuing_CU.append(cu_idx)
-                            if pe not in self.erp_rd:
-                                self.erp_rd.append(pe)
+                            #if pe not in self.erp_rd:
+                            self.erp_rd.add(pe)
 
                         ### add next event counter: pe_saa
                         for proceeding_index in cu.cu_op_event.proceeding_event:
@@ -515,7 +514,7 @@ class Controller(object):
                 else:
                     cu.pure_computation_time += 1
             if pe.cu_op_list:
-                erp.append(pe)
+                erp.add(pe)
         self.erp_cu_op = erp
 
     def performance_analysis(self):
@@ -531,7 +530,7 @@ class Controller(object):
                 cu.wait_transfer_time += 1
 
     def event_pe_saa(self):
-        erp = []
+        erp = set()
         for pe in self.erp_pe_saa:
             pe_saa_erp = []
             #pe.state = True
@@ -591,12 +590,12 @@ class Controller(object):
                     #     self.check_buffer_pe_set.add(pe)
 
             pe.pe_saa_erp = pe_saa_erp
-            if pe.pe_saa_erp:
-                erp.append(pe)
+            #if pe.pe_saa_erp:
+            erp.add(pe)
         self.erp_pe_saa = erp
  
     def event_act(self):
-        erp = []
+        erp = set()
         for pe in self.erp_act:
             if not pe.activation_erp:
                 continue
@@ -635,12 +634,12 @@ class Controller(object):
                         if pe not in self.trigger_edram_wr:
                             self.trigger_edram_wr.append(pe)
 
-            if pe.activation_erp:
-                erp.append(pe)
+            #if pe.activation_erp:
+            erp.add(pe)
         self.erp_act = erp
 
     def event_edram_wr(self):
-        erp = []
+        erp = set()
         for pe in self.erp_wr:
             #pe.state = True
             self.check_state_pe.add(pe)
@@ -695,12 +694,12 @@ class Controller(object):
             
             self.check_buffer_pe_set.add(pe)
 
-            if pe.edram_wr_erp:
-                erp.append(pe)
+            #if pe.edram_wr_erp:
+            erp.add(pe)
         self.erp_wr = erp
 
     def event_edram_rd_pool(self):
-        erp = []
+        erp = set()
         for pe in self.erp_pool_rd:
             pool_read_data = self.edram_read_data - pe.this_cycle_read_data # 這個cycle pooling還能夠read多少資料
             self.check_state_pe.add(pe)
@@ -763,8 +762,8 @@ class Controller(object):
                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                         self.check_buffer_pe_set.add(self.PE_array[pe_id])
 
-            if pe.edram_rd_pool_erp:
-                erp.append(pe)
+            #if pe.edram_rd_pool_erp:
+            erp.add(pe)
 
         self.erp_pool_rd = erp
 
@@ -937,8 +936,9 @@ class Controller(object):
                                     if cu_idx not in pe.idle_eventQueuing_CU:
                                         pe.idle_eventQueuing_CU.append(cu_idx)
                             pe.edram_rd_ir_trigger = []
-                            if pe not in self.erp_rd and pe.idle_eventQueuing_CU:
-                                self.erp_rd.append(pe)
+                            #if pe not in self.erp_rd and pe.idle_eventQueuing_CU:
+                            if pe.idle_eventQueuing_CU:
+                                self.erp_rd.add(pe)
                         self.trigger_edram_rd = []
                         self.trigger_next_layer = False
         else: # pipeline
@@ -951,12 +951,12 @@ class Controller(object):
                         if cu_idx not in pe.idle_eventQueuing_CU:
                             pe.idle_eventQueuing_CU.append(cu_idx)
                 pe.edram_rd_ir_trigger = []
-                if pe not in self.erp_rd and pe.idle_eventQueuing_CU:
-                    self.erp_rd.append(pe)
+                #if pe not in self.erp_rd and pe.idle_eventQueuing_CU:
+                if pe.idle_eventQueuing_CU:
+                    self.erp_rd.add(pe)
             self.trigger_edram_rd = []
 
         for pe in self.trigger_cu_op:
-            #if pe.cu_op_trigger != 0: # 應該不用判斷
             event = pe.cu_op_trigger
             cuy, cux = event.position_idx[4], event.position_idx[5]
             cu_idx = cux + cuy * self.hd_info.CU_num_x
@@ -964,8 +964,8 @@ class Controller(object):
             cu.cu_op_event = event
             pe.cu_op_list.append(cu)
             pe.cu_op_trigger = 0
-            if pe not in self.erp_cu_op:
-                self.erp_cu_op.append(pe)
+            #if pe not in self.erp_cu_op:
+            self.erp_cu_op.add(pe)
         self.trigger_cu_op = []
 
         for pe in self.trigger_pe_saa:
@@ -973,8 +973,8 @@ class Controller(object):
                 pro_event = trigger[0]
                 pe.pe_saa_erp.append(pro_event) 
             pe.pe_saa_trigger = []
-            if pe not in self.erp_pe_saa:
-                self.erp_pe_saa.append(pe)
+            #if pe not in self.erp_pe_saa:
+            self.erp_pe_saa.add(pe)
         self.trigger_pe_saa = []
 
         for pe in self.trigger_act:
@@ -982,8 +982,8 @@ class Controller(object):
                 pro_event = trigger[0]
                 pe.activation_erp.append(pro_event)
             pe.activation_trigger = []
-            if pe not in self.erp_act:
-                self.erp_act.append(pe)
+            #if pe not in self.erp_act:
+            self.erp_act.add(pe)
         self.trigger_act = []
 
         for pe in self.trigger_edram_wr:
@@ -991,8 +991,8 @@ class Controller(object):
                 pro_event = trigger[0]
                 pe.edram_wr_erp.append(pro_event)
             pe.edram_wr_trigger = []
-            if pe not in self.erp_wr:
-                self.erp_wr.append(pe)
+            #if pe not in self.erp_wr:
+            self.erp_wr.add(pe)
         self.trigger_edram_wr = []
 
         # Trigger edram_read_pool
@@ -1006,8 +1006,8 @@ class Controller(object):
                                 pro_event = trigger[0]
                                 pe.edram_rd_pool_erp.append(pro_event)
                             pe.edram_rd_pool_trigger = []
-                            if pe not in self.erp_pool_rd:
-                                self.erp_pool_rd.append(pe)
+                            #if pe not in self.erp_pool_rd:
+                            self.erp_pool_rd.add(pe)
                         self.trigger_pool_rd = []
                         self.trigger_next_layer = False
         else: # pipeline
@@ -1016,8 +1016,8 @@ class Controller(object):
                     pro_event = trigger[0]
                     pe.edram_rd_pool_erp.append(pro_event)
                 pe.edram_rd_pool_trigger = []
-                if pe not in self.erp_pool_rd:
-                    self.erp_pool_rd.append(pe)
+                #if pe not in self.erp_pool_rd:
+                self.erp_pool_rd.add(pe)
             self.trigger_pool_rd = []
         
         ## Trigger pooling 
