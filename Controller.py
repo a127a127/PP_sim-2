@@ -264,13 +264,13 @@ class Controller(object):
 
             ### Buffer utilization
             staa = time.time()
-
-            for pe in self.check_buffer_pe_set:
-                pe.edram_buffer_i.buffer_size_util[0].append(self.cycle_ctr)
-                pe.edram_buffer_i.buffer_size_util[1].append(len(pe.edram_buffer_i.buffer))
-                pe.edram_buffer.buffer_size_util[0].append(self.cycle_ctr)
-                pe.edram_buffer.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
-            self.check_buffer_pe_set = set()
+            if self.cycle_ctr % 10 == 0:
+                for pe in self.check_buffer_pe_set:
+                    pe.edram_buffer_i.buffer_size_util[0].append(self.cycle_ctr)
+                    pe.edram_buffer_i.buffer_size_util[1].append(len(pe.edram_buffer_i.buffer))
+                    pe.edram_buffer.buffer_size_util[0].append(self.cycle_ctr)
+                    pe.edram_buffer.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
+                self.check_buffer_pe_set = set()
             t_buf += time.time() - staa
 
             ### Finish
@@ -535,7 +535,7 @@ class Controller(object):
             pe_saa_erp = []
             #pe.state = True
             self.check_state_pe.add(pe)
-            for event in pe.pe_saa_erp: # 1個cycle全部做完
+            for event in pe.pe_saa_erp:
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
                     pe_saa_erp.append(event)
                     continue
