@@ -688,7 +688,7 @@ class Controller(object):
                         elif pro_event.event_type == "edram_rd_pool":
                             pe.edram_rd_pool_trigger.append([pro_event, []])
                             #if pe not in self.trigger_pool_rd:
-                            self.trigger_pool_rd.append(pe)
+                            self.trigger_pool_rd.add(pe)
                         elif pro_event.event_type == "data_transfer":
                             self.data_transfer_trigger.append([pro_event, []])
             
