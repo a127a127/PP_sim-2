@@ -427,7 +427,8 @@ class Controller(object):
         for pe in self.erp_cu_op:
             #pe.state = True
             self.check_state_pe.add(pe)
-            for cu in pe.cu_op_list.copy():
+            cu_op_list = []
+            for cu in pe.cu_op_list:
                 if cu.finish_cycle == 0 and cu.cu_op_event != 0: # cu operation start
                     if self.trace:
                         pass
@@ -455,6 +456,7 @@ class Controller(object):
                         for c in range(ou_num):
                             self.xb_state_for_plot[0].append(self.cycle_ctr+c)
                             self.xb_state_for_plot[1].append(xb_id)
+                    cu_op_list.append(cu)
 
                 elif cu.finish_cycle != 0 and cu.cu_op_event != 0: ## doing cu operation
                     if cu.finish_cycle == self.cycle_ctr: # finish
@@ -490,15 +492,13 @@ class Controller(object):
                         cu.finish_cycle = 0
                         cu.cu_op_event = 0
                         cu.state = False
-                        pe.cu_op_list.remove(cu)
+                        # pe.cu_op_list.remove(cu)
                     else:
+                        cu_op_list.append(cu)
                         if self.trace:
-                            pass
                             print("\tcu operation")
-                            #print("\tcu.position", cu.position)
-                            #print("\t",cu.cu_op_event)
                 
-                cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
+                #cu_id = self.PE_array.index(pe) * self.hd_info.CU_num + pe.CU_array.index(cu)
                 # self.cu_state_for_plot[0].append(self.cycle_ctr)
                 # self.cu_state_for_plot[1].append(cu_id)
 
@@ -512,6 +512,7 @@ class Controller(object):
                     cu.wait_resource_time += 1
                 else:
                     cu.pure_computation_time += 1
+            pe.cu_op_list = cu_op_list
             if pe.cu_op_list:
                 erp.add(pe)
         self.erp_cu_op = erp
@@ -734,7 +735,8 @@ class Controller(object):
                 pe.Bus_energy += self.hd_info.Energy_bus * self.input_bit * num_data
                 pe.Pooling_energy += self.hd_info.Energy_pooling
 
-                pe.state = True
+                #pe.state = True
+                self.check_state_pe.add(pe)
                 pe.edram_rd_pool_erp.remove(event)
 
                 ### add next event counter: pooling
