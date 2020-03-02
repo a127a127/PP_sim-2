@@ -171,7 +171,7 @@ class Controller(object):
         t_st = 0
         t_buf = 0
         t_poo = 0
-        t_oth = 0
+        #t_oth = 0
         t_ = time.time()
         start_time = time.time()
         layer = 0
@@ -184,11 +184,11 @@ class Controller(object):
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                     print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
-                    print("buffer", t_buf, "pool", t_poo, "other", t_oth)
+                    print("buffer", t_buf, "pool", t_poo) #"other", t_oth)
                     print("t:", time.time()-t_)
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
-                    t_oth = 0
+                    #t_oth = 0
                     t_ = time.time()
 
             self.cycle_ctr += 1
@@ -257,10 +257,10 @@ class Controller(object):
             t_st += time.time() - staa
 
             ### Reset PE ###
-            staa = time.time()
-            for pe in self.PE_array:
-                pe.this_cycle_read_data = 0
-            t_oth += time.time() - staa
+            # staa = time.time()
+            # for pe in self.PE_array:
+            #     pe.this_cycle_read_data = 0
+            # t_oth += time.time() - staa
 
             ### Buffer utilization
             staa = time.time()
@@ -334,7 +334,7 @@ class Controller(object):
                     if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
                         if self.trace:
                             print("\t\tfinish edram read")
-                        pe.this_cycle_read_data = num_data % self.edram_read_data
+                        #pe.this_cycle_read_data = num_data % self.edram_read_data
                         self.done_event += 1
                         if not self.isPipeLine:
                             self.this_layer_event_ctr += 1
@@ -370,14 +370,15 @@ class Controller(object):
                                     self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                     self.check_buffer_pe_set.add(self.PE_array[pe_id])
                     else:
-                        pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
+                        pass
+                        #pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             else: # CU傳資料到IR
                 pe.edram_rd_cycle_ctr += 1
                 self.check_state_pe.add(pe)
                 if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
                     if self.trace:
                         print("\tfinish edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
-                    pe.this_cycle_read_data = num_data % self.edram_read_data
+                    #pe.this_cycle_read_data = num_data % self.edram_read_data
                     self.done_event += 1
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
@@ -414,7 +415,8 @@ class Controller(object):
                                 self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, d])
                                 self.check_buffer_pe_set.add(self.PE_array[pe_id])
                 else:
-                    pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
+                    pass
+                    #pe.this_cycle_read_data = self.edram_read_data # 這個cycle read多少data量
             # 下個cycle還要不要檢查此pe
             if pe.edram_rd_event: # 有event正在處理
                 erp.add(pe)
@@ -590,8 +592,8 @@ class Controller(object):
                     #     self.check_buffer_pe_set.add(pe)
 
             pe.pe_saa_erp = pe_saa_erp
-            #if pe.pe_saa_erp:
-            erp.add(pe)
+            if pe.pe_saa_erp:
+                erp.add(pe)
         self.erp_pe_saa = erp
  
     def event_act(self):
@@ -634,8 +636,8 @@ class Controller(object):
                         #if pe not in self.trigger_edram_wr:
                         self.trigger_edram_wr.add(pe)
 
-            #if pe.activation_erp:
-            erp.add(pe)
+            if pe.activation_erp:
+                erp.add(pe)
         self.erp_act = erp
 
     def event_edram_wr(self):
@@ -694,14 +696,18 @@ class Controller(object):
             
             self.check_buffer_pe_set.add(pe)
 
-            #if pe.edram_wr_erp:
-            erp.add(pe)
+            if pe.edram_wr_erp:
+                erp.add(pe)
         self.erp_wr = erp
 
     def event_edram_rd_pool(self):
         erp = set()
         for pe in self.erp_pool_rd:
-            pool_read_data = self.edram_read_data - pe.this_cycle_read_data # 這個cycle pooling還能夠read多少資料
+            if pe.data_to_ir_ing:
+                erp.add(pe)
+                continue
+
+            #pool_read_data = self.edram_read_data - pe.this_cycle_read_data # 這個cycle pooling還能夠read多少資料
             self.check_state_pe.add(pe)
             for event in pe.edram_rd_pool_erp.copy():
                 if event.data_is_transfer != 0: # 此event的資料正在傳輸
@@ -720,9 +726,9 @@ class Controller(object):
                 #     continue
                 
                 num_data = len(event.inputs)
-                pool_read_data = pool_read_data - num_data
-                if pool_read_data < 0: #沒辦法再read了
-                    break
+                #pool_read_data = pool_read_data - num_data
+                #if pool_read_data < 0: #沒辦法再read了
+                #    break
                 self.done_event += 1
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
@@ -763,8 +769,8 @@ class Controller(object):
                         self.PE_array[pe_id].edram_buffer_i.buffer.remove([nlayer, data])
                         self.check_buffer_pe_set.add(self.PE_array[pe_id])
 
-            #if pe.edram_rd_pool_erp:
-            erp.add(pe)
+            if pe.edram_rd_pool_erp:
+                erp.add(pe)
 
         self.erp_pool_rd = erp
 
