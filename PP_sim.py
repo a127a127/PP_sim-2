@@ -59,7 +59,7 @@ def main():
     
     ### Trace ###
     isTrace_order      = True
-    isTrace_controller = True
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
