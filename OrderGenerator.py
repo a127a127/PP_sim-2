@@ -447,14 +447,14 @@ class OrderGenerator(object):
                         event = EventMetaData("cu_operation", position_idx, preceding_count, [], nlayer, cu_op_inputs, cu_op_outputs)
                         self.Computation_order.append(event)
 
-                ### Event: edram_wr, data_transfer (for pe_saa), pe_saa
+                ### Event: pe_saa, edram_wr, data_transfer
                 for nfilter in range(self.model_info.filter_n[nlayer]):
                     num_input = 0 # fully只有一組input vector
                     preceding_list = self.pe_saa_mat[nlayer][num_input][nfilter]
                     first_pre_event_idx = preceding_list[0]  # do pe_saa in first pe of preceding cu_saa event
                     do_pe_saa_pos = self.Computation_order[first_pre_event_idx].position_idx[:-2]
 
-                ### Event: edram_wr, data_transfer (for pe_saa)
+                ### Event: pe_saa, edram_wr, data_transfer
                     pe_saa_precding_event_idx = []
                     preceding_pe = dict()
                     for pre_event_idx in preceding_list:

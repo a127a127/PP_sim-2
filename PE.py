@@ -27,8 +27,8 @@ class PE(object):
         
         ### events per cycle
         # 要在一個cycle完成最多可能來自所有CU的資料
-        self.pe_saa_epc = HardwareMetaData().Router_num * HardwareMetaData().PE_num * HardwareMetaData().CU_num 
-        self.activation_epc = self.pe_saa_epc
+        #self.pe_saa_epc = HardwareMetaData().Router_num * HardwareMetaData().PE_num * HardwareMetaData().CU_num 
+        #self.activation_epc = self.pe_saa_epc
 
         ### event ready pool
         self.pe_saa_erp = []
