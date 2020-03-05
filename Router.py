@@ -32,7 +32,6 @@ class Router(object):
         #     return True
         self.arrived_order.append(port_type)
         self.input_queue[port_type].append(packet)
-        return True
     
     def step(self):
         #port_type = self.arrived_order[0]

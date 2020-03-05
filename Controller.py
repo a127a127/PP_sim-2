@@ -140,7 +140,7 @@ class Controller(object):
                     if cu_idx not in pe.eventQueuing_CU: 
                         pe.eventQueuing_CU.append(cu_idx)
             if e.nlayer != 0:
-                breakpoint
+                break
         
         t_edram = 0
         t_cuop = 0
@@ -148,6 +148,7 @@ class Controller(object):
         t_act = 0
         t_wr = 0
         t_it = 0
+        t_trans = 0
         t_fe = 0
         t_tr = 0
         t_st = 0
@@ -164,11 +165,12 @@ class Controller(object):
                     print("layer:", layer)
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
-                    print("iterconeect", t_it, "fetch", t_fe, "trigger", t_tr, "state", t_st)
+                    print("iterconeect", t_it, "fetch", t_fe, "transfer", t_trans, "trigger", t_tr, "state", t_st)
                     print("buffer", t_buf, "pool", t_poo)
                     print("t:", time.time()-t_)
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
+                    t_trans = 0
                     t_ = time.time()
 
             self.cycle_ctr += 1
@@ -208,7 +210,7 @@ class Controller(object):
 
             staa = time.time()
             self.event_transfer()
-            t_tr += time.time() - staa
+            t_trans += time.time() - staa
 
             staa = time.time()
             #self.fetch()
@@ -779,6 +781,7 @@ class Controller(object):
                         #if des_pe not in self.trigger_pe_saa:
                         self.trigger_pe_saa.add(des_pe)
 
+            
             # Free buffer (ideal)
             if event_type == "pe_saa": # same layer data transfer
                 #if data in self.PE_array[src_pe_id].edram_buffer_i.buffer:
@@ -787,28 +790,28 @@ class Controller(object):
             else:
                 if self.ordergenerator.model_info.layer_list[event.nlayer+1].layer_type != "fully":
                     d = event.outputs[0]
-                    # pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[event.nlayer+1] + d[2]*self.ordergenerator.model_info.input_w[event.nlayer+1]*self.ordergenerator.model_info.input_h[event.nlayer+1] # w + h*width + c*height*width
-                    # self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
-                    # if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
-                    #     self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
-                    #     self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
-                    try:
+                    pos = d[1] + d[0]*self.ordergenerator.model_info.input_w[event.nlayer+1] + d[2]*self.ordergenerator.model_info.input_w[event.nlayer+1]*self.ordergenerator.model_info.input_h[event.nlayer+1] # w + h*width + c*height*width
+                    self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
+                    if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
                         self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
                         self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
-                    except ValueError:
-                        pass
+                    # try:
+                    #     self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
+                    #     self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
+                    # except ValueError:
+                    #     pass
                 else:
                     d = event.outputs[0]
-                    # pos = d[0]
-                    # self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
-                    # if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
-                    #     self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
-                    #     self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
-                    try:
+                    pos = d[0]
+                    self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] -= 1
+                    if self.ordergenerator.free_buffer_controller.input_require[src_pe_id][event.nlayer+1][pos] == 0:
                         self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
                         self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
-                    except ValueError:
-                        pass
+                    # try:
+                    #     self.PE_array[src_pe_id].edram_buffer_i.buffer.remove([event.nlayer+1, d])
+                    #     self.check_buffer_pe_set.add(self.PE_array[src_pe_id])
+                    # except ValueError:
+                    #     pass
 
         self.data_transfer_erp = []
 
@@ -847,13 +850,11 @@ class Controller(object):
         #         self.interconnect.input_packet(packet)
 
     def trigger(self):
-        ## Trigger interconnect
         for trigger in self.data_transfer_trigger:
             pro_event = trigger[0]
             self.data_transfer_erp.append(pro_event)
         self.data_transfer_trigger = []
 
-        # Trigger edram_rd_ir, edram_read_pool
         if not self.isPipeLine:
             if self.trigger_next_layer:
                 self.trigger_next_layer = False
