@@ -339,7 +339,7 @@ class Controller(object):
                     pe.edram_rd_cycle_ctr = 0
                     pe.edram_rd_event = None
                     pe.data_to_ir_ing = False
-                    #cu.state = True
+                    cu.state = True
 
                     # trigger cu operation
                     proceeding_index = event.proceeding_event[0] # 只會trigger一個cu operation
@@ -436,7 +436,7 @@ class Controller(object):
 
                         cu.finish_cycle = 0
                         cu.cu_op_event = 0
-                        # cu.state = False
+                        cu.state = False
                     else:
                         cu_op_list.append(cu)
                         if self.trace:
