@@ -11,51 +11,58 @@ import time, sys, os
 
 def main():
     start_time = time.time()
-    mapping = int(sys.argv[1])
-    scheduling = int(sys.argv[2])
+    mapping = sys.argv[1]
+    scheduling = sys.argv[2]
 
     ### Mapping ##
     start_mapping_time = time.time()
     print("--- Mapping ---")
     print("Mapping policy:  ", end="")
-    if mapping == 0: # DefaultMapping
+    if mapping == 0:
         print("Default Mapping")
         exit()
         #mapping_information = DefaultMapping()
         #mapping_str = "Default_Mapping"
-    elif mapping == 1: # HighParallelismMapping
+    elif mapping == 1:
         print("High Parallelism Mapping")
         exit()
         #mapping_information = HighParallelismMapping()
         #mapping_str = "High_Parallelism_Mapping"
-    elif mapping == 2: # SameColumnFirstMapping
+    elif mapping == "SCF":
         print("Same Column First Mapping")
         mapping_information = SameColumnFirstMapping()
         mapping_str = "Same_Column_First_Mapping"
-    elif mapping == 3: # SameRowFirstMapping
+    elif mapping == "SRF":
         print("Same Row First Mapping")
         mapping_information = SameRowFirstMapping()
         mapping_str = "Same_Row_First_Mapping"
-    elif mapping == 4: # ParallelsimMapping
+    elif mapping == "Paral":
         print("Parallelsim Mapping"+sys.argv[3])
         mapping_information = ParallelsimMapping(int(sys.argv[3]))
         mapping_str = "Parallelsim_Mapping"+sys.argv[3]
-
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
     ### Scheduling ###
     print("Scheduling policy: ", end="")
-    if scheduling == 0: # Non-pipeline
+    if scheduling == "Non_pipeline":
         print("Non-pipeline")
-        scheduling_str = "Non_pipeline"
-    elif scheduling == 1: # Pipeline
+    elif scheduling == "Pipeline":
         print("Pipeline")
-        scheduling_str = "Pipeline"
     print()
+
+    ### Buffer Replacement ###
+    print("Buffer replacement policy: ", end="")
+    replacement = "Ideal"
+    if replacement == "Ideal":
+        print("Ideal")
+    elif replacement == "LRU":
+        print("LRU")
+
+
     ### dir ###
-    if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling_str):
-            os.makedirs('./statistics/'+mapping_str+'/'+scheduling_str)
+    if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling):
+            os.makedirs('./statistics/'+mapping_str+'/'+scheduling)
     
     ### Trace ###
     isTrace_order      = True
@@ -71,7 +78,7 @@ def main():
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
-    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling_str)
+    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling, replacement)
     controller.run()
 
     end_simulation_time = time.time()

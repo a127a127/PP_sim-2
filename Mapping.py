@@ -261,7 +261,11 @@ class SameColumnFirstMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([num_input,
+                                    # nn.append([num_input,
+                                    #            oh * self.model_info.pooling_strides[nlayer] + ph,
+                                    #            ow * self.model_info.pooling_strides[nlayer] + pw,
+                                    #            c])
+                                    nn.append([num_input, nlayer, 
                                                oh * self.model_info.pooling_strides[nlayer] + ph,
                                                ow * self.model_info.pooling_strides[nlayer] + pw,
                                                c])
@@ -561,7 +565,11 @@ class SameRowFirstMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([num_input,
+                                    # nn.append([num_input,
+                                    #            oh * self.model_info.pooling_strides[nlayer] + ph,
+                                    #            ow * self.model_info.pooling_strides[nlayer] + pw,
+                                    #            c])
+                                    nn.append([num_input, nlayer,
                                                oh * self.model_info.pooling_strides[nlayer] + ph,
                                                ow * self.model_info.pooling_strides[nlayer] + pw,
                                                c])
@@ -857,7 +865,11 @@ class ParallelsimMapping(object):
                             nn = []
                             for ph in range(self.model_info.pooling_h[nlayer]):
                                 for pw in range(self.model_info.pooling_w[nlayer]):
-                                    nn.append([num_input,
+                                    # nn.append([num_input,
+                                    #            oh * self.model_info.pooling_strides[nlayer] + ph,
+                                    #            ow * self.model_info.pooling_strides[nlayer] + pw,
+                                    #            c])
+                                    nn.append([num_input, nlayer, 
                                                oh * self.model_info.pooling_strides[nlayer] + ph,
                                                ow * self.model_info.pooling_strides[nlayer] + pw,
                                                c])
