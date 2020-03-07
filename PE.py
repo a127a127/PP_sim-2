@@ -1,10 +1,11 @@
 from OnChipBuffer import OnChipBuffer
 from HardwareMetaData import HardwareMetaData
+from ModelConfig import ModelConfig
 from CU import CU
 import collections
 
 class PE(object):
-    def __init__(self, pe_pos, input_bit):
+    def __init__(self, pe_pos):
         self.position = pe_pos
 
         self.state = False
@@ -21,8 +22,10 @@ class PE(object):
         ### for cu operation
         self.cu_op_list = []
 
-        self.edram_buffer = OnChipBuffer(input_bit)
-        self.edram_buffer_i = OnChipBuffer(input_bit)
+        size = HardwareMetaData().eDRAM_buffer_size * 1024 * 8 / ModelConfig().input_bit
+        self.edram_buffer = OnChipBuffer(size)
+        self.buffer_size_util = [[], []] # [cycle, size]
+
         self.input_require = []
         
         ### events per cycle
