@@ -36,7 +36,7 @@ class Controller(object):
             self.ideal_replacement = True
         elif replacement == "LRU":
             self.ideal_replacement = False
-        
+
         self.edram_read_data  = floor(HW().eDRAM_read_bits / self.input_bit) # 1個cycle可以讀多少data
         self.edram_write_data = floor(HW().eDRAM_write_bits / self.input_bit) # 1個cycle可以寫多少data
 
@@ -103,27 +103,6 @@ class Controller(object):
         self.check_buffer_pe_set = set()
 
     def run(self):
-        # 把input feature map放到buffer中
-        for pe in self.PE_array:
-            rty_idx, rtx_idx = pe.position[0], pe.position[1]
-            pey_idx, pex_idx = pe.position[2], pe.position[3]
-            feature_m = np.zeros((ModelConfig().input_h, ModelConfig().input_w, ModelConfig().input_c))
-            for cuy_idx in range(HW().CU_num_y):
-                for cux_idx in range(HW().CU_num_x):
-                    for xby_idx in range(HW().Xbar_num_y):
-                        for xbx_idx in range(HW().Xbar_num_x):
-                            mapping = self.mp_info.layer_mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cuy_idx][cux_idx][xby_idx][xbx_idx][0] # layer0
-                            for mp in mapping:
-                                for inp in mp.inputs:
-                                    feature_m[inp[1]][inp[2]][inp[3]] = 1
-
-            for h in range(feature_m.shape[0]):
-                for w in range(feature_m.shape[1]):
-                    for c in range(feature_m.shape[2]):
-                        if feature_m[h][w][c] == 1:
-                            data = (0, h, w, c)
-                            pe.edram_buffer.put(data, data)
-        
         for e in self.Computation_order:
             if e.event_type == 'edram_rd_ir':
                 if e.preceding_event_count == 0:
@@ -218,7 +197,7 @@ class Controller(object):
             t_trans += time.time() - staa
 
             staa = time.time()
-            #self.fetch()
+            self.fetch()
             t_fe += time.time() - staa
 
             ### Pipeline stage control ###
@@ -274,9 +253,24 @@ class Controller(object):
         
             num_data = len(event.inputs)
             if not pe.data_to_ir_ing: # 還沒開始從CU傳資料到IR
-                if event.data_is_transfer != 0: # 資料是否還在transfer？
+                if not event.fetch and event.data_is_transfer > 0:
+                    # transfer
                     pass
-                else: # do edram read
+                elif not event.fetch and event.data_is_transfer == 0:
+                    # check buffer
+                    event.fetch = True
+                    fetch_data = []
+                    for data in event.inputs:
+                        if not pe.edram_buffer.get(data):
+                            fetch_data.append(data)
+                    if fetch_data:
+                        self.fetch_array.append(FetchEvent(event, fetch_data))
+                        event.data_is_transfer += len(fetch_data)
+
+                elif event.fetch and event.data_is_transfer > 0:
+                    # transfer
+                    pass
+                elif  event.fetch and event.data_is_transfer == 0:
                     if self.trace:
                         print("\tdo edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
                     pe.data_to_ir_ing = True
@@ -631,14 +625,39 @@ class Controller(object):
             self.busy_pe.add(pe)
             edram_rd_pool_erp = []
             pe_id = self.PE_array.index(pe)
+            
+            total_pool_read_data = 0
             for event in pe.edram_rd_pool_erp:
-                if event.data_is_transfer != 0: # 此event的資料正在傳輸
+                if not event.fetch and event.data_is_transfer != 0:
+                    # transfer
                     edram_rd_pool_erp.append(event)
                     continue
+                elif not event.fetch and event.data_is_transfer == 0:
+                    # check buffer
+                    event.fetch = True
+                    fetch_data = []
+                    for data in event.inputs:
+                        if not pe.edram_buffer.get(data):
+                            fetch_data.append(data)
+                    if fetch_data:
+                        self.fetch_array.append(FetchEvent(event, fetch_data))
+                        event.data_is_transfer += len(fetch_data)
+                        idx = pe.edram_rd_pool_erp.index(event)
+                        edram_rd_pool_erp += pe.edram_rd_pool_erp[idx:]
+
+                elif event.fetch and event.data_is_transfer != 0:
+                    idx = pe.edram_rd_pool_erp.index(event)
+                    edram_rd_pool_erp += pe.edram_rd_pool_erp[idx:]
+                    break
+
+                num_data = len(event.inputs)
+                total_pool_read_data += num_data
+                if total_pool_read_data > self.edram_read_data:
+                    idx = pe.edram_rd_pool_erp.index(event)
+                    edram_rd_pool_erp += pe.edram_rd_pool_erp[idx:]
+                    break
 
                 self.busy_pe.add(pe)
-                
-                num_data = len(event.inputs)
                 self.done_event += 1
                 if not self.isPipeLine:
                     self.this_layer_event_ctr += 1
@@ -787,38 +806,32 @@ class Controller(object):
         self.data_transfer_erp = []
 
     def fetch(self):
-        pass
-        # des_dict = dict()
-        # for FE_d in self.fetch_array.copy():
-        #     FE, fetch_data = FE_d[0], FE_d[1]
-        #     FE.cycles_counter += 1
-        #     if FE.cycles_counter == FE.fetch_cycle:
-        #         src  = (0, FE.event.position_idx[1], -1, -1)
-        #         des  = FE.event.position_idx[0:4]
-        #         # if not self.isPipeLine:
-        #         #     self.this_layer_event_ctr -= len(fetch_data)
-        #         if des not in des_dict:
-        #             des_dict[des] = []
-        #         for data in fetch_data:
-        #             #data = inp[1:]
-        #             data = [FE.event.nlayer, data]
-        #             pro_event_idx = self.Computation_order.index(FE.event)
+        des_dict = dict()
+        fetch_array = []
+        for FE in self.fetch_array:
+            FE.cycles_counter += 1
+            if FE.cycles_counter != HW().Fetch_cycle:
+                fetch_array.append(FE)
+            else:
+                src  = (0, FE.event.position_idx[1], -1, -1)
+                des  = FE.event.position_idx[0:4]
+                pro_event_idx = self.Computation_order.index(FE.event)
+                if des not in des_dict:
+                    des_dict[des] = dict()
+                for data in FE.data:
+                    if data not in des_dict[des]:
+                        des_dict[des][data] = [pro_event_idx]
+                    else:
+                        des_dict[des][data].append(pro_event_idx)
+        self.fetch_array = fetch_array
 
-        #             isDataInDict = False
-        #             for data_pro_event in des_dict[des]:
-        #                 if data == data_pro_event[0]:
-        #                     data_pro_event[1].append(pro_event_idx)
-        #                     isDataInDict = True
-        #                     break
-        #             if not isDataInDict:
-        #                 des_dict[des].append([data, [pro_event_idx]])
-        #         self.fetch_array.remove(FE_d)
-        # for des in des_dict:
-        #     src = (0, des[1], -1, -1)
-        #     for data_pro_event in des_dict[des]:
-        #         data, pro_event_idx = data_pro_event[0], data_pro_event[1]
-        #         packet = Packet(src, des, data, pro_event_idx)
-        #         self.interconnect.input_packet(packet)
+        # packet
+        for des in des_dict:
+            src = (0, des[1], -1, -1)
+            for data in des_dict[des]:
+                pro_event_list = des_dict[des][data]
+                packet = Packet(src, des, data, pro_event_list)
+                self.interconnect.input_packet(packet)
 
     def trigger(self):
         for trigger in self.data_transfer_trigger:
