@@ -119,9 +119,6 @@ class Controller(object):
                     
                     self.pe_id_rd.add(pe)
 
-                    # for performance analysis
-                    if cu_idx not in pe.eventQueuing_CU: 
-                        pe.eventQueuing_CU.append(cu_idx)
             if e.nlayer != 0:
                 break
         
@@ -376,6 +373,7 @@ class Controller(object):
         for pe in self.pe_id_cu_op:
             self.busy_pe.add(pe)
             cu_op_list = []
+            # pe.is_wait_resource = False # Performance analysis
             for cu in pe.cu_op_list:
                 if cu.finish_cycle == 0: # cu operation start
                     if self.trace:
@@ -442,17 +440,20 @@ class Controller(object):
                 # self.cu_state_for_plot[0].append(self.cycle_ctr)
                 # self.cu_state_for_plot[1].append(cu_id)
 
-                # performance analysis
-                isEventWaiting = False
-                for event in cu.edram_rd_ir_erp:
-                    if event.data_is_transfer == 0: # 有event資料已經ready但還不能做
-                        isEventWaiting = True
-                        break
-                if isEventWaiting:
+                # Performance analysis
+                if cu.edram_rd_ir_erp:
                     cu.wait_resource_time += 1
+                    # pe.is_wait_resource = True
                 else:
                     cu.pure_computation_time += 1
             pe.cu_op_list = cu_op_list
+            
+            # # Performance analysis
+            # if pe.is_wait_resource:
+            #     pe.wait_resource_time += 1
+            # else:
+            #     pe.pure_computation_time += 1
+
             if pe.cu_op_list:
                 erp.add(pe)
         self.pe_id_cu_op = erp
@@ -460,11 +461,9 @@ class Controller(object):
     def performance_analysis(self):
         for pe in self.pe_id_rd:
             for cu in pe.idle_eventQueuing_CU:
-                cu.wait_transfer_time += 1 # CU在等資料傳到
-            if pe.edram_rd_event:
-                event = pe.edram_rd_event
-                cu = pe.edram_rd_cu_idx
                 cu.wait_transfer_time += 1
+            if pe.edram_rd_cu_idx:
+                pe.edram_rd_cu_idx.wait_transfer_time += 1
 
     def event_pe_saa(self):
         erp = set()
@@ -1063,7 +1062,6 @@ class Controller(object):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
 
     def performance_statistics(self):
-        # PE breakdown
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Performance_CU.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "Pure computation", "Pure idle", "Wait resource", "Wait transfer"])
@@ -1076,3 +1074,15 @@ class Controller(object):
                     arr.append(cu.wait_resource_time)
                     arr.append(cu.wait_transfer_time)
                     writer.writerow(arr)
+        
+        # with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Performance_PE.csv', 'w', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     writer.writerow(["", "Pure computation", "Pure idle", "Wait resource", "Wait transfer"])
+        #     for pe in self.PE_array:
+        #         arr = ["PE"+str(self.PE_array.index(pe))]
+        #         arr.append(pe.pure_computation_time)
+        #         pure_idle_time = self.cycle_ctr - pe.pure_computation_time - pe.wait_resource_time - pe.wait_transfer_time
+        #         arr.append(pure_idle_time)
+        #         arr.append(pe.wait_resource_time)
+        #         arr.append(pe.wait_transfer_time)
+        #         writer.writerow(arr)

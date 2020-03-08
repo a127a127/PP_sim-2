@@ -17,10 +17,10 @@ class CU(object):
         ### trigger event list
         self.pe_saa_trigger = []
         
-        ### bottleneck analysis
-        self.pure_idle_time = 0
-        self.wait_transfer_time = 0
-        self.wait_resource_time = 0
+        ### Performance analysis
+        self.pure_idle_time        = 0
+        self.wait_transfer_time    = 0
+        self.wait_resource_time    = 0
         self.pure_computation_time = 0
 
     def __str__(self):

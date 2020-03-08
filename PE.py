@@ -11,9 +11,7 @@ class PE(object):
         self.state = False
 
         ### for edram read event 
-        #self.state_edram_rd_ir = False
         self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
-        self.eventQueuing_CU = [] # for perfomance analysis
         self.edram_rd_event = None
         self.edram_rd_cu_idx = None
         self.edram_rd_cycle_ctr = 0
@@ -27,11 +25,6 @@ class PE(object):
         self.buffer_size_util = [[], []] # [cycle, size]
 
         self.input_require = []
-        
-        ### events per cycle
-        # 要在一個cycle完成最多可能來自所有CU的資料
-        #self.pe_saa_epc = HardwareMetaData().Router_num * HardwareMetaData().PE_num * HardwareMetaData().CU_num 
-        #self.activation_epc = self.pe_saa_epc
 
         ### event ready pool
         self.pe_saa_erp = []
@@ -45,17 +38,20 @@ class PE(object):
         self.edram_wr_trigger = []
         self.edram_rd_pool_trigger = []
         self.edram_rd_ir_trigger = []
-        self.pe_saa_trigger = [] # for data transfer
+        self.pe_saa_trigger = []
 
         ### generate CU
         self.CU_array = []
         self.gen_cu()
 
-        ### performance analysis
-        self.pure_idle_time = 0
-        self.wait_transfer_time = 0
-        self.wait_resource_time = 0
+        ### Performance analysis
+        self.is_wait_resource = False
+        self.is_wait_transfer = False
+        self.pure_idle_time        = 0
+        self.wait_transfer_time    = 0
+        self.wait_resource_time    = 0
         self.pure_computation_time = 0
+        
 
         ### Energy
         self.Edram_buffer_energy     = 0.
