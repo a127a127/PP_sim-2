@@ -2,7 +2,9 @@
 #from Mapping import HighParallelismMapping
 from Mapping import SameColumnFirstMapping
 from Mapping import SameRowFirstMapping
-from Mapping import ParallelsimMapping
+from Mapping import SCFParallelsimMapping
+from Mapping import SRFParallelsimMapping
+
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 
@@ -36,10 +38,14 @@ def main():
         print("Same Row First Mapping")
         mapping_information = SameRowFirstMapping()
         mapping_str = "Same_Row_First_Mapping"
-    elif mapping == "Paral":
-        print("Parallelsim Mapping"+sys.argv[3])
-        mapping_information = ParallelsimMapping(int(sys.argv[3]))
-        mapping_str = "Parallelsim_Mapping"+sys.argv[3]
+    elif mapping == "SCFParal":
+        print("'SCF Parallelsim Mapping"+sys.argv[3])
+        mapping_information = SCFParallelsimMapping(int(sys.argv[3]))
+        mapping_str = "SCFParallelsim_Mapping"+sys.argv[3]
+    elif mapping == "SRFParal":
+        print("SRF Parallelsim Mapping"+sys.argv[3])
+        mapping_information = SRFParallelsimMapping(int(sys.argv[3]))
+        mapping_str = "SRFParallelsim_Mapping"+sys.argv[3]
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
@@ -58,7 +64,6 @@ def main():
         print("Ideal")
     elif replacement == "LRU":
         print("LRU")
-
 
     ### dir ###
     if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling):
