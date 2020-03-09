@@ -657,42 +657,42 @@ class OrderGenerator(object):
         print('Order generated!')
 
     def trace_order(self):
-        edram_rd_ir_ctr = 0
-        cu_op_ctr  = 0
-        pe_saa_ctr = 0
-        activation_ctr = 0
-        pooling_ctr = 0
-        edram_wr_ctr = 0
-        edram_rd_pool_ctr = 0
-        data_transfer_ctr = 0
+        self.edram_rd_ir_ctr = 0
+        self.cu_op_ctr  = 0
+        self.pe_saa_ctr = 0
+        self.activation_ctr = 0
+        self.pooling_ctr = 0
+        self.edram_wr_ctr = 0
+        self.edram_rd_pool_ctr = 0
+        self.data_transfer_ctr = 0
         for e in self.Computation_order:
             t = e.event_type
             if t == "edram_rd_ir":
-                edram_rd_ir_ctr += 1
+                self.edram_rd_ir_ctr += 1
             elif t == "cu_operation":
-                cu_op_ctr += 1
+                self.cu_op_ctr += 1
             elif t == "pe_saa":
-                pe_saa_ctr += 1
+                self.pe_saa_ctr += 1
             elif t == "activation":
-                activation_ctr += 1
+                self.activation_ctr += 1
             elif t == "edram_wr":
-                edram_wr_ctr += 1
+                self.edram_wr_ctr += 1
             elif t == "edram_rd_pool":
-                edram_rd_pool_ctr += 1
+                self.edram_rd_pool_ctr += 1
             elif t == "pooling":
-                pooling_ctr += 1
+                self.pooling_ctr += 1
             elif t == "data_transfer":
-                data_transfer_ctr += 1
+                self.data_transfer_ctr += 1
             else:
                 print("event type error:", t)
 
-        print("edram_rd_ir_ctr", edram_rd_ir_ctr)
-        print("cu_op_ctr", cu_op_ctr)
-        print("pe_saa_ctr", pe_saa_ctr)
-        print("activation_ctr", activation_ctr)
-        print("edram_wr_ctr", edram_wr_ctr)
-        print("edram_rd_pool_ctr", edram_rd_pool_ctr)
-        print("data_transfer_ctr", data_transfer_ctr)
+        print("edram_rd_ir_ctr", self.edram_rd_ir_ctr)
+        print("cu_op_ctr", self.cu_op_ctr)
+        print("pe_saa_ctr", self.pe_saa_ctr)
+        print("activation_ctr", self.activation_ctr)
+        print("edram_wr_ctr", self.edram_wr_ctr)
+        print("edram_rd_pool_ctr", self.edram_rd_pool_ctr)
+        print("data_transfer_ctr", self.data_transfer_ctr)
         print("total", len(self.Computation_order))
 
         if False:

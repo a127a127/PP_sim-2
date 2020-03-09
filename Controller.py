@@ -127,13 +127,15 @@ class Controller(object):
         t_pesaa = 0
         t_act = 0
         t_wr = 0
-        t_it = 0
-        t_trans = 0
-        t_fe = 0
-        t_tr = 0
-        t_st = 0
-        t_buf = 0
-        t_poo = 0
+
+        t_pool = 0
+        t_interconnect = 0
+        t_transfer = 0
+        t_fetch = 0
+
+        t_trigger = 0
+        t_state = 0
+        t_buffer = 0
         t_ = time.time()
         start_time = time.time()
         layer = 0
@@ -145,14 +147,15 @@ class Controller(object):
                     print("完成比例:", self.done_event/len(self.Computation_order))
                     print("layer:", layer)
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
+                    
                     print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
-                    print("iterconeect", t_it, "fetch", t_fe, "transfer", t_trans, "trigger", t_tr, "state", t_st)
-                    print("buffer", t_buf, "pool", t_poo)
+                    print("pooling:", t_pool, "iterconnect", t_interconnect, "transfer", t_transfer, "fetch", t_fetch)
+                    print("trigger", t_trigger, "state", t_state, "buffer", t_buffer)
                     print("t:", time.time()-t_)
                     print()
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
-                    t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
-                    t_trans = 0
+                    t_pool, t_interconnect, t_transfer, t_fetch = 0, 0, 0, 0
+                    t_trigger, t_state, t_buffer = 0, 0, 0
                     t_ = time.time()
 
             self.cycle_ctr += 1
@@ -184,19 +187,19 @@ class Controller(object):
 
             staa = time.time()
             self.event_edram_rd_pool()
-            t_poo += time.time() - staa
+            t_pool += time.time() - staa
             
             staa = time.time()
             self.process_interconnect()
-            t_it += time.time() - staa
+            t_interconnect += time.time() - staa
 
             staa = time.time()
             self.event_transfer()
-            t_trans += time.time() - staa
+            t_transfer += time.time() - staa
 
             staa = time.time()
             self.fetch()
-            t_fe += time.time() - staa
+            t_fetch += time.time() - staa
 
             ### Pipeline stage control ###
             if not self.isPipeLine:
@@ -210,7 +213,7 @@ class Controller(object):
 
             staa = time.time()
             self.trigger()
-            t_tr += time.time() - staa
+            t_trigger += time.time() - staa
 
             ### Record PE State ###
             staa = time.time()
@@ -218,7 +221,7 @@ class Controller(object):
                 self.pe_state_for_plot[0].append(self.cycle_ctr)
                 self.pe_state_for_plot[1].append(self.PE_array.index(pe))
             self.busy_pe = set()
-            t_st += time.time() - staa
+            t_state += time.time() - staa
 
 
             ### Buffer utilization
@@ -229,7 +232,7 @@ class Controller(object):
                     pe.buffer_size_util[0].append(self.cycle_ctr)
                     pe.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
                 self.check_buffer_pe_set = set()
-            t_buf += time.time() - staa
+            t_buffer += time.time() - staa
 
             ### Finish
             if self.done_event == len(self.Computation_order):
@@ -807,7 +810,6 @@ class Controller(object):
         self.data_transfer_erp = []
 
     def fetch(self):
-        des_dict = dict()
         fetch_array = []
         for FE in self.fetch_array:
             FE.cycles_counter += 1
@@ -817,22 +819,10 @@ class Controller(object):
                 src  = (0, FE.event.position_idx[1], -1, -1)
                 des  = FE.event.position_idx[0:4]
                 pro_event_idx = self.Computation_order.index(FE.event)
-                if des not in des_dict:
-                    des_dict[des] = dict()
                 for data in FE.data:
-                    if data not in des_dict[des]:
-                        des_dict[des][data] = [pro_event_idx]
-                    else:
-                        des_dict[des][data].append(pro_event_idx)
+                    packet = Packet(src, des, data, [pro_event_idx])
+                    self.interconnect.input_packet(packet)
         self.fetch_array = fetch_array
-
-        # packet
-        for des in des_dict:
-            src = (0, des[1], -1, -1)
-            for data in des_dict[des]:
-                pro_event_list = des_dict[des][data]
-                packet = Packet(src, des, data, pro_event_list)
-                self.interconnect.input_packet(packet)
 
     def trigger(self):
         for trigger in self.data_transfer_trigger:
@@ -979,6 +969,14 @@ class Controller(object):
     def output_result(self):
         with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(["Event Total", len(self.Computation_order)])
+            writer.writerow(["edram_rd_ir_ctr", self.ordergenerator.edram_rd_ir_ctr])
+            writer.writerow(["cu_op_ctr", self.ordergenerator.cu_op_ctr])
+            writer.writerow(["pe_saa_ctr", self.ordergenerator.pe_saa_ctr])
+            writer.writerow(["edram_wr_ctr", self.ordergenerator.edram_wr_ctr])
+            writer.writerow(["edram_rd_pool_ctr", self.ordergenerator.edram_rd_pool_ctr])
+            writer.writerow(["data_transfer_ctr", self.ordergenerator.data_transfer_ctr])
+            
             writer.writerow(["Cycles", self.cycle_ctr])
             writer.writerow(["Total energy consumption(nJ)", self.Total_energy])
             writer.writerow([])
