@@ -149,6 +149,7 @@ class Controller(object):
                     print("iterconeect", t_it, "fetch", t_fe, "transfer", t_trans, "trigger", t_tr, "state", t_st)
                     print("buffer", t_buf, "pool", t_poo)
                     print("t:", time.time()-t_)
+                    print()
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_it, t_fe, t_tr, t_st, t_buf, t_poo = 0, 0, 0, 0, 0, 0
                     t_trans = 0
