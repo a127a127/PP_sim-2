@@ -222,8 +222,8 @@ class Controller(object):
 
             ### Buffer utilization
             staa = time.time()
-            #if self.cycle_ctr % 200 == 0:
-            if True:
+            if self.cycle_ctr % 200 == 0:
+            #if True:
                 for pe in self.check_buffer_pe_set:
                     pe.buffer_size_util[0].append(self.cycle_ctr)
                     pe.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
@@ -643,6 +643,7 @@ class Controller(object):
                         event.data_is_transfer += len(fetch_data)
                         idx = pe.edram_rd_pool_erp.index(event)
                         edram_rd_pool_erp += pe.edram_rd_pool_erp[idx:]
+                        break
 
                 elif event.fetch and event.data_is_transfer != 0:
                     idx = pe.edram_rd_pool_erp.index(event)
