@@ -1,26 +1,22 @@
-from configparser import ConfigParser
+
+from ModelConfig import ModelConfig
 from math import floor
 
 class HardwareMetaData(object):
     def __init__(self):
         # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
 
-        cfg = ConfigParser()
-        cfg.read('./configs/hardware.ini')
-
-        self.cell_bit_width = 2
-
-        model_type = 0
-        if model_type == 0: # Lenet; 12 PEs
+        model_type = ModelConfig().Model_type
+        if model_type == "Lenet": # 12 PEs
             self.Router_num_y = 2
             self.Router_num_x = 2
-        elif model_type == 1: # Cifar10; 5 PEs
+        elif model_type == "Cifar10": # 5 PEs
             self.Router_num_y = 1
             self.Router_num_x = 2
-        elif model_type == 2: # DeepID; 8 PEs
+        elif model_type == "DeepID": # 8 PEs
             self.Router_num_y = 1
             self.Router_num_x = 2
-        elif model_type == 3: # Caffenet
+        elif model_type == "Caffenet":
             self.Router_num_y = 10
             self.Router_num_x = 10
         self.Router_num = self.Router_num_y * self.Router_num_x
@@ -38,6 +34,8 @@ class HardwareMetaData(object):
         self.OU_h = 9
         self.OU_w = 8
 
+        self.cell_bit_width = 2
+
         self.Frequency = 1.2 # GHz
         self.ADC_resolution = 3 # bits
         self.Router_flit_size = 32 # bits
@@ -49,9 +47,6 @@ class HardwareMetaData(object):
         self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
 
         self.eDRAM_buffer_size  = 64 # nKB
-        #self.Output_Reg_size    = 3 # nKB
-        #self.CU_Input_Reg_size  = 2 # nKB
-        #self.CU_Output_Reg_size = 256 # nKB
 
         # Leakage (沒資料)
         # self.eDRAM_buffer_leakage = 0
@@ -80,12 +75,11 @@ class HardwareMetaData(object):
         self.Energy_ou_adc      = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
                                   (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1))
         self.Energy_ou_ssa      = 0.05 * 0.01 / 2 / 1.2 * self.OU_w
-
         self.Energy_ir_in_cu    = 1.24 * 0.01 / 1.2 / 256 # per bit
         self.Energy_or_in_cu    = 0.23 * 0.01 / 1.2 / 128 # per bit
 
         # Off chip fetch
         self.Fetch_cycle = 1
-
+        
     def __str__(self):
         return str(self.__dict__)

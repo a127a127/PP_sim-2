@@ -913,7 +913,8 @@ class Controller(object):
             self.pe_id_wr.add(pe)
         self.trigger_edram_wr = set()
 
-    def print_statistics_result(self):
+    def print_statistics_result(self, path):
+        self.path = path
         self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
         self.Edram_buffer_energy     = 0.
         self.Bus_energy              = 0.
@@ -967,7 +968,7 @@ class Controller(object):
         self.output_result()
 
     def output_result(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Result.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["Event Total", len(self.Computation_order)])
             writer.writerow(["edram_rd_ir_ctr", self.ordergenerator.edram_rd_ir_ctr])
@@ -1000,7 +1001,7 @@ class Controller(object):
     def PE_energy_breakdown(self):
         # PE breakdown
         print("PE energy breakdown")
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Energy_breakdown_PE.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/Energy_breakdown_PE.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "Buffer", "Bus", "PE Shift and add", "OR", "Activation", "Pooling",
                              "CU Shift and add", "DAC", "ADC", "Crossbar", "IR", "OR"
@@ -1030,7 +1031,7 @@ class Controller(object):
             pe.edram_buffer.maximal_usage *= self.input_bit/8/1000
 
         ### time history
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_time_history.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/Buffer_time_history.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for pe in self.PE_array:
                 util = pe.buffer_size_util
@@ -1040,7 +1041,7 @@ class Controller(object):
                 writer.writerow(util[0])
                 writer.writerow(util[1])
         
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Buffer_utilization.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/Buffer_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "Size(KB)"])
             for pe in self.PE_array:
@@ -1050,19 +1051,19 @@ class Controller(object):
                 writer.writerow(["PE"+str(pe_id), pe.edram_buffer.maximal_usage])
 
     def pe_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/PE_utilization.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(len(self.pe_state_for_plot[0])):
                 writer.writerow([self.pe_state_for_plot[0][row], self.pe_state_for_plot[1][row]])
 
     def cu_utilization(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/CU_utilization.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/CU_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for row in range(len(self.cu_state_for_plot[0])):
                 writer.writerow([self.cu_state_for_plot[0][row], self.cu_state_for_plot[1][row]])
 
     def performance_statistics(self):
-        with open('./statistics/'+self.mapping_str+'/'+self.scheduling_str+'/Performance_CU.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/Performance_CU.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "Pure computation", "Pure idle", "Wait resource", "Wait transfer"])
             for pe in self.PE_array:

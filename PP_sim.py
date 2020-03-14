@@ -1,5 +1,3 @@
-#from Mapping import DefaultMapping
-#from Mapping import HighParallelismMapping
 from Mapping import SameColumnFirstMapping
 from Mapping import SameRowFirstMapping
 from Mapping import SCFParallelsimMapping
@@ -7,6 +5,7 @@ from Mapping import SRFParallelsimMapping
 
 from OrderGenerator import OrderGenerator
 from Controller import Controller
+from ModelConfig import ModelConfig
 
 import time, sys, os
 #import pickle
@@ -20,17 +19,7 @@ def main():
     start_mapping_time = time.time()
     print("--- Mapping ---")
     print("Mapping policy:  ", end="")
-    if mapping == 0:
-        print("Default Mapping")
-        exit()
-        #mapping_information = DefaultMapping()
-        #mapping_str = "Default_Mapping"
-    elif mapping == 1:
-        print("High Parallelism Mapping")
-        exit()
-        #mapping_information = HighParallelismMapping()
-        #mapping_str = "High_Parallelism_Mapping"
-    elif mapping == "SCF":
+    if mapping == "SCF":
         print("Same Column First Mapping")
         mapping_information = SameColumnFirstMapping()
         mapping_str = "Same_Column_First_Mapping"
@@ -46,6 +35,9 @@ def main():
         print("SRF Parallelsim Mapping"+sys.argv[3])
         mapping_information = SRFParallelsimMapping(int(sys.argv[3]))
         mapping_str = "SRFParallelsim_Mapping"+sys.argv[3]
+    else:
+        print("Wrong mapping type")
+        exit()
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
@@ -55,6 +47,9 @@ def main():
         print("Non-pipeline")
     elif scheduling == "Pipeline":
         print("Pipeline")
+    else:
+        print("Wrong scheduling type")
+        exit()
     print()
 
     ### Buffer Replacement ###
@@ -66,8 +61,9 @@ def main():
         print("LRU")
 
     ### dir ###
-    if not os.path.exists('./statistics/'+mapping_str+'/'+scheduling):
-            os.makedirs('./statistics/'+mapping_str+'/'+scheduling)
+    path = './statistics/'+ModelConfig().Model_type+'/'+mapping_str+'/'+scheduling
+    if not os.path.exists(path):
+            os.makedirs(path)
     
     ### Trace ###
     isTrace_order      = True
@@ -90,7 +86,7 @@ def main():
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    controller.print_statistics_result()
+    controller.print_statistics_result(path)
 
 if __name__ == '__main__':
     main()

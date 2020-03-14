@@ -2,9 +2,8 @@ from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
     def __init__(self):
-        model_type = 3
-        if model_type == 0: # Lenet
-            self.Model_type = "Lenet"
+        self.Model_type = "Lenet"
+        if self.Model_type == "Lenet":
             self.layer_list = [
                 LayerMetaData("convolution",   6, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
@@ -21,8 +20,7 @@ class ModelConfig(object):
             self.input_bit = 16
             self.filter_bit = 16
 
-        elif model_type == 1: # Cifar10 model from 子賢paper
-            self.Model_type = "Cifar10"
+        elif self.Model_type == "Cifar10": # Model from 子賢paper
             self.layer_list = [
                 LayerMetaData("convolution", 32, 5, 5,  3, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",      0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
@@ -40,8 +38,7 @@ class ModelConfig(object):
             self.input_bit = 16
             self.filter_bit = 16
 
-        elif model_type == 2: # DeepID
-            self.Model_type = "DeepID"
+        elif self.Model_type == "DeepID":
             self.layer_list = [
                 LayerMetaData("convolution",   20, 4, 4,  1, 1, 'VALID', 0, 0, 0,    0),
                 LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0),
@@ -60,8 +57,7 @@ class ModelConfig(object):
             self.input_bit = 16
             self.filter_bit = 16
 
-        elif model_type == 3: # Caffenet
-            self.Model_type = "Caffenet"
+        elif self.Model_type == "Caffenet":
             self.layer_list = [
                 LayerMetaData("convolution",  96, 11, 11,   3, 4, 'VALID', 0, 0, 0,    0),
                 LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 2,    0),
@@ -82,21 +78,23 @@ class ModelConfig(object):
             self.input_bit = 16
             self.filter_bit = 16
 
-        elif model_type == 4: # Test0
-            self.Model_type = "Test0"
+        elif self.Model_type == "Test":
             self.layer_list = [
-                LayerMetaData("convolution",     8,  3,  3,   1, 1, 'VALID', 0, 0, 0,   0),
-                #LayerMetaData("pooling",         0,  0,  0,   0, 0,       0, 2, 2, 2,   0),
-                #LayerMetaData("convolution",    16,  3,  3,   8, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   2),
+                LayerMetaData("convolution",      2,  2,  2,  2, 1,  'VALID', 0, 0, 0,    0),
+                #LayerMetaData("convolution",      1,  2,  2,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("pooling",         0,  0,  0,   0, 0,       0, 3, 3, 1,   0),
+                #LayerMetaData("convolution",     1,  2,  2,   1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   2),
                 #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   2)
                 ]
             self.input_n = 1
-            self.input_h = 3
-            self.input_w = 3
-            self.input_c = 1
+            self.input_h = 2
+            self.input_w = 2
+            self.input_c = 2
             self.input_bit = 1
             self.filter_bit = 16
-
+        else:
+            print("Wrong model type")
+            exit()
     def __str__(self):
             return str(self.__dict__)
