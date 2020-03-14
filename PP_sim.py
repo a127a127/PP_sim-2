@@ -54,7 +54,7 @@ def main():
 
     ### Buffer Replacement ###
     print("Buffer replacement policy: ", end="")
-    replacement = "Ideal"
+    replacement = "LRU"
     if replacement == "Ideal":
         print("Ideal")
     elif replacement == "LRU":
