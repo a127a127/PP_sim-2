@@ -33,7 +33,7 @@ class OrderGenerator(object):
                 self.pe_saa_mat.append([])
 
 
-        self.transfer_mat = [] # for different layer data transfer (output feature map, 最後一層沒有)
+        self.transfer_mat = [] # for different layer feature map data transfer (output feature map, 最後一層沒有)
         for i in range(self.model_info.layer_length):
             if self.model_info.layer_list[i].layer_type == "convolution" or self.model_info.layer_list[i].layer_type == "pooling":
                 if i+1 < self.model_info.layer_length:
@@ -145,7 +145,7 @@ class OrderGenerator(object):
                                     inp = xbar_inputs[nInp].inputs
                                 else:
                                     inp = []
-
+                                
                                 # inp紀錄的位置為padding後的位置
                                 if self.model_info.layer_list[nlayer].padding == "SAME":
                                     for d in inp:

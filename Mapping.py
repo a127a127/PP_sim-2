@@ -809,7 +809,6 @@ class SCFParallelsimMapping(object):
                                     if cu_h >= HW().CU_num_y:
                                         cu_h = 0
                                         pe_w += 1
-                                        used_pe_num += 1
                                         if pe_w >= HW().PE_num_x:
                                             pe_w = 0
                                             pe_h += 1
@@ -1109,7 +1108,6 @@ class SRFParallelsimMapping(object):
                                     if cu_h >= HW().CU_num_y:
                                         cu_h = 0
                                         pe_w += 1
-                                        used_pe_num += 1
                                         if pe_w >= HW().PE_num_x:
                                             pe_w = 0
                                             pe_h += 1
@@ -1179,7 +1177,6 @@ class SRFParallelsimMapping(object):
                 input_per_pe = len(inputs) // used_pe_num # split into multiple pe
                 if input_per_pe == 0:
                     input_per_pe = 1
-                
                 next_layer_id = (rt_h, rt_w, pe_h, pe_w)
                 rt_h, rt_w, pe_h, pe_w = pool_pe_id[0], pool_pe_id[1], pool_pe_id[2], pool_pe_id[3]
                 for pe_n in range(used_pe_num):

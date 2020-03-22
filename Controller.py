@@ -271,7 +271,7 @@ class Controller(object):
                 elif event.fetch and event.data_is_transfer > 0:
                     # transfer
                     pass
-                elif  event.fetch and event.data_is_transfer == 0:
+                elif event.fetch and event.data_is_transfer == 0:
                     if self.trace:
                         print("\tdo edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
                     pe.data_to_ir_ing = True
@@ -284,6 +284,8 @@ class Controller(object):
 
                     # 要幾個cycle讀完
                     pe.edram_read_cycles = ceil(num_data / self.edram_read_data)
+                    if pe.edram_read_cycles == 0:
+                        pe.edram_read_cycles = 1
 
                     # 判斷是否完成(只有read一個cycle內完成才會進入這邊)
                     pe.edram_rd_cycle_ctr += 1
