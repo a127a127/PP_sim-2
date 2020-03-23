@@ -894,11 +894,15 @@ class SCFParallelsimMapping(object):
                                     if rt_w >= HW().Router_num_x:
                                         rt_w -= 1
                                         rt_h += 1
+                                        if rt_h >= HW().Router_num_y:
+                                            rt_h, rt_w = 0, 0
                                 else:
                                     rt_w -= 1
                                     if rt_w < 0:
                                         rt_w = 0
                                         rt_h += 1
+                                        if rt_h >= HW().Router_num_y:
+                                            rt_h, rt_w = 0, 0
 
                     if pe_n + 1 == used_pe_num:
                         this_input = inputs[pe_n * input_per_pe : ].tolist()

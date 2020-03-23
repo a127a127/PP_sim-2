@@ -291,6 +291,7 @@ class Controller(object):
                     pe.edram_rd_cycle_ctr += 1
                     if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
                         if self.trace:
+                            pass
                             print("\t\tfinish edram read")
                         self.done_event += 1
                         if not self.isPipeLine:
@@ -331,6 +332,7 @@ class Controller(object):
                 self.busy_pe.add(pe)
                 if pe.edram_rd_cycle_ctr == pe.edram_read_cycles: # 完成edram read
                     if self.trace:
+                        pass
                         print("\tfinish edram_rd_ir, nlayer:", event.nlayer,", pos:", event.position_idx)
                     self.done_event += 1
                     if not self.isPipeLine:
@@ -439,6 +441,7 @@ class Controller(object):
                     else:
                         cu_op_list.append(cu)
                         if self.trace:
+                            pass
                             print("\tcu operation")
                 
                 ## cu state ##
