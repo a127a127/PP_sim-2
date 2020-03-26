@@ -93,8 +93,8 @@ class ModelConfig(object):
                 LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 1000)
                 ]
             self.input_n = 1
-            self.input_h = 231
-            self.input_w = 231
+            self.input_h = 221
+            self.input_w = 221
             self.input_c = 3
             self.input_bit = 16
             self.filter_bit = 16
