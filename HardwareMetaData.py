@@ -19,9 +19,12 @@ class HardwareMetaData(object):
         elif model_type == "Caffenet":
             self.Router_num_y = 10
             self.Router_num_x = 10
+        elif model_type == "Overfeat":
+            self.Router_num_y = 12
+            self.Router_num_x = 12
         elif model_type == "Test":
-            self.Router_num_y = 1
-            self.Router_num_x = 2
+            self.Router_num_y = 3
+            self.Router_num_x = 3
         
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
