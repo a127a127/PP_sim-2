@@ -22,6 +22,9 @@ class HardwareMetaData(object):
         elif model_type == "Overfeat":
             self.Router_num_y = 12
             self.Router_num_x = 12
+        elif model_type == "VGG16":
+            self.Router_num_y = 27
+            self.Router_num_x = 27
         elif model_type == "Test":
             self.Router_num_y = 3
             self.Router_num_x = 3

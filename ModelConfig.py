@@ -99,6 +99,37 @@ class ModelConfig(object):
             self.input_bit = 16
             self.filter_bit = 16
 
+        elif self.Model_type == "VGG16":
+            self.layer_list = [
+                LayerMetaData("convolution",  64,  3,  3,   3, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution",  64,  3,  3,  64, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 2, 2, 2,    0),
+                LayerMetaData("convolution", 128,  3,  3,  64, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 128,  3,  3, 128, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 2, 2, 2,    0),
+                LayerMetaData("convolution", 256,  3,  3, 128, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 256,  3,  3, 256, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 256,  3,  3, 256, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 2, 2, 2,    0),
+                LayerMetaData("convolution", 512,  3,  3, 256, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 512,  3,  3, 512, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 512,  3,  3, 512, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 2, 2, 2,    0),
+                LayerMetaData("convolution", 512,  3,  3, 256, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 512,  3,  3, 512, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("convolution", 512,  3,  3, 512, 1,  'SAME', 0, 0, 0,    0),
+                LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 2, 2, 2,    0),
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096),
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096),
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 1000)
+                ]
+            self.input_n = 1
+            self.input_h = 224
+            self.input_w = 224
+            self.input_c = 3
+            self.input_bit = 16
+            self.filter_bit = 16
+
         elif self.Model_type == "Test":
             self.layer_list = [
                 LayerMetaData("convolution",      1,  3,  3,  1, 1,  'SAME', 0, 0, 0,    0),
