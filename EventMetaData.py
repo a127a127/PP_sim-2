@@ -21,4 +21,37 @@ class EventMetaData:
                     "proceeding_event:": self.proceeding_event, "nlayer:": self.nlayer, "inputs:": self.inputs, "outputs:": self.outputs,
                     "position_idx:": self.position_idx, "fetch:": self.fetch, "data_is_transfer:": self.data_is_transfer
                     })
+    
+    # event_type: edram_rd_ir
+        # inputs : edram_read_data
+        # outputs: 0
+    
+    # event_type: cu_operation
+        # inputs : max_ou 
+        # outputs: num_ou_in_xb # {XB1: 4 OUs, XB2: 3 OUs}
+    
+    # event_type: pe_saa
+        # inputs : saa_amount
+        # outputs: 0
+    
+    # event_type: activation
+        # inputs : act_amount
+        # outputs: 0
+    
+    # event_type: edram_wr
+        # inputs : 0
+        # outputs: edram_write_data
+    
+    # event_type: data_transfer
+        # inputs : 0
+        # outputs: transfer_data
+        # position_idx: [data_transfer_src, data_transfer_des]
+    
+    # event_type: edram_rd
+        # inputs :  edram_read_data
+        # outputs:  0
+    
+    # event_type: pooling
+        # inputs :  pooling_amount
+        # outputs:  0
         
