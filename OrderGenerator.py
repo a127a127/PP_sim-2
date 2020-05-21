@@ -946,14 +946,14 @@ class OrderGenerator(object):
                    #--------------------#
 
                     des_pe_dict = dict() # {PE1: [data1, data2], PE2: [data1, data3]}
-                    for data in pooling_outputs:
-                        h = data[1]
-                        w = data[2]
-                        c = data[3]
+                    for d in pooling_outputs:
+                        h = d[1]
+                        w = d[2]
+                        c = d[3]
                         pos = w + h * self.model_info.input_w[nlayer+1] + \
                                 c * self.model_info.input_w[nlayer+1] * self.model_info.input_h[nlayer+1]
                         if self.model_info.layer_list[nlayer+1].layer_type != "fully":
-                            pass # data = (nlayer+1, h, w, c)
+                            data = (nlayer+1, h, w, c)
                         else:
                             data = (nlayer+1, pos, 0, 0)
                         des_pe_set = self.fm_data_used_pe_idx[nlayer+1][pos]
