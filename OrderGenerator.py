@@ -13,6 +13,7 @@ class OrderGenerator(object):
         model_config = ModelConfig()
         self.model_info = Model(model_config)
         self.mp_info = mapping_information
+        self.trace = trace
         #self.free_buffer_controller = FreeBufferController()
 
        #---紀錄每一筆feature map data會被哪些PE用到---#
@@ -115,8 +116,8 @@ class OrderGenerator(object):
 
         self.Computation_order = []
         self.generate_order()
-        if trace:
-            self.print_order()
+        
+        self.print_order()
        
     def generate_order(self):
         for nlayer in range(self.model_info.layer_length):
@@ -486,7 +487,7 @@ class OrderGenerator(object):
                                         edram_write_data.append((nlayer+1, window_h, window_w, f))
                                     wr_outputs = edram_write_data
 
-                                    event = EventMetaData("edram_wr", wr_position_idx, wr_preceding_count, [wr_event_idx+1], nlayer, wr_inputs, wr_outputs)
+                                    event = EventMetaData("edram_wr", wr_position_idx, wr_preceding_count, [], nlayer, wr_inputs, wr_outputs)
                                     self.Computation_order.append(event)
                                     self.Computation_order[act_event_idx].proceeding_event.append(wr_event_idx) # dependency
                                    #---------------------#
@@ -856,7 +857,7 @@ class OrderGenerator(object):
                                 edram_write_data.append((nlayer+1, f, 0, 0))
                             wr_outputs = edram_write_data
 
-                            event = EventMetaData("edram_wr", wr_position_idx, wr_preceding_count, [wr_event_idx+1], nlayer, wr_inputs, wr_outputs)
+                            event = EventMetaData("edram_wr", wr_position_idx, wr_preceding_count, [], nlayer, wr_inputs, wr_outputs)
                             self.Computation_order.append(event)
                             self.Computation_order[act_event_idx].proceeding_event.append(wr_event_idx) # dependency
                            #---------------------#
@@ -952,6 +953,7 @@ class OrderGenerator(object):
                         c = d[3]
                         pos = w + h * self.model_info.input_w[nlayer+1] + \
                                 c * self.model_info.input_w[nlayer+1] * self.model_info.input_h[nlayer+1]
+                        
                         if self.model_info.layer_list[nlayer+1].layer_type != "fully":
                             data = (nlayer+1, h, w, c)
                         else:
@@ -996,7 +998,7 @@ class OrderGenerator(object):
         self.activation_ctr = 0
         self.pooling_ctr = 0
         self.edram_wr_ctr = 0
-        self.edram_rd_pool_ctr = 0
+        self.edram_rd_ctr = 0
         self.data_transfer_ctr = 0
         for e in self.Computation_order:
             t = e.event_type
@@ -1010,8 +1012,8 @@ class OrderGenerator(object):
                 self.activation_ctr += 1
             elif t == "edram_wr":
                 self.edram_wr_ctr += 1
-            elif t == "edram_rd_pool":
-                self.edram_rd_pool_ctr += 1
+            elif t == "edram_rd":
+                self.edram_rd_ctr += 1
             elif t == "pooling":
                 self.pooling_ctr += 1
             elif t == "data_transfer":
@@ -1024,11 +1026,11 @@ class OrderGenerator(object):
         print("pe_saa_ctr", self.pe_saa_ctr)
         print("activation_ctr", self.activation_ctr)
         print("edram_wr_ctr", self.edram_wr_ctr)
-        print("edram_rd_pool_ctr", self.edram_rd_pool_ctr)
+        print("edram_rd_ctr", self.edram_rd_ctr)
         print("data_transfer_ctr", self.data_transfer_ctr)
         print("total", len(self.Computation_order))
 
-        if True:
+        if self.trace:
             for e in self.Computation_order:
                 print(self.Computation_order.index(e), e)
 

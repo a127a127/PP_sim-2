@@ -1,10 +1,9 @@
 from HardwareMetaData import HardwareMetaData
 class FetchEvent():
-    __slots__ = ["fetch_cycle", "cycles_counter", "event", "data"]
-    def __init__(self, event, data):
-        self.fetch_cycle = HardwareMetaData().Fetch_cycle
-        self.cycles_counter = 0
+    __slots__ = ["event", "des_pe", "data"]
+    def __init__(self, event, des_pe, data):
         self.event = event
+        self.des_pe = des_pe
         self.data  = data
         
     def __str__(self):

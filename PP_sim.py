@@ -40,7 +40,7 @@ def main():
         exit()
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-
+    
     ### Scheduling ###
     print("Scheduling policy: ", end="")
     if scheduling == "Non_pipeline":
@@ -67,7 +67,7 @@ def main():
     
     ### Trace ###
     isTrace_order      = True
-    isTrace_controller = False
+    isTrace_controller = False   
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
@@ -79,14 +79,11 @@ def main():
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
-    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling, replacement)
-    controller.run()
-
+    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling, replacement, path)
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    controller.print_statistics_result(path)
 
 if __name__ == '__main__':
     main()

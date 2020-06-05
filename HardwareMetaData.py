@@ -26,19 +26,15 @@ class HardwareMetaData(object):
             self.Router_num_y = 27
             self.Router_num_x = 27
         elif model_type == "Test":
-            self.Router_num_y = 3
-            self.Router_num_x = 3
+            self.Router_num_y = 8
+            self.Router_num_x = 1
         
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num_y = 4
-        self.CU_num_x = 3
-        self.CU_num = self.CU_num_y * self.CU_num_x
-        self.Xbar_num_y = 2
-        self.Xbar_num_x = 4
-        self.Xbar_num = self.Xbar_num_y * self.Xbar_num_x
+        self.CU_num = 12 #12
+        self.Xbar_num = 8 #8
         self.Xbar_h = 128
         self.Xbar_w = 128
         self.OU_h = 9
@@ -47,18 +43,17 @@ class HardwareMetaData(object):
         self.cell_bit_width = 2
 
         self.Frequency = 1.2 # GHz
-        self.ADC_resolution = 3 # bits
+        self.ADC_resolution = 8 # bits
         self.Router_flit_size = 32 # bits
         
         self.cycle_time = 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper # ns
-        self.eDRAM_read_latency = 1 / 1.2 / 256 # scaling from ISAAC (ns/per bit)
-        
+
         self.eDRAM_read_bits  = floor(256 * 1.2 * self.cycle_time) # bits / per cycle
         self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
 
         self.eDRAM_buffer_size  = 64 # nKB
 
-        # Leakage (沒資料)
+        # Leakage ()
         # self.eDRAM_buffer_leakage = 0
         # self.Router_leakage       = 0
         # self.Act_leakage          = 0
@@ -78,7 +73,6 @@ class HardwareMetaData(object):
         self.Energy_shift_and_add = 0.05 * 0.01 / 2 / 1.2 # per data doing shift and add
         self.Energy_pooling       = 0.4 * 0.01 / 1.2 # nxn data doing pooling
         self.Energy_or            = 1.68 * 0.01 / 1.2 / 128 # per bit
-        
         # per operation unit (ou)
         self.Energy_ou_dac      = 4 * 0.01 / 1.2 / 8 * self.OU_h / 128
         self.Energy_ou_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128))

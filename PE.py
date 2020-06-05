@@ -1,5 +1,5 @@
 from OnChipBuffer import OnChipBuffer
-from HardwareMetaData import HardwareMetaData
+from HardwareMetaData import HardwareMetaData as HW
 from ModelConfig import ModelConfig
 from CU import CU
 import collections
@@ -7,43 +7,29 @@ import collections
 class PE(object):
     def __init__(self, pe_pos):
         self.position = pe_pos
-
+        self.plot_idx = pe_pos[3] + pe_pos[2]*HW().PE_num_x + pe_pos[1]*HW().PE_num + pe_pos[0]*HW().Router_num_x*HW().PE_num
         self.state = False
 
-        ### for edram read event 
-        self.idle_eventQueuing_CU = collections.deque() # CU為idle且有event正在queuing的position
-        self.edram_rd_event = None
-        self.edram_rd_cu_idx = None
-        self.edram_rd_cycle_ctr = 0
-        self.data_to_ir_ing = False
-
-        ### for cu operation
-        self.cu_op_list = []
-
-        size = HardwareMetaData().eDRAM_buffer_size * 1024 * 8 / ModelConfig().input_bit
+        size = HW().eDRAM_buffer_size * 1024 * 8 / ModelConfig().input_bit
         self.edram_buffer = OnChipBuffer(size)
         self.buffer_size_util = [[], []] # [cycle, size]
 
-        self.input_require = []
+        ### # Event queue's CU index
+        self.edram_rd_cu_idx     = collections.deque() # set()
+        self.cu_operation_cu_idx = collections.deque()
 
-        ### event ready pool
-        self.pe_saa_erp = []
-        self.activation_erp = collections.deque()
-        self.edram_wr_erp   = collections.deque()
-        self.edram_rd_pool_erp = []
-
-        ### trigger event
-        self.cu_op_trigger = 0
-        self.activation_trigger = []
-        self.edram_wr_trigger = []
-        self.edram_rd_pool_trigger = []
-        self.edram_rd_ir_trigger = []
-        self.pe_saa_trigger = []
-
-        ### generate CU
-        self.CU_array = []
-        self.gen_cu()
-
+        ### event queue
+        self.edram_rd_erp     = collections.deque()
+        self.edram_rd_ir_erp  = [] # 一個CU一個edram_rd     event queue
+        self.cu_operation_erp = [] # 一個CU一個cu_operation event queue
+        for i in range(HW().CU_num):
+            self.edram_rd_ir_erp.append(collections.deque())
+            self.cu_operation_erp.append(collections.deque())
+        self.pe_saa_erp       = collections.deque()
+        self.activation_erp   = collections.deque()
+        self.edram_wr_erp     = collections.deque()
+        self.pooling_erp      = collections.deque()
+        
         ### Performance analysis
         self.is_wait_resource = False
         self.is_wait_transfer = False
@@ -51,7 +37,6 @@ class PE(object):
         self.wait_transfer_time    = 0
         self.wait_resource_time    = 0
         self.pure_computation_time = 0
-        
 
         ### Energy
         self.Edram_buffer_energy     = 0.
@@ -68,14 +53,11 @@ class PE(object):
         self.CU_IR_energy            = 0.
         self.CU_OR_energy            = 0.
 
-    def gen_cu(self):
-        rty, rtx, pey, pex = self.position[0], self.position[1], self.position[2], self.position[3] 
-        CU_num_y = HardwareMetaData().CU_num_y
-        CU_num_x = HardwareMetaData().CU_num_x
-        for cuy in range(CU_num_y):
-            for cux in range(CU_num_x):
-                cu_pos = (rty, rtx, pey, pex, cuy, cux)
-                self.CU_array.append(CU(cu_pos))
+        ### Performance analysis
+        self.busy_cu       = 0
+        self.busy_other    = 0
+        self.idle_transfer = 0
+        self.idle_other    = 0
 
     def __str__(self):
         return str(self.__dict__)
