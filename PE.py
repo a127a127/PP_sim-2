@@ -1,7 +1,6 @@
 from OnChipBuffer import OnChipBuffer
 from HardwareMetaData import HardwareMetaData as HW
 from ModelConfig import ModelConfig
-from CU import CU
 import collections
 
 class PE(object):
