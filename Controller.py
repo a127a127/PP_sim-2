@@ -16,7 +16,9 @@ import matplotlib.pyplot as plt
 
 import time
 
-# performance(cu+pe), Frinegrain
+# performance(cu+pe), 
+# Mapping: Frinegrain, pooling mapping, 
+# interconnect街口, 跳cycle看效能比較(util會影響？), ideal
 
 class Controller(object):
     def __init__(self, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
@@ -68,8 +70,8 @@ class Controller(object):
         self.Trigger = dict()
 
         # Utilization
-        self.pe_state_for_plot = [0]
-        # self.cu_state_for_plot = [[], []]
+        self.pe_state_for_plot = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
+        self.cu_state_for_plot = [0] # [{CU1, CU2}, {CU1, CU2}, ...]
         # self.check_buffer_pe_set = set()
 
         # Pipeline control
@@ -339,10 +341,17 @@ class Controller(object):
                 self.Trigger[finish_cycle].append([pe, pro_event, cu_idx])
             
             # PE util
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                self.pe_state_for_plot.append(set())
+            for cycle in range(len(self.pe_state_for_plot), finish_cycle):
+                 self.pe_state_for_plot.append(set())
             for cycle in range(self.cycle_ctr, finish_cycle):
                 self.pe_state_for_plot[cycle].add(pe.plot_idx)
+            
+            # CU util
+            for cycle in range(len(self.cu_state_for_plot), finish_cycle):
+                self.cu_state_for_plot.append(set())
+            for cycle in range(self.cycle_ctr, finish_cycle):
+                cu_plot_idx = pe.plot_idx * HW().CU_num + cu_idx
+                self.cu_state_for_plot[cycle].add(cu_plot_idx)
             
         self.cu_operation_pe_idx = set()
 
@@ -693,8 +702,8 @@ class Controller(object):
         self.buffer_analysis()
         print("output pe utilization...")
         self.pe_utilization()
-        # print("output cu utilization...")
-        # self.cu_utilization()
+        print("output cu utilization...")
+        self.cu_utilization()
         # print("output performance anaylsis...")
         # self.performance_statistics()
         self.output_result()
@@ -799,3 +808,11 @@ class Controller(object):
                 if self.pe_state_for_plot[cycle]:
                     for pe_idx in self.pe_state_for_plot[cycle]:
                         writer.writerow([cycle, pe_idx])
+
+    def cu_utilization(self):
+        with open(self.path+'/CU_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for cycle in range(1, len(self.cu_state_for_plot)):
+                if self.cu_state_for_plot[cycle]:
+                    for cu_idx in self.cu_state_for_plot[cycle]:
+                        writer.writerow([cycle, cu_idx])
