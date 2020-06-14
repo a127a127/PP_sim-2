@@ -4,21 +4,21 @@ from PE import PE
 
 from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
-from Interconnect import Interconnect
-from Packet import Packet
+#from Interconnect import Interconnect
+#from Packet import Packet
 
 import numpy as np
-from math import ceil, floor
-import os, csv, copy, sys
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import csv
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 import time
 
-# performance(cu+pe), 
-# Mapping: Frinegrain, pooling mapping, 
-# interconnect街口, 跳cycle看效能比較(util會影響？), ideal
+# performance(cu+pe) : delay 先把idle busy分出來
+# Mapping: pooling mapping
+# interconnect街口
+# 跳cycle看效能比較(util會影響？), ideal
 
 class Controller(object):
     def __init__(self, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
@@ -244,7 +244,7 @@ class Controller(object):
         for pe in self.edram_rd_pe_idx:
             if pe.edram_rd_erp: # 非CU的edram read
                 event = pe.edram_rd_erp.popleft()
-                if pe.edram_rd_erp:
+                if pe.edram_rd_erp or pe.edram_rd_cu_idx:
                     check_pe_idx.add(pe)
             else:
                 cu_idx = pe.edram_rd_cu_idx.popleft()
@@ -346,12 +346,12 @@ class Controller(object):
             for cycle in range(self.cycle_ctr, finish_cycle):
                 self.pe_state_for_plot[cycle].add(pe.plot_idx)
             
-            # CU util
-            for cycle in range(len(self.cu_state_for_plot), finish_cycle):
-                self.cu_state_for_plot.append(set())
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                cu_plot_idx = pe.plot_idx * HW().CU_num + cu_idx
-                self.cu_state_for_plot[cycle].add(cu_plot_idx)
+            # # CU util
+            # for cycle in range(len(self.cu_state_for_plot), finish_cycle):
+            #     self.cu_state_for_plot.append(set())
+            # for cycle in range(self.cycle_ctr, finish_cycle):
+            #     cu_plot_idx = pe.plot_idx * HW().CU_num + cu_idx
+            #     self.cu_state_for_plot[cycle].add(cu_plot_idx)
             
         self.cu_operation_pe_idx = set()
 

@@ -251,41 +251,6 @@ class SameColumnFirstMapping(object):
                                                oc))
                             inputs.append(nn)
                 
-
-                '''
-                input_per_pe = len(inputs) // used_pe_num # split into multiple pe
-                if input_per_pe == 0:
-                    input_per_pe = 1    
-                for pe_n in range(used_pe_num):
-                    if pe_n != 0:
-                        pe_w += 1
-                        if pe_w >= HW().PE_num_x:
-                            pe_w = 0
-                            pe_h += 1
-                            if pe_h >= HW().PE_num_y:
-                                pe_h = 0
-                                if rt_h % 2 == 0:
-                                    rt_w += 1
-                                    if rt_w >= HW().Router_num_x:
-                                        rt_w -= 1
-                                        rt_h += 1
-                                else:
-                                    rt_w -= 1
-                                    if rt_w < 0:
-                                        rt_w = 0
-                                        rt_h += 1
-                    this_input = []
-                    if pe_n + 1 == used_pe_num:
-                        for i in range(pe_n * input_per_pe, len(inputs)):
-                            this_input.append(inputs[i])
-                    else:
-                        for i in range(pe_n * input_per_pe, (pe_n+1) * input_per_pe):
-                            this_input.append(inputs[i])
-
-                    if this_input:
-                        self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = this_input
-                        self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
-                '''
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 

@@ -43,7 +43,7 @@ class HardwareMetaData(object):
         self.cell_bit_width = 2
 
         self.Frequency = 1.2 # GHz
-        self.ADC_resolution = 8 # bits
+        self.ADC_resolution = 8 # bits # TODO: 算resolution
         self.Router_flit_size = 32 # bits
         
         self.cycle_time = 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper # ns

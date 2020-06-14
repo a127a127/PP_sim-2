@@ -8,7 +8,6 @@ from Controller import Controller
 from ModelConfig import ModelConfig
 
 import time, sys, os
-#import pickle
 
 def main():
     start_time = time.time()
@@ -75,7 +74,7 @@ def main():
     order_generator = OrderGenerator(mapping_information, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-
+    
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")

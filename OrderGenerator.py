@@ -895,100 +895,104 @@ class OrderGenerator(object):
                #=============#
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+                eDRAM_read_bits = HW().eDRAM_read_bits # per cycle
+                eDRAM_read_data = math.floor(eDRAM_read_bits / ModelConfig().input_bit) # per cycle
+                pooling_data = self.model_info.pooling_h[nlayer] * self.model_info.pooling_w[nlayer] # per pooling
+                num_pooling_per_cycle = math.floor(eDRAM_read_data / pooling_data) # 一個cycle最多可以做幾個pooling
                 for pe_pos in self.mp_info.layer_used_pe[nlayer]:
                     rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
                     pey_idx, pex_idx = pe_pos[2], pe_pos[3]
 
                     pe_inputs = self.mp_info.mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx][nlayer]
-                   #---Event: edram_rd---#
-                    eri_event_idx = len(self.Computation_order)
-                    eri_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                    
-                    edram_read_data = set()
-                    for pool_inp in pe_inputs:
-                        for data in pool_inp[1]:
-                            edram_read_data.add(data)
-                    edram_read_data = list(edram_read_data)
-
-                    # dependency: transfer -> edram_rd
-                    pre_event = set()
-                    if nlayer != 0:
-                        for data in edram_read_data:
-                            h = data[1]
-                            w = data[2]
-                            c = data[3]
-                            pos = w + h * self.model_info.input_w[nlayer] + \
-                                c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]
-                            transfer_event_idx = self.fm_data_transfer_event_idx[nlayer-1][pos][pe_pos]
-                            pre_event.add(transfer_event_idx)
-                            if eri_event_idx not in self.Computation_order[transfer_event_idx].proceeding_event:
-                                self.Computation_order[transfer_event_idx].proceeding_event.append(eri_event_idx)
-                    eri_preceding_count = len(pre_event)
-                    eri_inputs  = edram_read_data
-                    eri_outputs = 0
-                    event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
-                    self.Computation_order.append(event)
-                    ### input requirement
-                    #
-                   #---------------------#
-
-                   #---Event: pooling---#
-                    pooling_event_idx = len(self.Computation_order)
-                    pooling_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                    pooling_preceding_count = 1
-                    pooling_amount = len(pe_inputs) # 做幾次
-                    pooling_inputs  = pooling_amount
-                    pooling_outputs = []
-                    for pool_inp in pe_inputs:
-                        data = pool_inp[0]
-                        pooling_outputs.append(data)
-                    event = EventMetaData("pooling", pooling_position_idx, pooling_preceding_count, [], nlayer, pooling_inputs, pooling_outputs)
-                    self.Computation_order.append(event)
-                   #--------------------#
-
-                    des_pe_dict = dict() # {PE1: [data1, data2], PE2: [data1, data3]}
-                    for d in pooling_outputs:
-                        h = d[1]
-                        w = d[2]
-                        c = d[3]
-                        pos = w + h * self.model_info.input_w[nlayer+1] + \
-                                c * self.model_info.input_w[nlayer+1] * self.model_info.input_h[nlayer+1]
-                        
-                        if self.model_info.layer_list[nlayer+1].layer_type != "fully":
-                            data = (nlayer+1, h, w, c)
-                        else:
-                            data = (nlayer+1, pos, 0, 0)
-                        des_pe_set = self.fm_data_used_pe_idx[nlayer+1][pos]
-                        for des_pe in des_pe_set:
-                            if des_pe in des_pe_dict:
-                                des_pe_dict[des_pe].append(data)
-                            else:
-                                des_pe_dict[des_pe] = [data]
-                    for des_pe in des_pe_dict: # 一個目的地PE生一個data transfer event
-                       #---Event: data_transfer---#
-                        transfer_event_idx = len(self.Computation_order)
-                        data_transfer_src = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                        data_transfer_des = des_pe
-                        transfer_position_idx = [data_transfer_src, data_transfer_des]
-                        transfer_preceding_count = 1
-                        transfer_inputs  = 0
-                        transfer_outputs = des_pe_dict[des_pe]
-                        event = EventMetaData("data_transfer", transfer_position_idx, transfer_preceding_count, [], nlayer, transfer_inputs, transfer_outputs)
-                        self.Computation_order.append(event)
-                        self.Computation_order[pooling_event_idx].proceeding_event.append(transfer_event_idx)
-                        
-                        # 先記錄data transfer event的index, 在生下一層的eDRAM read才能接dependency
-                        for data in transfer_outputs:
-                            if self.model_info.layer_list[nlayer+1].layer_type != "fully":
+                    total_num_pooling = len(pe_inputs)
+                    num_pooling_events = math.ceil(total_num_pooling / num_pooling_per_cycle)
+                    for num_pooling in range(num_pooling_events):
+                        inputs = pe_inputs[num_pooling*num_pooling_per_cycle : (num_pooling+1)*num_pooling_per_cycle]
+                       #---Event: edram_rd---#
+                        eri_event_idx = len(self.Computation_order)
+                        eri_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
+                        edram_read_data = set()
+                        for pool_inp in inputs:
+                            for data in pool_inp[1]:
+                                edram_read_data.add(data)
+                        edram_read_data = list(edram_read_data)
+                        # dependency: transfer -> edram_rd
+                        pre_event = set()
+                        if nlayer != 0:
+                            for data in edram_read_data:
                                 h = data[1]
                                 w = data[2]
                                 c = data[3]
-                                pos = w + h * self.model_info.input_w[nlayer+1] + \
+                                pos = w + h * self.model_info.input_w[nlayer] + \
+                                    c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]
+                                transfer_event_idx = self.fm_data_transfer_event_idx[nlayer-1][pos][pe_pos]
+                                pre_event.add(transfer_event_idx)
+                                if eri_event_idx not in self.Computation_order[transfer_event_idx].proceeding_event:
+                                    self.Computation_order[transfer_event_idx].proceeding_event.append(eri_event_idx)
+                        eri_preceding_count = len(pre_event)
+                        eri_inputs  = edram_read_data
+                        eri_outputs = 0
+                        event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
+                        self.Computation_order.append(event)
+                        ### input requirement
+                        #
+                       #---------------------#
+                       #---Event: pooling---#
+                        pooling_event_idx = len(self.Computation_order)
+                        pooling_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
+                        pooling_preceding_count = 1
+                        pooling_amount = len(inputs) # 做幾次
+                        pooling_inputs  = pooling_amount
+                        pooling_outputs = []
+                        for pool_inp in inputs:
+                            data = pool_inp[0]
+                            pooling_outputs.append(data)
+                        event = EventMetaData("pooling", pooling_position_idx, pooling_preceding_count, [], nlayer, pooling_inputs, pooling_outputs)
+                        self.Computation_order.append(event)
+                       #--------------------#
+                        des_pe_dict = dict() # {PE1: [data1, data2], PE2: [data1, data3]}
+                        for d in pooling_outputs:
+                            h = d[1]
+                            w = d[2]
+                            c = d[3]
+                            pos = w + h * self.model_info.input_w[nlayer+1] + \
                                     c * self.model_info.input_w[nlayer+1] * self.model_info.input_h[nlayer+1]
+                            
+                            if self.model_info.layer_list[nlayer+1].layer_type != "fully":
+                                data = (nlayer+1, h, w, c)
                             else:
-                                pos = data[1]
-                            self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
-                       #--------------------------#
+                                data = (nlayer+1, pos, 0, 0)
+                            des_pe_set = self.fm_data_used_pe_idx[nlayer+1][pos]
+                            for des_pe in des_pe_set:
+                                if des_pe in des_pe_dict:
+                                    des_pe_dict[des_pe].append(data)
+                                else:
+                                    des_pe_dict[des_pe] = [data]
+                        for des_pe in des_pe_dict: # 一個目的地PE生一個data transfer event
+                           #---Event: data_transfer---#
+                            transfer_event_idx = len(self.Computation_order)
+                            data_transfer_src = (rty_idx, rtx_idx, pey_idx, pex_idx)
+                            data_transfer_des = des_pe
+                            transfer_position_idx = [data_transfer_src, data_transfer_des]
+                            transfer_preceding_count = 1
+                            transfer_inputs  = 0
+                            transfer_outputs = des_pe_dict[des_pe]
+                            event = EventMetaData("data_transfer", transfer_position_idx, transfer_preceding_count, [], nlayer, transfer_inputs, transfer_outputs)
+                            self.Computation_order.append(event)
+                            self.Computation_order[pooling_event_idx].proceeding_event.append(transfer_event_idx)
+                        
+                            # 先記錄data transfer event的index, 在生下一層的eDRAM read才能接dependency
+                            for data in transfer_outputs:
+                                if self.model_info.layer_list[nlayer+1].layer_type != "fully":
+                                    h = data[1]
+                                    w = data[2]
+                                    c = data[3]
+                                    pos = w + h * self.model_info.input_w[nlayer+1] + \
+                                        c * self.model_info.input_w[nlayer+1] * self.model_info.input_h[nlayer+1]
+                                else:
+                                    pos = data[1]
+                                self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
+                           #--------------------------#
         print('Order generated!')
 
     def print_order(self):
@@ -1031,7 +1035,12 @@ class OrderGenerator(object):
         print("total", len(self.Computation_order))
 
         if self.trace:
+            layer = 0
             for e in self.Computation_order:
+                if e.nlayer == layer:
+                    layer += 1
+                    print()
+                    print("layer:", e.nlayer)
                 print(self.Computation_order.index(e), e)
 
     def old(self):
