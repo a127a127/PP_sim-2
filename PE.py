@@ -1,29 +1,28 @@
 from OnChipBuffer import OnChipBuffer
-from HardwareMetaData import HardwareMetaData as HW
-from ModelConfig import ModelConfig
 import collections
 
 class PE(object):
-    def __init__(self, pe_pos):
+    def __init__(self, hw_config, input_bit, pe_pos):
         self.position = pe_pos
+        self.hw_config = hw_config
 
         rty, rtx = pe_pos[0], pe_pos[1]
         pey, pex = pe_pos[2], pe_pos[3]
 
         if rty % 2 == 0:
-            self.plot_idx = rty * HW().Router_num_x * HW().PE_num + \
-                            rtx * HW().PE_num + \
-                            pey * HW().PE_num_x + \
+            self.plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                            rtx * self.hw_config.PE_num + \
+                            pey * self.hw_config.PE_num_x + \
                             pex
         else:
-            self.plot_idx = rty * HW().Router_num_x * HW().PE_num + \
-                            (HW().Router_num_x - rtx - 1) * HW().PE_num + \
-                            pey * HW().PE_num_x + \
+            self.plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                            (self.hw_config.Router_num_x - rtx - 1) * self.hw_config.PE_num + \
+                            pey * self.hw_config.PE_num_x + \
                             pex
 
         self.state = False
 
-        size = HW().eDRAM_buffer_size * 1024 * 8 / ModelConfig().input_bit
+        size = self.hw_config.eDRAM_buffer_size * 1024 * 8 / input_bit
         self.edram_buffer = OnChipBuffer(size)
         self.buffer_size_util = [[], []] # [cycle, size]
 
@@ -35,7 +34,7 @@ class PE(object):
         self.edram_rd_erp     = collections.deque()
         self.edram_rd_ir_erp  = [] # 一個CU一個edram_rd     event queue
         self.cu_operation_erp = [] # 一個CU一個cu_operation event queue
-        for i in range(HW().CU_num):
+        for i in range(self.hw_config.CU_num):
             self.edram_rd_ir_erp.append(collections.deque())
             self.cu_operation_erp.append(collections.deque())
         self.pe_saa_erp       = collections.deque()

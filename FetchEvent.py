@@ -1,4 +1,3 @@
-from HardwareMetaData import HardwareMetaData
 class FetchEvent():
     __slots__ = ["event", "des_pe", "data"]
     def __init__(self, event, des_pe, data):

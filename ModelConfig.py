@@ -1,9 +1,9 @@
 from LayerMetaData import LayerMetaData
 
 class ModelConfig(object):
-    def __init__(self):
-        self.Model_type = "DeepID"
-        if self.Model_type == "Lenet":
+    def __init__(self, model_type):
+        self.Model_type = model_type
+        if self.Model_type   == "Lenet":
             self.layer_list = [
                 LayerMetaData("convolution",   6, 5, 5,  1, 1, 'VALID', 0, 0, 0,   0),
                 LayerMetaData("pooling",       0, 0, 0,  0, 0,       0, 2, 2, 2,   0),
@@ -132,13 +132,14 @@ class ModelConfig(object):
         
         elif self.Model_type == "Test":
             self.layer_list = [
-                #LayerMetaData("convolution",    4, 4, 4,  1, 1, 'VALID', 0, 0, 0,   0),
-                #LayerMetaData("convolution",    4, 2, 2,  4, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("convolution",     1, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
+                LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
+                LayerMetaData("fully",           0, 0, 0,  0, 0,       0, 0, 0, 0,   2)
+                #LayerMetaData("convolution",     1, 2, 2,  4, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  4)
-                LayerMetaData("convolution",      2,  4,  4,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("convolution",      2,  2,  2,  1, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("convolution",      1,  3,  3,  1, 1, 'SAME', 0, 0, 0,   0),
                 #LayerMetaData("pooling",          0,  0,  0,   0, 0,       0, 2, 2, 1,   0),
-                #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,     2),
                 #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   256)
                 ]
             self.input_n = 1
@@ -151,5 +152,6 @@ class ModelConfig(object):
         else:
             print("Wrong model type")
             exit()
+    
     def __str__(self):
             return str(self.__dict__)

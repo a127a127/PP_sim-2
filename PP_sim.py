@@ -6,13 +6,18 @@ from Mapping import SRFParallelsimMapping
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
+from HardwareConfig import HardwareConfig
 
 import time, sys, os
 
 def main():
     start_time = time.time()
-    mapping = sys.argv[1]
-    scheduling = sys.argv[2]
+    model      = sys.argv[1]
+    mapping    = sys.argv[2]
+    scheduling = sys.argv[3]
+
+    model_config = ModelConfig(model)
+    hw_config = HardwareConfig(model_config)
 
     ### Mapping ##
     start_mapping_time = time.time()
@@ -20,19 +25,21 @@ def main():
     print("Mapping policy:  ", end="")
     if mapping == "SCF":
         print("Same Column First Mapping")
-        mapping_information = SameColumnFirstMapping()
+        mapping_information = SameColumnFirstMapping(model_config, hw_config)
         mapping_str = "Same_Column_First_Mapping"
     elif mapping == "SRF":
         print("Same Row First Mapping")
-        mapping_information = SameRowFirstMapping()
+        mapping_information = SameRowFirstMapping(model_config, hw_config)
         mapping_str = "Same_Row_First_Mapping"
     elif mapping == "SCFParal":
         print("'SCF Parallelsim Mapping"+sys.argv[3])
-        mapping_information = SCFParallelsimMapping(int(sys.argv[3]))
+        paral = int(sys.argv[4])
+        mapping_information = SCFParallelsimMapping(model_config, hw_config, paral)
         mapping_str = "SCFParallelsim_Mapping"+sys.argv[3]
     elif mapping == "SRFParal":
         print("SRF Parallelsim Mapping"+sys.argv[3])
-        mapping_information = SRFParallelsimMapping(int(sys.argv[3]))
+        paral = int(sys.argv[4])
+        mapping_information = SRFParallelsimMapping(model_config, hw_config, paral)
         mapping_str = "SRFParallelsim_Mapping"+sys.argv[3]
     else:
         print("Wrong mapping type")
@@ -60,7 +67,7 @@ def main():
         print("LRU")
 
     ### dir ###
-    path = './statistics/'+ModelConfig().Model_type+'/'+mapping_str+'/'+scheduling
+    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
     if not os.path.exists(path):
             os.makedirs(path)
     
@@ -71,14 +78,14 @@ def main():
     ### Generate computation order graph ### 
     start_order_time = time.time()
     print("--- Generate computation order graph ---")
-    order_generator = OrderGenerator(mapping_information, isTrace_order)
+    order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
     
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
-    controller = Controller(order_generator, isTrace_controller, mapping_str, scheduling, replacement, path)
+    controller = Controller(model_config, hw_config, order_generator, isTrace_controller, mapping_str, scheduling, replacement, path)
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()

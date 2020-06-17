@@ -1,5 +1,3 @@
-from HardwareMetaData import HardwareMetaData as HW
-from ModelConfig import ModelConfig
 from Model import Model
 from MappingMetaData import MappingMetaData
 import sys
@@ -7,31 +5,31 @@ from math import ceil
 import numpy as np
 
 class SameColumnFirstMapping(object):
-    def __init__(self):
+    def __init__(self, model_config, hw_config):
         # 同一筆data要放在同一個crossbar
-        model_config = ModelConfig()
         print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
+        self.hw_config  = hw_config
 
         self.mapping_to_xbar = [] # convolution and fully
         self.mapping_to_pe = [] # pooling
-        for rty_idx in range(HW().Router_num_y):
+        for rty_idx in range(self.hw_config.Router_num_y):
             self.mapping_to_xbar.append([])
             self.mapping_to_pe.append([])
-            for rtx_idx in range(HW().Router_num_x):
+            for rtx_idx in range(self.hw_config.Router_num_x):
                 self.mapping_to_xbar[rty_idx].append([])
                 self.mapping_to_pe[rty_idx].append([])
-                for pey_idx in range(HW().PE_num_y):
+                for pey_idx in range(self.hw_config.PE_num_y):
                     self.mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.mapping_to_pe[rty_idx][rtx_idx].append([])
-                    for pex_idx in range(HW().PE_num_x):
+                    for pex_idx in range(self.hw_config.PE_num_x):
                         self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for nlayer in range(self.model_info.layer_length):
                             self.mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                        for cu_idx in range(HW().CU_num):
+                        for cu_idx in range(self.hw_config.CU_num):
                             self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                            for xb_idx in range(HW().Xbar_num):
+                            for xb_idx in range(self.hw_config.Xbar_num):
                                 self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx].append([])
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
@@ -56,12 +54,12 @@ class SameColumnFirstMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
 
-                mapping_height_num_xb = ceil(matrix_height / HW().Xbar_h)
+                mapping_height_num_xb = ceil(matrix_height / self.hw_config.Xbar_h)
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for w in range(mapping_width_num_xb):
                     # Filters
@@ -74,31 +72,31 @@ class SameColumnFirstMapping(object):
                     for h in range(mapping_height_num_xb):
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
-                            Inp = [i for i in range(h * HW().Xbar_h,(h+1) * HW().Xbar_h)]
+                            Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
                         else:
-                            Inp = [i for i in range(h * HW().Xbar_h, matrix_height)]
+                            Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                         self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer].append(MappingMetaData(Inp, Cols, Filters))
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                         else:
@@ -106,7 +104,7 @@ class SameColumnFirstMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
@@ -114,17 +112,17 @@ class SameColumnFirstMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                             else:
@@ -132,7 +130,7 @@ class SameColumnFirstMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                 else:
@@ -145,12 +143,12 @@ class SameColumnFirstMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
 
-                mapping_height_num_xb = ceil(matrix_height / HW().Xbar_h)
+                mapping_height_num_xb = ceil(matrix_height / self.hw_config.Xbar_h)
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for w in range(mapping_width_num_xb):
                     # Filters
@@ -164,31 +162,31 @@ class SameColumnFirstMapping(object):
                     for h in range(mapping_height_num_xb):
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
-                            Inp = [i for i in range(h * HW().Xbar_h,(h+1) * HW().Xbar_h)]
+                            Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
                         else:
-                            Inp = [i for i in range(h * HW().Xbar_h, matrix_height)]
+                            Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                         self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer].append(MappingMetaData(Inp, Cols, Filters))
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                         else:
@@ -196,7 +194,7 @@ class SameColumnFirstMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))                
@@ -204,17 +202,17 @@ class SameColumnFirstMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                             else:
@@ -222,7 +220,7 @@ class SameColumnFirstMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                 else:
@@ -260,31 +258,31 @@ class SameColumnFirstMapping(object):
         return str(self.__dict__)
 
 class SameRowFirstMapping(object):
-    def __init__(self):
+    def __init__(self, model_config, hw_config):
         # 同一筆data要放在同一個crossbar
-        model_config = ModelConfig()
         print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
+        self.hw_config = hw_config
 
         self.mapping_to_xbar = [] # convolution and fully
         self.mapping_to_pe = [] # pooling
-        for rty_idx in range(HW().Router_num_y):
+        for rty_idx in range(self.hw_config.Router_num_y):
             self.mapping_to_xbar.append([])
             self.mapping_to_pe.append([])
-            for rtx_idx in range(HW().Router_num_x):
+            for rtx_idx in range(self.hw_config.Router_num_x):
                 self.mapping_to_xbar[rty_idx].append([])
                 self.mapping_to_pe[rty_idx].append([])
-                for pey_idx in range(HW().PE_num_y):
+                for pey_idx in range(self.hw_config.PE_num_y):
                     self.mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.mapping_to_pe[rty_idx][rtx_idx].append([])
-                    for pex_idx in range(HW().PE_num_x):
+                    for pex_idx in range(self.hw_config.PE_num_x):
                         self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for nlayer in range(self.model_info.layer_length):
                             self.mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                        for cu_idx in range(HW().CU_num):
+                        for cu_idx in range(self.hw_config.CU_num):
                             self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                            for xb_idx in range(HW().Xbar_num):
+                            for xb_idx in range(self.hw_config.Xbar_num):
                                 self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx].append([])
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
@@ -309,19 +307,19 @@ class SameRowFirstMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
 
-                mapping_height_num_xb = ceil(matrix_height / HW().Xbar_h)
+                mapping_height_num_xb = ceil(matrix_height / self.hw_config.Xbar_h)
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 
                 for h in range(mapping_height_num_xb):
                     if h != mapping_height_num_xb-1:
-                        Inp = [i for i in range(h * HW().Xbar_h,(h+1) * HW().Xbar_h)]
+                        Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
                     else:
-                        Inp = [i for i in range(h * HW().Xbar_h, matrix_height)]
+                        Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                     for w in range(mapping_width_num_xb):
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
@@ -333,24 +331,24 @@ class SameRowFirstMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                         else:
@@ -358,7 +356,7 @@ class SameRowFirstMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
@@ -366,17 +364,17 @@ class SameRowFirstMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                             else:
@@ -384,7 +382,7 @@ class SameRowFirstMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                 else:
@@ -397,18 +395,18 @@ class SameRowFirstMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
 
-                mapping_height_num_xb = ceil(matrix_height / HW().Xbar_h)
+                mapping_height_num_xb = ceil(matrix_height / self.hw_config.Xbar_h)
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for h in range(mapping_height_num_xb):
                     if h != mapping_height_num_xb-1:
-                        Inp = [i for i in range(h * HW().Xbar_h,(h+1) * HW().Xbar_h)]
+                        Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
                     else:
-                        Inp = [i for i in range(h * HW().Xbar_h, matrix_height)]
+                        Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                     for w in range(mapping_width_num_xb):
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
@@ -420,24 +418,24 @@ class SameRowFirstMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                         else:
@@ -445,7 +443,7 @@ class SameRowFirstMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
@@ -453,17 +451,17 @@ class SameRowFirstMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                             else:
@@ -471,7 +469,7 @@ class SameRowFirstMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
                 else:
@@ -509,31 +507,31 @@ class SameRowFirstMapping(object):
         return str(self.__dict__)
 
 class SCFParallelsimMapping(object):
-    def __init__(self, parall):
+    def __init__(self, model_config, hw_config, parall):
         self.Parall = parall
-        model_config = ModelConfig()
         print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
+        self.hw_config = hw_config
 
         self.mapping_to_xbar = [] # convolution and fully
         self.mapping_to_pe = [] # pooling
-        for rty_idx in range(HW().Router_num_y):
+        for rty_idx in range(self.hw_config.Router_num_y):
             self.mapping_to_xbar.append([])
             self.mapping_to_pe.append([])
-            for rtx_idx in range(HW().Router_num_x):
+            for rtx_idx in range(self.hw_config.Router_num_x):
                 self.mapping_to_xbar[rty_idx].append([])
                 self.mapping_to_pe[rty_idx].append([])
-                for pey_idx in range(HW().PE_num_y):
+                for pey_idx in range(self.hw_config.PE_num_y):
                     self.mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.mapping_to_pe[rty_idx][rtx_idx].append([])
-                    for pex_idx in range(HW().PE_num_x):
+                    for pex_idx in range(self.hw_config.PE_num_x):
                         self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for nlayer in range(self.model_info.layer_length):
                             self.mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                        for cu_idx in range(HW().CU_num):
+                        for cu_idx in range(self.hw_config.CU_num):
                             self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                            for xb_idx in range(HW().Xbar_num):
+                            for xb_idx in range(self.hw_config.Xbar_num):
                                 self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx].append([])
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
@@ -558,13 +556,13 @@ class SCFParallelsimMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
                 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
                 filters_per_xb = ceil(filters_per_xb / self.Parall) # 1
 
-                H = ceil(HW().Xbar_h / self.Parall) # 2
+                H = ceil(self.hw_config.Xbar_h / self.Parall) # 2
                 mapping_height_num_xb = ceil(matrix_height / H) # 3
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for w in range(mapping_width_num_xb):
@@ -583,24 +581,24 @@ class SCFParallelsimMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     #print("no enough crossbar")
                                                     #exit()
@@ -609,7 +607,7 @@ class SCFParallelsimMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     #print("no enough crossbar")
                                                     #exit()
@@ -618,17 +616,17 @@ class SCFParallelsimMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -637,7 +635,7 @@ class SCFParallelsimMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -651,13 +649,13 @@ class SCFParallelsimMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
                 filters_per_xb = ceil(filters_per_xb / self.Parall) # 1
 
-                H = ceil(HW().Xbar_h / self.Parall) # 2
+                H = ceil(self.hw_config.Xbar_h / self.Parall) # 2
                 mapping_height_num_xb = ceil(matrix_height / H) # 3
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for w in range(mapping_width_num_xb):
@@ -676,24 +674,24 @@ class SCFParallelsimMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -702,7 +700,7 @@ class SCFParallelsimMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -711,17 +709,17 @@ class SCFParallelsimMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -730,7 +728,7 @@ class SCFParallelsimMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -769,31 +767,31 @@ class SCFParallelsimMapping(object):
         return str(self.__dict__)
 
 class SRFParallelsimMapping(object):
-    def __init__(self, parall):
+    def __init__(self, model_config, hw_config, parall):
         self.Parall = parall
-        model_config = ModelConfig()
         print("Model:", model_config.Model_type)
         self.model_info = Model(model_config)
+        self.hw_config  = hw_config
 
         self.mapping_to_xbar = [] # convolution and fully
         self.mapping_to_pe = [] # pooling
-        for rty_idx in range(HW().Router_num_y):
+        for rty_idx in range(self.hw_config.Router_num_y):
             self.mapping_to_xbar.append([])
             self.mapping_to_pe.append([])
-            for rtx_idx in range(HW().Router_num_x):
+            for rtx_idx in range(self.hw_config.Router_num_x):
                 self.mapping_to_xbar[rty_idx].append([])
                 self.mapping_to_pe[rty_idx].append([])
-                for pey_idx in range(HW().PE_num_y):
+                for pey_idx in range(self.hw_config.PE_num_y):
                     self.mapping_to_xbar[rty_idx][rtx_idx].append([])
                     self.mapping_to_pe[rty_idx][rtx_idx].append([])
-                    for pex_idx in range(HW().PE_num_x):
+                    for pex_idx in range(self.hw_config.PE_num_x):
                         self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx].append([])
                         self.mapping_to_pe[rty_idx][rtx_idx][pey_idx].append([])
                         for nlayer in range(self.model_info.layer_length):
                             self.mapping_to_pe[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                        for cu_idx in range(HW().CU_num):
+                        for cu_idx in range(self.hw_config.CU_num):
                             self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx].append([])
-                            for xb_idx in range(HW().Xbar_num):
+                            for xb_idx in range(self.hw_config.Xbar_num):
                                 self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx].append([])
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
@@ -818,13 +816,13 @@ class SRFParallelsimMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
                 filters_per_xb = ceil(filters_per_xb / self.Parall) # 1
 
-                H = ceil(HW().Xbar_h / self.Parall) # 2
+                H = ceil(self.hw_config.Xbar_h / self.Parall) # 2
                 mapping_height_num_xb = ceil(matrix_height / H) # 3
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for h in range(mapping_height_num_xb):
@@ -843,24 +841,24 @@ class SRFParallelsimMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -869,7 +867,7 @@ class SRFParallelsimMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -878,17 +876,17 @@ class SRFParallelsimMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -897,7 +895,7 @@ class SRFParallelsimMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -911,13 +909,13 @@ class SRFParallelsimMapping(object):
                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
-                cells_per_weight = ceil(self.model_info.filter_bit / HW().cell_bit_width) # 16/2 = 8 cells per weight
+                cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
                 matrix_height = self.model_info.filter_length[nlayer]
                 matrix_width  = self.model_info.filter_n[nlayer]
-                filters_per_xb = HW().Xbar_w // cells_per_weight
+                filters_per_xb = self.hw_config.Xbar_w // cells_per_weight
                 filters_per_xb = ceil(filters_per_xb / self.Parall) # 1
 
-                H = ceil(HW().Xbar_h / self.Parall) # 2
+                H = ceil(self.hw_config.Xbar_h / self.Parall) # 2
                 mapping_height_num_xb = ceil(matrix_height / H) # 3
                 mapping_width_num_xb  = ceil(matrix_width  / filters_per_xb) # width / 16
                 for h in range(mapping_height_num_xb):
@@ -936,24 +934,24 @@ class SRFParallelsimMapping(object):
                         
                         # 算下一個XB的位置
                         xb_n += 1
-                        if xb_n >= HW().Xbar_num:
+                        if xb_n >= self.hw_config.Xbar_num:
                             xb_n = 0
                             cu_n += 1
-                            if cu_n >= HW().CU_num:
+                            if cu_n >= self.hw_config.CU_num:
                                 cu_n = 0
                                 pe_w += 1
                                 used_pe_num += 1
-                                if pe_w >= HW().PE_num_x:
+                                if pe_w >= self.hw_config.PE_num_x:
                                     pe_w = 0
                                     pe_h += 1
-                                    if pe_h >= HW().PE_num_y:
+                                    if pe_h >= self.hw_config.PE_num_y:
                                         pe_h = 0
                                         if rt_h % 2 == 0:
                                             rt_w += 1
-                                            if rt_w >= HW().Router_num_x:
+                                            if rt_w >= self.hw_config.Router_num_x:
                                                 rt_w -= 1
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -962,7 +960,7 @@ class SRFParallelsimMapping(object):
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
-                                                if rt_h >= HW().Router_num_y:
+                                                if rt_h >= self.hw_config.Router_num_y:
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
@@ -971,17 +969,17 @@ class SRFParallelsimMapping(object):
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     pe_w += 1
-                    if pe_w >= HW().PE_num_x:
+                    if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
                         pe_h += 1
-                        if pe_h >= HW().PE_num_y:
+                        if pe_h >= self.hw_config.PE_num_y:
                             pe_h = 0
                             if rt_h % 2 == 0:
                                 rt_w += 1
-                                if rt_w >= HW().Router_num_x:
+                                if rt_w >= self.hw_config.Router_num_x:
                                     rt_w -= 1
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
@@ -990,7 +988,7 @@ class SRFParallelsimMapping(object):
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
-                                    if rt_h >= HW().Router_num_y:
+                                    if rt_h >= self.hw_config.Router_num_y:
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()

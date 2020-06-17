@@ -1,12 +1,11 @@
 
-from ModelConfig import ModelConfig
 from math import floor
 
-class HardwareMetaData(object):
-    def __init__(self):
+class HardwareConfig(object):
+    def __init__(self, model_config):
         # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
 
-        model_type = ModelConfig().Model_type
+        model_type = model_config.Model_type
         if model_type == "Lenet": # 12 PEs
             self.Router_num_y = 2
             self.Router_num_x = 2

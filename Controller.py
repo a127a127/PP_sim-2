@@ -1,5 +1,3 @@
-from HardwareMetaData import HardwareMetaData as HW
-from ModelConfig import ModelConfig
 from PE import PE
 
 from EventMetaData import EventMetaData
@@ -21,7 +19,9 @@ import time
     # 每個cycle紀錄 pe util, cu util, layer 
 
 class Controller(object):
-    def __init__(self, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
+    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
+        self.model_config = model_config
+        self.hw_config = hw_config
         self.ordergenerator = ordergenerator
         self.trace = trace
         self.mapping_str = mapping_str
@@ -44,12 +44,12 @@ class Controller(object):
         self.input_bit = self.ordergenerator.model_info.input_bit
 
         self.PE_array = dict()
-        for rty_idx in range(HW().Router_num_y):
-            for rtx_idx in range(HW().Router_num_x):
-                for pey_idx in range(HW().PE_num_y):
-                    for pex_idx in range(HW().PE_num_x):
+        for rty_idx in range(self.hw_config.Router_num_y):
+            for rtx_idx in range(self.hw_config.Router_num_x):
+                for pey_idx in range(self.hw_config.PE_num_y):
+                    for pex_idx in range(self.hw_config.PE_num_x):
                         pe_pos = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                        pe = PE(pe_pos)
+                        pe = PE(self.hw_config, self.model_config.input_bit, pe_pos)
                         self.PE_array[pe_pos] = pe
 
         self.fetch_array = []
@@ -74,7 +74,7 @@ class Controller(object):
         self.cu_state_for_plot = [0] # [{CU1, CU2}, {CU1, CU2}, ...]
         self.layer_state_for_plot = [0] # [{layer0, layer1}, {layer0}, {layer0, layer1}...]
         self.layer_finish_cycle = []
-        for nlayer in range(len(ModelConfig().layer_list)):
+        for nlayer in range(len(model_config.layer_list)):
             self.layer_finish_cycle.append(0)
 
         # Pipeline control
@@ -286,12 +286,12 @@ class Controller(object):
                 # Energy
                 num_data = len(edram_rd_data)
                 if event.event_type == "edram_rd_ir":
-                    pe.Edram_buffer_energy += HW().Energy_edram_buffer * self.input_bit * num_data # read
-                    pe.Bus_energy += HW().Energy_bus * self.input_bit * num_data # bus
-                    pe.CU_IR_energy += HW().Energy_ir_in_cu * self.input_bit * num_data # write
+                    pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
+                    pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data # bus
+                    pe.CU_IR_energy += self.hw_config.Energy_ir_in_cu * self.input_bit * num_data # write
                 else: # edram_rd
-                    pe.Edram_buffer_energy += HW().Energy_edram_buffer * self.input_bit * num_data # read
-                    pe.Bus_energy += HW().Energy_bus * self.input_bit * num_data # bus
+                    pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
+                    pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data # bus
                 
                 # Trigger
                 pro_event_idx = event.proceeding_event[0] # 只會有一個pro event
@@ -331,13 +331,13 @@ class Controller(object):
             ou_num_dict = event.outputs
             for xb_idx in ou_num_dict:
                 ou_num = ou_num_dict[xb_idx]
-                pe.CU_dac_energy += HW().Energy_ou_dac * ou_num
-                pe.CU_crossbar_energy += HW().Energy_ou_crossbar * ou_num
-                pe.CU_adc_energy += HW().Energy_ou_adc * ou_num
-                pe.CU_shift_and_add_energy += HW().Energy_ou_ssa * ou_num
+                pe.CU_dac_energy += self.hw_config.Energy_ou_dac * ou_num
+                pe.CU_crossbar_energy += self.hw_config.Energy_ou_crossbar * ou_num
+                pe.CU_adc_energy += self.hw_config.Energy_ou_adc * ou_num
+                pe.CU_shift_and_add_energy += self.hw_config.Energy_ou_ssa * ou_num
                 
-                pe.CU_IR_energy += HW().Energy_ir_in_cu * ou_num * HW().OU_h 
-                pe.CU_OR_energy += HW().Energy_or_in_cu * ou_num * HW().OU_w * HW().ADC_resolution
+                pe.CU_IR_energy += self.hw_config.Energy_ir_in_cu * ou_num * self.hw_config.OU_h 
+                pe.CU_OR_energy += self.hw_config.Energy_or_in_cu * ou_num * self.hw_config.OU_w * self.hw_config.ADC_resolution
 
             # Trigger
             pro_event_idx = event.proceeding_event[0] # 只會有一個pro event
@@ -360,7 +360,7 @@ class Controller(object):
             # for cycle in range(len(self.cu_state_for_plot), finish_cycle):
             #     self.cu_state_for_plot.append(set())
             # for cycle in range(self.cycle_ctr, finish_cycle):
-            #     cu_plot_idx = pe.plot_idx * HW().CU_num + cu_idx
+            #     cu_plot_idx = pe.plot_idx * self.hw_config.CU_num + cu_idx
             #     self.cu_state_for_plot[cycle].add(cu_plot_idx)
 
             # layer
@@ -387,11 +387,11 @@ class Controller(object):
             
             # Energy
             saa_amount = event.inputs
-            pe.Or_energy += HW().Energy_or * self.input_bit * saa_amount
-            pe.Bus_energy += HW().Energy_bus * self.input_bit * saa_amount
-            pe.PE_shift_and_add_energy += HW().Energy_shift_and_add * saa_amount
-            pe.Bus_energy += HW().Energy_bus * self.input_bit * saa_amount
-            pe.Or_energy += HW().Energy_or * self.input_bit * saa_amount
+            pe.Or_energy += self.hw_config.Energy_or * self.input_bit * saa_amount
+            pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * saa_amount
+            pe.PE_shift_and_add_energy += self.hw_config.Energy_shift_and_add * saa_amount
+            pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * saa_amount
+            pe.Or_energy += self.hw_config.Energy_or * self.input_bit * saa_amount
 
             # Trigger
             for proceeding_index in event.proceeding_event:
@@ -430,9 +430,9 @@ class Controller(object):
             
             # Energy
             act_amount = event.inputs
-            pe.Or_energy += HW().Energy_or * self.input_bit * act_amount
-            pe.Bus_energy += HW().Energy_bus * self.input_bit * act_amount
-            pe.Activation_energy += HW().Energy_activation * act_amount
+            pe.Or_energy += self.hw_config.Energy_or * self.input_bit * act_amount
+            pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * act_amount
+            pe.Activation_energy += self.hw_config.Energy_activation * act_amount
 
             # Trigger
             for proceeding_index in event.proceeding_event:
@@ -470,8 +470,8 @@ class Controller(object):
             # Energy
             edram_write_data = event.outputs
             num_data = len(edram_write_data)
-            pe.Bus_energy += HW().Energy_bus * self.input_bit * num_data
-            pe.Edram_buffer_energy += HW().Energy_edram_buffer * self.input_bit * num_data
+            pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data
+            pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data
 
             # Write data
             for data in edram_write_data:
@@ -518,7 +518,7 @@ class Controller(object):
             
             # Energy
             pooling_amount = event.inputs
-            pe.Pooling_energy += HW().Energy_pooling * pooling_amount
+            pe.Pooling_energy += self.hw_config.Energy_pooling * pooling_amount
 
             # Trigger
             for proceeding_index in event.proceeding_event:
@@ -582,8 +582,8 @@ class Controller(object):
                 transfer_distance += abs(data_transfer_des[0] - data_transfer_src[0])
 
                 # Energy
-                self.Total_energy_interconnect += HW().Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-                des_pe.Edram_buffer_energy += HW().Energy_edram_buffer * self.input_bit * num_data # write
+                self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
+                des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
                 # Trigger
                 finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
@@ -613,11 +613,11 @@ class Controller(object):
             transfer_distance = des_pe.position[0]
 
             # Energy
-            self.Total_energy_interconnect += HW().Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-            des_pe.Edram_buffer_energy += HW().Energy_edram_buffer * self.input_bit * num_data # write
+            self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
+            des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
             # Cycle
-            finish_cycle = self.cycle_ctr + 1 + HW().Fetch_cycle + transfer_distance + 1
+            finish_cycle = self.cycle_ctr + 1 + self.hw_config.Fetch_cycle + transfer_distance + 1
             
             # Trigger
             if finish_cycle not in self.Trigger:
@@ -733,7 +733,7 @@ class Controller(object):
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
-        print("Cycles time:", HW().cycle_time, "ns\n")
+        print("Cycles time:", self.hw_config.cycle_time, "ns\n")
         print()
 
         self.output_result()
@@ -796,7 +796,7 @@ class Controller(object):
             for pe_pos in self.PE_array:
                 pe = self.PE_array[pe_pos]
                 rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
-                idx = pex + pey * HW().PE_num_x + rtx * HW().PE_num + rty * HW().PE_num * HW().Router_num_x
+                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
                 arr = ["PE"+str(idx)]
                 arr.append(pe.Edram_buffer_energy)
                 arr.append(pe.Bus_energy)
@@ -829,7 +829,7 @@ class Controller(object):
                 if pe.edram_buffer.maximal_usage == 0:
                     continue
                 rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
-                idx = pex + pey * HW().PE_num_x + rtx * HW().PE_num + rty * HW().PE_num * HW().Router_num_x
+                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
                 writer.writerow(["PE"+str(idx), pe.edram_buffer.maximal_usage])
 
         # ### time history
@@ -869,7 +869,7 @@ class Controller(object):
 
     def layer_behavior(self):
         self.layer_used_cycle = []
-        for nlayer in range(len(ModelConfig().layer_list)):
+        for nlayer in range(len(self.model_config.layer_list)):
             self.layer_used_cycle.append(0)
         for cycle in range(1, len(self.layer_state_for_plot)):
             if self.layer_state_for_plot[cycle]:
@@ -879,7 +879,7 @@ class Controller(object):
         with open(self.path+'/Layer_behavior.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "busy_time", "idle_time"])
-            for nlayer in range(len(ModelConfig().layer_list)):
+            for nlayer in range(len(self.model_config.layer_list)):
                 busy_time = self.layer_used_cycle[nlayer]
                 idle_time = self.layer_finish_cycle[nlayer] - busy_time
                 writer.writerow([nlayer, busy_time, idle_time])
