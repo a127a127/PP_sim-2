@@ -6,7 +6,21 @@ import collections
 class PE(object):
     def __init__(self, pe_pos):
         self.position = pe_pos
-        self.plot_idx = pe_pos[3] + pe_pos[2]*HW().PE_num_x + pe_pos[1]*HW().PE_num + pe_pos[0]*HW().Router_num_x*HW().PE_num
+
+        rty, rtx = pe_pos[0], pe_pos[1]
+        pey, pex = pe_pos[2], pe_pos[3]
+
+        if rty % 2 == 0:
+            self.plot_idx = rty * HW().Router_num_x * HW().PE_num + \
+                            rtx * HW().PE_num + \
+                            pey * HW().PE_num_x + \
+                            pex
+        else:
+            self.plot_idx = rty * HW().Router_num_x * HW().PE_num + \
+                            (HW().Router_num_x - rtx - 1) * HW().PE_num + \
+                            pey * HW().PE_num_x + \
+                            pex
+
         self.state = False
 
         size = HW().eDRAM_buffer_size * 1024 * 8 / ModelConfig().input_bit
