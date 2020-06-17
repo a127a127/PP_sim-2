@@ -16,9 +16,9 @@ import csv
 import time
 
 # performance(cu+pe) : delay 先把idle busy分出來
-# Mapping: pooling mapping
 # interconnect街口
 # 跳cycle看效能比較(util會影響？), ideal
+    # 每個cycle紀錄 pe util, cu util, layer 
 
 class Controller(object):
     def __init__(self, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
@@ -72,7 +72,10 @@ class Controller(object):
         # Utilization
         self.pe_state_for_plot = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
         self.cu_state_for_plot = [0] # [{CU1, CU2}, {CU1, CU2}, ...]
-        # self.check_buffer_pe_set = set()
+        self.layer_state_for_plot = [0] # [{layer0, layer1}, {layer0}, {layer0, layer1}...]
+        self.layer_finish_cycle = []
+        for nlayer in range(len(ModelConfig().layer_list)):
+            self.layer_finish_cycle.append(0)
 
         # Pipeline control
         if not self.isPipeLine: # Non_pipeline
@@ -151,6 +154,8 @@ class Controller(object):
 
             if len(self.pe_state_for_plot) == self.cycle_ctr:
                 self.pe_state_for_plot.append(set())
+            if len(self.layer_state_for_plot) == self.cycle_ctr:
+                self.layer_state_for_plot.append(set())
 
             ## Pipeline stage control ###
             if not self.isPipeLine: # Non_pipeline
@@ -302,6 +307,11 @@ class Controller(object):
 
                 # PE util
                 self.pe_state_for_plot[self.cycle_ctr].add(pe.plot_idx)
+
+                # layer
+                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
+                if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
+                    self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
                 
         self.edram_rd_pe_idx = check_pe_idx
         
@@ -352,6 +362,15 @@ class Controller(object):
             # for cycle in range(self.cycle_ctr, finish_cycle):
             #     cu_plot_idx = pe.plot_idx * HW().CU_num + cu_idx
             #     self.cu_state_for_plot[cycle].add(cu_plot_idx)
+
+            # layer
+            for cycle in range(len(self.layer_state_for_plot), finish_cycle):
+                self.layer_state_for_plot.append(set())
+            for cycle in range(self.cycle_ctr, finish_cycle):
+                self.layer_state_for_plot[cycle].add(event.nlayer)
+            
+            if finish_cycle > self.layer_finish_cycle[event.nlayer]:
+                self.layer_finish_cycle[event.nlayer] = finish_cycle
             
         self.cu_operation_pe_idx = set()
 
@@ -388,6 +407,11 @@ class Controller(object):
             # PE util
             self.pe_state_for_plot[self.cycle_ctr].add(pe.plot_idx)
 
+            # layer
+            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
+            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
+                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+
             if pe.pe_saa_erp:
                 check_pe_idx.add(pe)
         
@@ -422,6 +446,11 @@ class Controller(object):
             
             # PE util
             self.pe_state_for_plot[self.cycle_ctr].add(pe.plot_idx)
+
+            # layer
+            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
+            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
+                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
 
             if pe.activation_erp:
                 check_pe_idx.add(pe)
@@ -467,6 +496,11 @@ class Controller(object):
             # PE util
             self.pe_state_for_plot[self.cycle_ctr].add(pe.plot_idx)
 
+            # layer
+            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
+            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
+                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+
             if pe.edram_wr_erp:
                 check_pe_idx.add(pe)
         self.edram_wr_pe_idx = check_pe_idx
@@ -499,6 +533,11 @@ class Controller(object):
             
             # PE util
             self.pe_state_for_plot[self.cycle_ctr].add(pe.plot_idx)
+
+            # layer
+            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
+            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
+                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
 
             if pe.pooling_erp:
                 check_pe_idx.add(pe)
@@ -653,6 +692,7 @@ class Controller(object):
             if pe.edram_rd_cu_idx:
                 pe.edram_rd_cu_idx.wait_transfer_time += 1
 
+
     def print_statistics_result(self):
         print("print_statistics_result")
         # self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -696,17 +736,20 @@ class Controller(object):
         print("Cycles time:", HW().cycle_time, "ns\n")
         print()
 
+        self.output_result()
         print("Energy breakdown:")
         self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
         print("output pe utilization...")
         self.pe_utilization()
-        print("output cu utilization...")
-        self.cu_utilization()
+        # print("output cu utilization...")
+        # self.cu_utilization()
+        print("output layer utilization...")
+        self.layer_utilization()
         # print("output performance anaylsis...")
         # self.performance_statistics()
-        self.output_result()
+        self.layer_behavior()
 
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
@@ -803,7 +846,6 @@ class Controller(object):
     def pe_utilization(self):
         with open(self.path+'/PE_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            #writer.writerow(["Cycle", "PE idx"])
             for cycle in range(1, len(self.pe_state_for_plot)):
                 if self.pe_state_for_plot[cycle]:
                     for pe_idx in self.pe_state_for_plot[cycle]:
@@ -816,3 +858,29 @@ class Controller(object):
                 if self.cu_state_for_plot[cycle]:
                     for cu_idx in self.cu_state_for_plot[cycle]:
                         writer.writerow([cycle, cu_idx])
+
+    def layer_utilization(self):
+        with open(self.path+'/Layer_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for cycle in range(1, len(self.layer_state_for_plot)):
+                if self.layer_state_for_plot[cycle]:
+                    for layer in self.layer_state_for_plot[cycle]:
+                        writer.writerow([cycle, layer])
+
+    def layer_behavior(self):
+        self.layer_used_cycle = []
+        for nlayer in range(len(ModelConfig().layer_list)):
+            self.layer_used_cycle.append(0)
+        for cycle in range(1, len(self.layer_state_for_plot)):
+            if self.layer_state_for_plot[cycle]:
+                for layer in self.layer_state_for_plot[cycle]:
+                    self.layer_used_cycle[layer] += 1
+        
+        with open(self.path+'/Layer_behavior.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "busy_time", "idle_time"])
+            for nlayer in range(len(ModelConfig().layer_list)):
+                busy_time = self.layer_used_cycle[nlayer]
+                idle_time = self.layer_finish_cycle[nlayer] - busy_time
+                writer.writerow([nlayer, busy_time, idle_time])
+
