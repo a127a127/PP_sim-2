@@ -601,16 +601,18 @@ class SCFParallelsimMapping(object):
                                                 rt_w -= 1
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    #print("no enough crossbar")
+                                                    #exit()
                                         else:
                                             rt_w -= 1
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    #print("no enough crossbar")
+                                                    #exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
@@ -627,16 +629,18 @@ class SCFParallelsimMapping(object):
                                     rt_w -= 1
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                             else:
                                 rt_w -= 1
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                 else:
                     used_pe_num -= 1
                     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -690,16 +694,18 @@ class SCFParallelsimMapping(object):
                                                 rt_w -= 1
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                         else:
                                             rt_w -= 1
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))                
                 
                 # next layer next PE
@@ -716,16 +722,18 @@ class SCFParallelsimMapping(object):
                                     rt_w -= 1
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                             else:
                                 rt_w -= 1
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                 else:
                     used_pe_num -= 1
                     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -853,16 +861,18 @@ class SRFParallelsimMapping(object):
                                                 rt_w -= 1
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                         else:
                                             rt_w -= 1
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
@@ -879,16 +889,18 @@ class SRFParallelsimMapping(object):
                                     rt_w -= 1
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                             else:
                                 rt_w -= 1
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                 else:
                     used_pe_num -= 1
                     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -942,16 +954,18 @@ class SRFParallelsimMapping(object):
                                                 rt_w -= 1
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                         else:
                                             rt_w -= 1
                                             if rt_w < 0:
                                                 rt_w = 0
                                                 rt_h += 1
                                                 if rt_h >= HW().Router_num_y:
-                                                    print("no enough crossbar")
-                                                    exit()
+                                                    rt_h, rt_w = 0, 0
+                                                    # print("no enough crossbar")
+                                                    # exit()
                                 self.layer_used_pe[nlayer].append((rt_h, rt_w, pe_h, pe_w))
 
                 # next layer next PE
@@ -968,16 +982,18 @@ class SRFParallelsimMapping(object):
                                     rt_w -= 1
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                             else:
                                 rt_w -= 1
                                 if rt_w < 0:
                                     rt_w = 0
                                     rt_h += 1
                                     if rt_h >= HW().Router_num_y:
-                                        print("no enough crossbar")
-                                        exit()
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
                 else:
                     used_pe_num -= 1
                     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
