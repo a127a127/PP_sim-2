@@ -162,10 +162,12 @@ class Controller(object):
                 self.this_layer_cycle_ctr += 1
                 if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
                     self.pipeline_layer_stage += 1
+                    print("\n------Layer", self.pipeline_layer_stage)
                     self.cycles_each_layer.append(self.this_layer_cycle_ctr)
                     self.this_layer_cycle_ctr = 0
                     self.this_layer_event_ctr = 0
 
+                    cu_dict = dict() # {PE0:{cu0, cu1}, PE1:{cu0, cu1}} # cu performance breakdown
                     for trigger in self.Non_pipeline_trigger:
                         pe = trigger[0]
                         event = trigger[1]
@@ -178,6 +180,12 @@ class Controller(object):
                             self.edram_rd_pe_idx.add(pe)
                             if cu_idx not in pe.edram_rd_cu_idx:
                                 pe.edram_rd_cu_idx.append(cu_idx)
+                            
+                            if pe not in cu_dict: # cu performance breakdown
+                                cu_dict[pe] = {cu_idx} # cu performance breakdown
+                            else: # cu performance breakdown
+                                cu_dict[pe].add(cu_idx) # cu performance breakdown
+                            
                         elif event.event_type == "edram_rd":
                             if len(trigger) == 3: # transfer data此時寫入buffer 
                                 transfer_data = trigger[2]
@@ -187,7 +195,12 @@ class Controller(object):
                             self.edram_rd_pe_idx.add(pe)
                         else:
                             print("error event type:", event.event_type)
+                        
+                    for pe in cu_dict: # cu performance breakdown
+                        for cu_idx in cu_dict[pe]: # cu performance breakdown
+                            pe.cu_wait_transfer[cu_idx] += (self.cycle_ctr - self.transfer_start_cycle) # cu performance breakdown
                     self.Non_pipeline_trigger = []
+
 
             if self.trace:
                 print("cycle:", self.cycle_ctr)
@@ -243,7 +256,7 @@ class Controller(object):
             ### Finish
             if self.done_event == len(self.Computation_order):
                 break
-
+        
     def event_edram_rd(self):
         check_pe_idx = set()
         for pe in self.edram_rd_pe_idx:
@@ -343,7 +356,7 @@ class Controller(object):
             pro_event_idx = event.proceeding_event[0] # 只會有一個pro event
             pro_event = self.Computation_order[pro_event_idx]
             
-            finish_cycle = self.cycle_ctr + 1 + event.inputs + 2 # +2: pipeline 最後兩個 stage
+            finish_cycle = self.cycle_ctr + event.inputs + 2 # +2: pipeline 最後兩個 stage
             
             if finish_cycle not in self.Trigger:
                 self.Trigger[finish_cycle] = [[pe, pro_event, cu_idx]]
@@ -371,6 +384,10 @@ class Controller(object):
             
             if finish_cycle > self.layer_finish_cycle[event.nlayer]:
                 self.layer_finish_cycle[event.nlayer] = finish_cycle
+
+            # cu performance breakdown
+            pe.cu_busy[cu_idx] += event.inputs + 2 + 1 # +1 cu_rd
+            pe.cu_finish_cycle[cu_idx] = self.cycle_ctr + event.inputs + 2 - 1
             
         self.cu_operation_pe_idx = set()
 
@@ -486,6 +503,7 @@ class Controller(object):
                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                     if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                         self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
+                        self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                     else:
                         finish_cycle = self.cycle_ctr + 1
                         if finish_cycle not in self.Trigger:
@@ -568,6 +586,7 @@ class Controller(object):
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                             self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
+                            self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                         else:
                             if finish_cycle not in self.Trigger:
                                 self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
@@ -593,6 +612,7 @@ class Controller(object):
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                             self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
+                            self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                         else:
                             if finish_cycle not in self.Trigger:
                                 self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
@@ -624,6 +644,13 @@ class Controller(object):
                 self.Trigger[finish_cycle] = [[des_pe, event, transfer_data]]
             else:
                 self.Trigger[finish_cycle].append([des_pe, event, transfer_data])
+            
+            # cu performance breakdown
+            pos_idx = event.position_idx
+            pe_pos = pos_idx[:4]
+            pe = self.PE_array[pe_pos]
+            cu_idx = pos_idx[4]
+            pe.cu_wait_transfer[cu_idx] += self.hw_config.Fetch_cycle + transfer_distance + 2
 
         self.fetch_array = []
 
@@ -750,6 +777,7 @@ class Controller(object):
         # print("output performance anaylsis...")
         # self.performance_statistics()
         self.layer_behavior()
+        self.cu_performance_breakdown()
 
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
@@ -884,3 +912,31 @@ class Controller(object):
                 idle_time = self.layer_finish_cycle[nlayer] - busy_time
                 writer.writerow([nlayer, busy_time, idle_time])
 
+    def cu_performance_breakdown(self):
+        for pe_pos in self.PE_array:
+            pe = self.PE_array[pe_pos]
+            for cu_idx in range(len(pe.cu_busy)):
+                pe.cu_idle[cu_idx] = pe.cu_finish_cycle[cu_idx] - pe.cu_busy[cu_idx] - pe.cu_wait_transfer[cu_idx] # cu performance breakdown
+        
+        Plot = [] # [PE0, PE1, PE2, ...]
+        for pe_n in range(len(self.PE_array)):
+            Plot.append([])
+        for pe_pos in self.PE_array:
+            pe = self.PE_array[pe_pos]
+            for cu_idx in range(self.hw_config.CU_num):
+                cu_busy = pe.cu_busy[cu_idx]
+                cu_wait_transfer = pe.cu_wait_transfer[cu_idx]
+                cu_idle = pe.cu_idle[cu_idx]
+                Plot[pe.plot_idx].append([cu_busy, cu_wait_transfer, cu_idle])
+
+        with open(self.path+'/CU_performance_breakdown.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "busy", "wait_transfer", "idle"])
+            for pe_idx in range(len(Plot)):
+                cu_list = Plot[pe_idx]
+                for cu_idx in range(len(cu_list)):
+                    row = cu_list[cu_idx]
+                    if row[0] != 0 or row[1] != 0 or row[2] !=0 :
+                        row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
+                        writer.writerow(row)
+                        
