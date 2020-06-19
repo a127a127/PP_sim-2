@@ -503,7 +503,6 @@ class Controller(object):
                 if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                     if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                         self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
-                        self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                     else:
                         finish_cycle = self.cycle_ctr + 1
                         if finish_cycle not in self.Trigger:
@@ -592,6 +591,8 @@ class Controller(object):
                                 self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
                             else:
                                 self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
+                            
+                            # cu performance breakdown
                     else:
                         for data in transfer_data: # 沒有trigger event先放data
                             des_pe.edram_buffer.put(data, data)
@@ -618,6 +619,11 @@ class Controller(object):
                                 self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
                             else:
                                 self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
+                            
+                            # cu performance breakdown
+                            print(pro_event)
+                            cu_idx = pro_event.position_idx[4]
+                            des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
                     else:
                         for data in transfer_data: # 沒有trigger event先放data
                             des_pe.edram_buffer.put(data, data)
@@ -916,7 +922,7 @@ class Controller(object):
         for pe_pos in self.PE_array:
             pe = self.PE_array[pe_pos]
             for cu_idx in range(len(pe.cu_busy)):
-                pe.cu_idle[cu_idx] = pe.cu_finish_cycle[cu_idx] - pe.cu_busy[cu_idx] - pe.cu_wait_transfer[cu_idx] # cu performance breakdown
+                pe.cu_idle[cu_idx] = pe.cu_finish_cycle[cu_idx] - pe.cu_busy[cu_idx] - pe.cu_wait_transfer[cu_idx]
         
         Plot = [] # [PE0, PE1, PE2, ...]
         for pe_n in range(len(self.PE_array)):
@@ -939,4 +945,3 @@ class Controller(object):
                     if row[0] != 0 or row[1] != 0 or row[2] !=0 :
                         row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
                         writer.writerow(row)
-                        
