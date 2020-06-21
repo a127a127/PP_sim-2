@@ -111,6 +111,7 @@ class SameColumnFirstMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -201,6 +202,7 @@ class SameColumnFirstMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -363,6 +365,7 @@ class SameRowFirstMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -450,6 +453,7 @@ class SameRowFirstMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -615,6 +619,7 @@ class SCFParallelsimMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -708,6 +713,7 @@ class SCFParallelsimMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -875,6 +881,7 @@ class SRFParallelsimMapping(object):
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
@@ -968,6 +975,7 @@ class SRFParallelsimMapping(object):
 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
                     pe_w += 1
                     if pe_w >= self.hw_config.PE_num_x:
                         pe_w = 0
