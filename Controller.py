@@ -650,9 +650,10 @@ class Controller(object):
                             else:
                                 self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
                             
-                            # cu performance breakdown
-                            cu_idx = pro_event.position_idx[4]
-                            des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
+                            if pro_event.event_type == "edram_rd_ir":
+                                # cu performance breakdown
+                                cu_idx = pro_event.position_idx[4]
+                                des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
 
                             # pe performance breakdown
                             pe_set.add(des_pe)
