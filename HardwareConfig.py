@@ -25,8 +25,8 @@ class HardwareConfig(object):
             self.Router_num_y = 27
             self.Router_num_x = 27
         elif model_type == "Test":
-            self.Router_num_y = 8
-            self.Router_num_x = 1
+            self.Router_num_y = 1
+            self.Router_num_x = 2
         
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
@@ -38,6 +38,8 @@ class HardwareConfig(object):
         self.Xbar_w = 128
         self.OU_h = 9
         self.OU_w = 8
+
+        self.total_pe_num = self.Router_num * self.PE_num
 
         self.cell_bit_width = 2
 

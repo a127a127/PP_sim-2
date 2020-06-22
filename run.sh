@@ -1,7 +1,15 @@
-# non-pipeline
-python3 PP_sim.py 0 0
-python3 PP_sim.py 0 1
-python3 PP_sim.py 1 0
-python3 PP_sim.py 1 1
-python3 PP_sim.py 2 0
-python3 PP_sim.py 2 1
+model="Lenet"
+
+#python3 PP_sim.py $model SCF Non_pipeline
+#python3 PP_sim.py $model SCF Non_pipeline
+#python3 PP_sim.py $model SCF Pipeline
+#python3 PP_sim.py $model SRF Non_pipeline
+#python3 PP_sim.py $model SRF Pipeline
+#python3 PP_sim.py $model SCFParal Non_pipeline 2
+#python3 PP_sim.py $model SCFParal Pipeline 2
+#python3 PP_sim.py $model SRFParal Non_pipeline 2
+#python3 PP_sim.py $model SRFParal Pipeline 2
+#python3 PP_sim.py $model SCFParal Non_pipeline 4
+#python3 PP_sim.py $model SCFParal Pipeline 4
+#python3 PP_sim.py $model SRFParal Non_pipeline 4
+python3 PP_sim.py $model SRFParal Pipeline 4

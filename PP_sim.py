@@ -35,12 +35,12 @@ def main():
         print("'SCF Parallelsim Mapping"+sys.argv[3])
         paral = int(sys.argv[4])
         mapping_information = SCFParallelsimMapping(model_config, hw_config, paral)
-        mapping_str = "SCFParallelsim_Mapping"+sys.argv[3]
+        mapping_str = "SCFParallelsim_Mapping"+sys.argv[4]
     elif mapping == "SRFParal":
         print("SRF Parallelsim Mapping"+sys.argv[3])
         paral = int(sys.argv[4])
         mapping_information = SRFParallelsimMapping(model_config, hw_config, paral)
-        mapping_str = "SRFParallelsim_Mapping"+sys.argv[3]
+        mapping_str = "SRFParallelsim_Mapping"+sys.argv[4]
     else:
         print("Wrong mapping type")
         exit()
