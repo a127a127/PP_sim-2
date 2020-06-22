@@ -72,15 +72,22 @@ class PE(object):
         self.idle_other    = 0
 
         ### cu performance breakdown
+        self.cu_finish_cycle  = []
         self.cu_wait_transfer = []
-        self.cu_busy = []
-        self.cu_finish_cycle = []
-        self.cu_idle = []
+        self.cu_busy          = []
+        self.cu_idle          = []
         for i in range(self.hw_config.CU_num):
             self.cu_wait_transfer.append(0)
             self.cu_busy.append(0)
             self.cu_finish_cycle.append(0)
             self.cu_idle.append(0)
+        
+        ### pe performance breakdown
+        self.pe_finish_cycle  = 0
+        self.pe_wait_transfer = 0
+        self.pe_busy_cu       = 0
+        self.pe_busy_other    = 0
+        self.pe_idle          = 0
 
 
     def __str__(self):
