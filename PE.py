@@ -89,6 +89,11 @@ class PE(object):
         self.pe_busy_other    = 0
         self.pe_idle          = 0
 
+        ### CU state
+        self.cu_state = []
+        for i in range(self.hw_config.CU_num):
+            self.cu_state.append(False)
+
 
     def __str__(self):
         return str(self.__dict__)

@@ -133,8 +133,9 @@ class ModelConfig(object):
         elif self.Model_type == "Test":
             self.layer_list = [
                 LayerMetaData("convolution",     1, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
-                LayerMetaData("fully",           0, 0, 0,  0, 0,       0, 0, 0, 0,   2)
+                LayerMetaData("convolution",     5, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
+                #LayerMetaData("fully",           0, 0, 0,  0, 0,       0, 0, 0, 0,   2)
                 #LayerMetaData("convolution",     1, 2, 2,  4, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("fully",         0, 0, 0,  0, 0,       0, 0, 0, 0,  4)
                 #LayerMetaData("convolution",      2,  2,  2,  1, 1, 'VALID', 0, 0, 0,   0),
