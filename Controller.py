@@ -353,6 +353,7 @@ class Controller(object):
     def event_cu_op(self):
         for pe in self.cu_operation_pe_idx:
             cu_idx = pe.cu_operation_cu_idx.popleft()
+            pe.cu_state[cu_idx] = True
             event = pe.cu_operation_erp[cu_idx].popleft()
             
             if self.trace:
@@ -409,7 +410,7 @@ class Controller(object):
 
             # cu performance breakdown
             pe.cu_busy[cu_idx] += event.inputs + 2
-            pe.cu_finish_cycle[cu_idx] = self.cycle_ctr + event.inputs + 2 - 1
+            pe.cu_finish_cycle[cu_idx] = max(finish_cycle, pe.cu_finish_cycle[cu_idx])
 
             # pe performance breakdown
             for cycle in range(len(self.pe_state_cu_busy), finish_cycle):
@@ -721,9 +722,11 @@ class Controller(object):
                         pe.edram_buffer.put(data, data)
                     cu_idx = event.position_idx[4]
                     pe.edram_rd_ir_erp[cu_idx].appendleft(event)
-                    if self.cycle_ctr > pe.cu_finish_cycle[cu_idx]:
+                    if not pe.cu_state[cu_idx]: # state == False
                         self.edram_rd_pe_idx.add(pe)
-                        pe.edram_rd_cu_idx.appendleft(cu_idx)
+                        if cu_idx not in pe.edram_rd_cu_idx:
+                            pe.edram_rd_cu_idx.appendleft(cu_idx)
+                    
                 
                 elif event.event_type == "cu_operation":
                     cu_idx = event.position_idx[4]
@@ -737,6 +740,7 @@ class Controller(object):
                         if pe.edram_rd_ir_erp[cu_idx]:
                             pe.edram_rd_cu_idx.append(cu_idx)
                             self.edram_rd_pe_idx.add(pe)
+                        pe.cu_state[cu_idx] = False
                     pe.pe_saa_erp.append(event)
                     self.pe_saa_pe_idx.add(pe)
                     
