@@ -720,9 +720,10 @@ class Controller(object):
                     for data in transfer_data:
                         pe.edram_buffer.put(data, data)
                     cu_idx = event.position_idx[4]
-                    self.edram_rd_pe_idx.add(pe)
-                    pe.edram_rd_cu_idx.appendleft(cu_idx)
                     pe.edram_rd_ir_erp[cu_idx].appendleft(event)
+                    if self.cycle_ctr > pe.cu_finish_cycle[cu_idx]:
+                        self.edram_rd_pe_idx.add(pe)
+                        pe.edram_rd_cu_idx.appendleft(cu_idx)
                 
                 elif event.event_type == "cu_operation":
                     cu_idx = event.position_idx[4]
@@ -864,7 +865,7 @@ class Controller(object):
     def PE_energy_breakdown(self):
         # PE breakdown
         print("PE energy breakdown")
-        with open(self.path+'/Energy_breakdown_PE.csv', 'w', newline='') as csvfile:
+        with open(self.path+'/PE_Energy_breakdown.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["", "Buffer", "Bus", "PE Shift and add", "OR", "Activation", "Pooling",
                              "CU Shift and add", "DAC", "ADC", "Crossbar", "IR", "OR"
