@@ -876,23 +876,27 @@ class Controller(object):
                             ])
             for pe_pos in self.PE_array:
                 pe = self.PE_array[pe_pos]
-                rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
-                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
-                arr = ["PE"+str(idx)]
-                arr.append(pe.Edram_buffer_energy)
-                arr.append(pe.Bus_energy)
-                arr.append(pe.PE_shift_and_add_energy)
-                arr.append(pe.Or_energy)
-                arr.append(pe.Activation_energy)
-                arr.append(pe.Pooling_energy)
+                if pe.Edram_buffer_energy != 0 or pe.Bus_energy != 0 or pe.PE_shift_and_add_energy != 0 or \
+                    pe.Or_energy != 0 or pe.Activation_energy != 0 or pe.Pooling_energy != 0 or \
+                    pe.CU_shift_and_add_energy != 0 or pe.CU_dac_energy != 0 or pe.CU_adc_energy != 0 or \
+                    pe.CU_crossbar_energy != 0 or pe.CU_IR_energy != 0 or pe.CU_OR_energy != 0:
+                        rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
+                        idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
+                        arr = ["PE"+str(idx)]
+                        arr.append(pe.Edram_buffer_energy)
+                        arr.append(pe.Bus_energy)
+                        arr.append(pe.PE_shift_and_add_energy)
+                        arr.append(pe.Or_energy)
+                        arr.append(pe.Activation_energy)
+                        arr.append(pe.Pooling_energy)
 
-                arr.append(pe.CU_shift_and_add_energy)
-                arr.append(pe.CU_dac_energy)
-                arr.append(pe.CU_adc_energy)
-                arr.append(pe.CU_crossbar_energy)
-                arr.append(pe.CU_IR_energy)
-                arr.append(pe.CU_OR_energy)
-                writer.writerow(arr)
+                        arr.append(pe.CU_shift_and_add_energy)
+                        arr.append(pe.CU_dac_energy)
+                        arr.append(pe.CU_adc_energy)
+                        arr.append(pe.CU_crossbar_energy)
+                        arr.append(pe.CU_IR_energy)
+                        arr.append(pe.CU_OR_energy)
+                        writer.writerow(arr)
 
     def buffer_analysis(self):
         # num轉KB
