@@ -128,7 +128,6 @@ class Controller(object):
         t_fetch = 0
 
         t_trigger = 0
-        t_state = 0
         t_buffer = 0
         t_ = time.time()
 
@@ -146,12 +145,12 @@ class Controller(object):
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
                     print("pooling:", t_pool, "transfer", t_transfer, "fetch", t_fetch)
-                    print("trigger", t_trigger, "state", t_state, "buffer", t_buffer)
+                    print("trigger", t_trigger, "buffer", t_buffer)
                     print("t:", time.time()-t_)
                     print()
                     t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
                     t_pool, t_transfer, t_fetch = 0, 0, 0
-                    t_trigger, t_state, t_buffer = 0, 0, 0
+                    t_trigger, t_buffer =  0, 0
                     t_ = time.time()
 
             self.cycle_ctr += 1
@@ -208,7 +207,7 @@ class Controller(object):
                             self.edram_rd_pe_idx.add(pe)
 
                             # pe performance breakdown
-                            pe_set.add(pe)
+                            #pe_set.add(pe)
 
                         else:
                             print("error event type:", event.event_type)
@@ -916,6 +915,26 @@ class Controller(object):
                 rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
                 idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
                 writer.writerow(["PE"+str(idx), pe.edram_buffer.maximal_usage])
+        
+        with open(self.path+'/Buffer_utilization2.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["", "tmp_data", "fm_data"])
+            for pe_pos in self.PE_array:
+                pe  = self.PE_array[pe_pos]
+                buf = pe.edram_buffer.buffer
+                tmp_data, fm_data = 0, 0
+                for data in buf:
+                    if len(data) == 5: # intermediate data
+                        tmp_data += 1
+                    elif len(data) == 4: # feature map data
+                        fm_data += 1
+                tmp_data *= self.input_bit/8/1000
+                fm_data *= self.input_bit/8/1000
+                if tmp_data == 0 and fm_data == 0:
+                    continue
+                rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
+                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
+                writer.writerow(["PE"+str(idx), tmp_data, fm_data]) 
 
         # ### time history
         # with open(self.path+'/Buffer_time_history.csv', 'w', newline='') as csvfile:
