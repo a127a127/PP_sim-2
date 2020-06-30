@@ -4,6 +4,10 @@ import sys
 from math import ceil
 import numpy as np
 
+TOTAL_PE = 8
+# Lenet:8, Cifar10: 5
+RTY, RTX, PEY, PEX = 0, 1, 0, 1 # 第一個不能放的PE
+
 class SameColumnFirstMapping(object):
     def __init__(self, model_config, hw_config):
         # 同一筆data要放在同一個crossbar
@@ -38,12 +42,17 @@ class SameColumnFirstMapping(object):
             self.layer_used_pe.append(set())
         self.map()
 
+        if False:
+            print("used PE", self.used_pe)
+            exit()
+
     def map(self):
         rt_h, rt_w = 0, 0
         pe_h, pe_w = 0, 0
         cu_n = 0
         xb_n = 0
         
+        self.used_pe = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)
@@ -51,6 +60,7 @@ class SameColumnFirstMapping(object):
                 pool_pe_id = (rt_h, rt_w, pe_h, pe_w)
 
                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.used_pe += 1
 
                 ## Weight matrix
                 cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
@@ -106,6 +116,7 @@ class SameColumnFirstMapping(object):
                                                     print("no enough crossbar")
                                                     exit()
                                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                                self.used_pe += 1
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -135,10 +146,12 @@ class SameColumnFirstMapping(object):
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                        self.used_pe -= 1
         
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.used_pe += 1
 
                 ## Weight matrix
                 cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
@@ -194,7 +207,8 @@ class SameColumnFirstMapping(object):
                                                 if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))                
+                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                                self.used_pe += 1         
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -224,6 +238,7 @@ class SameColumnFirstMapping(object):
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                        self.used_pe -= 1
                     
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
@@ -606,6 +621,8 @@ class SCFParallelsimMapping(object):
                                                     rt_h, rt_w = 0, 0
                                                     #print("no enough crossbar")
                                                     #exit()
+                                if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                                    rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
@@ -635,6 +652,8 @@ class SCFParallelsimMapping(object):
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
+                    if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                        rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -698,6 +717,8 @@ class SCFParallelsimMapping(object):
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
+                                if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                                    rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
@@ -727,6 +748,8 @@ class SCFParallelsimMapping(object):
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
+                    if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                        rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -864,6 +887,8 @@ class SRFParallelsimMapping(object):
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
+                                if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                                    rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
@@ -893,6 +918,8 @@ class SRFParallelsimMapping(object):
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
+                    if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                        rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -956,6 +983,9 @@ class SRFParallelsimMapping(object):
                                                     rt_h, rt_w = 0, 0
                                                     # print("no enough crossbar")
                                                     # exit()
+                                
+                                if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                                    rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 # next layer next PE
@@ -985,6 +1015,8 @@ class SRFParallelsimMapping(object):
                                         rt_h, rt_w = 0, 0
                                         # print("no enough crossbar")
                                         # exit()
+                    if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                        rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 else:
                     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
