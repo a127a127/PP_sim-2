@@ -32,12 +32,12 @@ def main():
         mapping_information = SameRowFirstMapping(model_config, hw_config)
         mapping_str = "Same_Row_First_Mapping"
     elif mapping == "SCFParal":
-        print("'SCF Parallelsim Mapping"+sys.argv[3])
+        print("'SCF Parallelsim Mapping"+sys.argv[4])
         paral = int(sys.argv[4])
         mapping_information = SCFParallelsimMapping(model_config, hw_config, paral)
         mapping_str = "SCFParallelsim_Mapping"+sys.argv[4]
     elif mapping == "SRFParal":
-        print("SRF Parallelsim Mapping"+sys.argv[3])
+        print("SRF Parallelsim Mapping"+sys.argv[4])
         paral = int(sys.argv[4])
         mapping_information = SRFParallelsimMapping(model_config, hw_config, paral)
         mapping_str = "SRFParallelsim_Mapping"+sys.argv[4]
