@@ -761,7 +761,7 @@ class Controller(object):
                         transfer_data = trigger[2]
                         for data in transfer_data:
                             pe.edram_buffer.put(data, data)
-                    pe.edram_rd_erp.append(event)
+                    pe.edram_rd_erp.appendleft(event)
                     self.edram_rd_pe_idx.add(pe)
                 
                 elif event.event_type == "pooling":
