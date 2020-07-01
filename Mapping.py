@@ -4,9 +4,14 @@ import sys
 from math import ceil
 import numpy as np
 
-TOTAL_PE = 8
-# Lenet:8, Cifar10: 5
-RTY, RTX, PEY, PEX = 0, 1, 0, 1 # 第一個不能放的PE
+# Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
+RTY, RTX, PEY, PEX = 8, 0, 0, 1 # 第一個不能放的PE idx
+# Lenet: 1, 1, 0, 0
+# Cifar10: 0, 1 0, 1
+# DeepID: 0, 1, 1, 0
+# Caffenet: 8, 0, 0, 1
+# Overfeat: 11, 1, 0, 0
+# VGG16: 12, 11, 0, 0
 
 class SameColumnFirstMapping(object):
     def __init__(self, model_config, hw_config):

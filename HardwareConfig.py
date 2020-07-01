@@ -22,8 +22,8 @@ class HardwareConfig(object):
             self.Router_num_y = 12
             self.Router_num_x = 12
         elif model_type == "VGG16":
-            self.Router_num_y = 27
-            self.Router_num_x = 27
+            self.Router_num_y = 14
+            self.Router_num_x = 14
         elif model_type == "Test":
             self.Router_num_y = 1
             self.Router_num_x = 2
