@@ -695,11 +695,12 @@ class Controller(object):
                 self.Trigger[finish_cycle].append([des_pe, event, transfer_data])
             
             # cu performance breakdown
-            pos_idx = event.position_idx
-            pe_pos = pos_idx[:4]
-            pe = self.PE_array[pe_pos]
-            cu_idx = pos_idx[4]
-            pe.cu_wait_transfer[cu_idx] += self.hw_config.Fetch_cycle + transfer_distance + 2
+            if event.event_type == "edram_rd_ir":
+                pos_idx = event.position_idx
+                pe_pos = pos_idx[:4]
+                pe = self.PE_array[pe_pos]
+                cu_idx = pos_idx[4]
+                pe.cu_wait_transfer[cu_idx] += self.hw_config.Fetch_cycle + transfer_distance + 2
 
             # pe performance breakdown
             for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
