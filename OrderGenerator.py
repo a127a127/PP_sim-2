@@ -816,11 +816,12 @@ class OrderGenerator(object):
                             
                         # 準備edram read一次讀多少data
                         edram_read_data = []
-                        for pre_event_idx in wr_and_transfer_event_dict[pe_pos]:
-                            pre_event = self.Computation_order[pre_event_idx]
-                            for data in pre_event.outputs:
-                                edram_read_data.append(data)
-                            
+                        # for pre_event_idx in wr_and_transfer_event_dict[pe_pos]:
+                        #     pre_event = self.Computation_order[pre_event_idx]
+                        #     for data in pre_event.outputs:
+                        #         edram_read_data.append(data)
+                        
+                        edram_read_data.append(1)
                         eri_inputs  = edram_read_data
                         eri_outputs = 0
                         event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
