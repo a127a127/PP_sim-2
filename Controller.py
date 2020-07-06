@@ -13,10 +13,6 @@ import csv
 
 import time
 
-# performance(cu+pe) : delay 先把idle busy分出來
-# interconnect街口
-# 跳cycle看效能比較(util會影響？), ideal
-    # 每個cycle紀錄 pe util, cu util, layer 
 
 class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
@@ -293,11 +289,12 @@ class Controller(object):
             
             edram_rd_data = event.inputs
                     
-            # data in buffer?
             fetch_data = []
-            for data in edram_rd_data:
-                if not pe.edram_buffer.get(data):
-                    fetch_data.append(data)
+            if event.event_type == "edram_rd_ir":
+                # data in buffer?
+                for data in edram_rd_data:
+                    if not pe.edram_buffer.get(data):
+                        fetch_data.append(data)
 
             if fetch_data:
                 # fetch data
@@ -728,7 +725,6 @@ class Controller(object):
                         if cu_idx not in pe.edram_rd_cu_idx:
                             pe.edram_rd_cu_idx.appendleft(cu_idx)
                     
-                
                 elif event.event_type == "cu_operation":
                     cu_idx = event.position_idx[4]
                     pe.cu_operation_erp[cu_idx].appendleft(event)

@@ -536,7 +536,7 @@ class OrderGenerator(object):
                                                 pos = data[1]
                                             self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                                        #--------------------------#  
-                       #=======================#
+                       #========================#
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                #----決定每個filter的aggregator----# # 和conv一樣
@@ -830,7 +830,7 @@ class OrderGenerator(object):
                             self.Computation_order[event_idx].proceeding_event.append(eri_event_idx)
                         ### input requirement
                         #
-                       #------------------------#
+                       #---------------------#
 
                        #---Event: pe_saa---#
                         pe_saa_event_idx = len(self.Computation_order)
@@ -1005,6 +1005,7 @@ class OrderGenerator(object):
                                     pos = data[1]
                                 self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                            #--------------------------#
+        
         print('Order generated!')
 
     def print_order(self):
