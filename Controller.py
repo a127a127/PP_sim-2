@@ -133,7 +133,7 @@ class Controller(object):
         self.done_event = 0
 
         while True:
-            if self.cycle_ctr % 100000 == 0:
+            if self.cycle_ctr % 10000 == 0:
                 if self.done_event == 0:
                     pass
                 else:
@@ -735,7 +735,8 @@ class Controller(object):
                     if len(trigger) == 3: # 讓此CU可以做其他event
                         cu_idx = trigger[2]
                         if pe.edram_rd_ir_erp[cu_idx]:
-                            pe.edram_rd_cu_idx.append(cu_idx)
+                            if cu_idx not in pe.edram_rd_cu_idx:
+                                pe.edram_rd_cu_idx.append(cu_idx)
                             self.edram_rd_pe_idx.add(pe)
                         pe.cu_state[cu_idx] = False
                     pe.pe_saa_erp.append(event)

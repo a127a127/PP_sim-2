@@ -66,11 +66,13 @@ def main():
     elif replacement == "LRU":
         print("LRU")
 
-    ### dir ###
+    ### path ###
     path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
     if not os.path.exists(path):
             os.makedirs(path)
     
+    mapping_information.mapping_layout(path)
+
     ### Trace ###
     isTrace_order      = False
     isTrace_controller = False   

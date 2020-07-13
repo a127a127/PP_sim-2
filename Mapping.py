@@ -1,13 +1,13 @@
 from Model import Model
 from MappingMetaData import MappingMetaData
-import sys
+import sys, csv
 from math import ceil
 import numpy as np
 
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
-RTY, RTX, PEY, PEX = 8, 0, 0, 1 # 第一個不能放的PE idx
+RTY, RTX, PEY, PEX = 11, 1, 0, 0 # 第一個不能放的PE idx
 # Lenet: 1, 1, 0, 0
-# Cifar10: 0, 1 0, 1
+# Cifar10: 0, 1, 0, 1
 # DeepID: 0, 1, 1, 0
 # Caffenet: 8, 0, 0, 1
 # Overfeat: 11, 1, 0, 0
@@ -48,7 +48,11 @@ class SameColumnFirstMapping(object):
         self.map()
 
         if False:
-            print("used PE", self.used_pe)
+            used_pe = 0
+            for nlayer in range(len(self.layer_used_pe)):
+                print("layer", nlayer, "use", len(self.layer_used_pe[nlayer]))
+                used_pe += len(self.layer_used_pe[nlayer])
+            print("used PE", used_pe)
             exit()
 
     def map(self):
@@ -57,7 +61,6 @@ class SameColumnFirstMapping(object):
         cu_n = 0
         xb_n = 0
         
-        self.used_pe = 0
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)
@@ -65,7 +68,6 @@ class SameColumnFirstMapping(object):
                 pool_pe_id = (rt_h, rt_w, pe_h, pe_w)
 
                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
-                self.used_pe += 1
 
                 ## Weight matrix
                 cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
@@ -84,6 +86,7 @@ class SameColumnFirstMapping(object):
                     Cols = len(Filters) * cells_per_weight
                     
                     for h in range(mapping_height_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
                             Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
@@ -120,8 +123,6 @@ class SameColumnFirstMapping(object):
                                                 if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
-                                self.used_pe += 1
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -148,15 +149,13 @@ class SameColumnFirstMapping(object):
                                     if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
-                        self.used_pe -= 1
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
         
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
-                self.used_pe += 1
 
                 ## Weight matrix
                 cells_per_weight = ceil(self.model_info.filter_bit / self.hw_config.cell_bit_width) # 16/2 = 8 cells per weight
@@ -176,6 +175,7 @@ class SameColumnFirstMapping(object):
                     Cols = len(Filters) * cells_per_weight
 
                     for h in range(mapping_height_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
                             Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
@@ -211,9 +211,7 @@ class SameColumnFirstMapping(object):
                                                 rt_h += 1
                                                 if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
-                                                    exit()
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
-                                self.used_pe += 1         
+                                                    exit()  
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -240,10 +238,9 @@ class SameColumnFirstMapping(object):
                                     if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
-                        self.used_pe -= 1
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
                     
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
@@ -268,10 +265,29 @@ class SameColumnFirstMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
-                
+
+    def mapping_layout(self, path):
+        with open(path+'/mapping_layout.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["layer", "PE_idx"])
+            for nlayer in range(len(self.layer_used_pe)):
+                for pe_idx in self.layer_used_pe[nlayer]:
+                    rty, rtx, pey, pex = pe_idx[0], pe_idx[1], pe_idx[2], pe_idx[3]
+                    if rty % 2 == 0:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    rtx * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    else:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    (self.hw_config.Router_num_x - rtx - 1) * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    writer.writerow([nlayer, plot_idx])
+
     def __str__(self):
         return str(self.__dict__)
 
@@ -338,6 +354,7 @@ class SameRowFirstMapping(object):
                     else:
                         Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                     for w in range(mapping_width_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
                             Filters = [i for i in range(w * filters_per_xb, matrix_width)]
@@ -375,7 +392,6 @@ class SameRowFirstMapping(object):
                                                 if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -402,13 +418,12 @@ class SameRowFirstMapping(object):
                                     if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
         
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
-                sed_pe_num = 1
                 self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 ## Weight matrix
@@ -425,6 +440,7 @@ class SameRowFirstMapping(object):
                     else:
                         Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                     for w in range(mapping_width_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
                             Filters = [i for i in range(w * filters_per_xb, matrix_width)]
@@ -462,7 +478,6 @@ class SameRowFirstMapping(object):
                                                 if rt_h >= self.hw_config.Router_num_y:
                                                     print("no enough crossbar")
                                                     exit()
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -489,9 +504,9 @@ class SameRowFirstMapping(object):
                                     if rt_h >= self.hw_config.Router_num_y:
                                         print("no enough crossbar")
                                         exit()
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
                 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
@@ -516,10 +531,29 @@ class SameRowFirstMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
-                
+
+    def mapping_layout(self, path):
+        with open(path+'/mapping_layout.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["layer", "PE_idx"])
+            for nlayer in range(len(self.layer_used_pe)):
+                for pe_idx in self.layer_used_pe[nlayer]:
+                    rty, rtx, pey, pex = pe_idx[0], pe_idx[1], pe_idx[2], pe_idx[3]
+                    if rty % 2 == 0:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    rtx * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    else:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    (self.hw_config.Router_num_x - rtx - 1) * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    writer.writerow([nlayer, plot_idx])
+
     def __str__(self):
         return str(self.__dict__)
 
@@ -588,6 +622,7 @@ class SCFParallelsimMapping(object):
                         Filters = [i for i in range(w * filters_per_xb,(w+1) * filters_per_xb)]
                     Cols = len(Filters) * cells_per_weight
                     for h in range(mapping_height_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
                             Inp = [i for i in range(h * H,(h+1) * H)]
@@ -628,7 +663,6 @@ class SCFParallelsimMapping(object):
                                                     #exit()
                                 if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                                     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -659,9 +693,9 @@ class SCFParallelsimMapping(object):
                                         # exit()
                     if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                         rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                    # if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                    #     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
@@ -684,6 +718,7 @@ class SCFParallelsimMapping(object):
                         Filters = [i for i in range(w * filters_per_xb,(w+1) * filters_per_xb)]
                     Cols = len(Filters) * cells_per_weight
                     for h in range(mapping_height_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if h != mapping_height_num_xb-1:
                             Inp = [i for i in range(h * H,(h+1) * H)]
@@ -724,7 +759,6 @@ class SCFParallelsimMapping(object):
                                                     # exit()
                                 if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                                     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -755,9 +789,9 @@ class SCFParallelsimMapping(object):
                                         # exit()
                     if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                         rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
                  
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
@@ -782,9 +816,28 @@ class SCFParallelsimMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
+
+    def mapping_layout(self, path):
+        with open(path+'/mapping_layout.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["layer", "PE_idx"])
+            for nlayer in range(len(self.layer_used_pe)):
+                for pe_idx in self.layer_used_pe[nlayer]:
+                    rty, rtx, pey, pex = pe_idx[0], pe_idx[1], pe_idx[2], pe_idx[3]
+                    if rty % 2 == 0:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    rtx * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    else:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    (self.hw_config.Router_num_x - rtx - 1) * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    writer.writerow([nlayer, plot_idx])
 
     def __str__(self):
         return str(self.__dict__)
@@ -853,6 +906,7 @@ class SRFParallelsimMapping(object):
                     else:
                         Inp = [i for i in range(h * H, matrix_height)]
                     for w in range(mapping_width_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
                             Filters = [i for i in range(w * filters_per_xb, matrix_width)]
@@ -894,7 +948,6 @@ class SRFParallelsimMapping(object):
                                                     # exit()
                                 if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                                     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -925,9 +978,9 @@ class SRFParallelsimMapping(object):
                                         # exit()
                     if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                         rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
                 print("Fully", nlayer)
@@ -949,6 +1002,7 @@ class SRFParallelsimMapping(object):
                     else:
                         Inp = [i for i in range(h * H, matrix_height)]
                     for w in range(mapping_width_num_xb):
+                        self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # 一次map一個xb
                         if w + 1 == mapping_width_num_xb:
                             Filters = [i for i in range(w * filters_per_xb, matrix_width)]
@@ -991,7 +1045,6 @@ class SRFParallelsimMapping(object):
                                 
                                 if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                                     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
@@ -1022,9 +1075,9 @@ class SRFParallelsimMapping(object):
                                         # exit()
                     if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
                         rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                else:
-                    if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
-                        self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
+                # else:
+                #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
+                #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
                 print("Pooling", nlayer)
@@ -1049,9 +1102,28 @@ class SRFParallelsimMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
+
+    def mapping_layout(self, path):
+        with open(path+'/mapping_layout.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["layer", "PE_idx"])
+            for nlayer in range(len(self.layer_used_pe)):
+                for pe_idx in self.layer_used_pe[nlayer]:
+                    rty, rtx, pey, pex = pe_idx[0], pe_idx[1], pe_idx[2], pe_idx[3]
+                    if rty % 2 == 0:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    rtx * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    else:
+                        plot_idx = rty * self.hw_config.Router_num_x * self.hw_config.PE_num + \
+                                    (self.hw_config.Router_num_x - rtx - 1) * self.hw_config.PE_num + \
+                                    pey * self.hw_config.PE_num_x + \
+                                    pex
+                    writer.writerow([nlayer, plot_idx])
 
     def __str__(self):
         return str(self.__dict__)

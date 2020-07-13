@@ -4,6 +4,7 @@ from EventMetaData import EventMetaData
 import numpy as np
 import math
 import collections
+from tqdm import tqdm
 
 class OrderGenerator(object):
     def __init__(self, model_config, hw_config, mapping_information, trace):
@@ -22,7 +23,7 @@ class OrderGenerator(object):
                 arr.append(set())
             self.fm_data_used_pe_idx.append(arr)
         
-        for nlayer in range(self.model_info.layer_length):
+        for nlayer in tqdm(range(self.model_info.layer_length)):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 strides = self.model_info.strides[nlayer]
                 pad = self.model_info.pad[nlayer]
@@ -118,8 +119,8 @@ class OrderGenerator(object):
         self.print_order()
        
     def generate_order(self):
-        for nlayer in range(self.model_info.layer_length):
-            print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
+        for nlayer in tqdm(range(self.model_info.layer_length)):
+            #print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                #----決定每個filter的aggregator----#
                 pe_filter_processing = dict() # {PE1:{"act":[f1, f2], "transfer": {des_pe1:[f3, f4], des_pe2:[f5,f6]}, "aggregate":[f7]}, PE2: ...}

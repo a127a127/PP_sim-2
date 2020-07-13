@@ -40,15 +40,15 @@ class ModelConfig(object):
 
         elif self.Model_type == "DeepID":
             self.layer_list = [
-                LayerMetaData("convolution",   20, 4, 4,  1, 1, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0),
-                LayerMetaData("convolution",   40, 3, 3, 20, 1, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0),
-                LayerMetaData("convolution",   60, 3, 3, 40, 1, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0),
-                LayerMetaData("convolution",   80, 2, 2, 60, 1, 'VALID', 0, 0, 0,    0),
-                LayerMetaData("fully",         0,  0, 0,  0, 0,       0, 0, 0, 0,  160),
-                LayerMetaData("fully",         0,  0, 0,  0, 0,       0, 0, 0, 0,  100)
+                LayerMetaData("convolution",   20, 4, 4,  1, 1, 'VALID', 0, 0, 0,    0), #36x28
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0), #18x14
+                LayerMetaData("convolution",   40, 3, 3, 20, 1, 'VALID', 0, 0, 0,    0), #16x12
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0), #8x6
+                LayerMetaData("convolution",   60, 3, 3, 40, 1, 'VALID', 0, 0, 0,    0), #6x4
+                LayerMetaData("pooling",        0, 0, 0,  0, 0,       0, 2, 2, 2,    0), #3x2
+                LayerMetaData("convolution",   80, 2, 2, 60, 1, 'VALID', 0, 0, 0,    0), #2x1
+                LayerMetaData("fully",         0,  0, 0,  0, 0,       0, 0, 0, 0,  160), #160x160
+                LayerMetaData("fully",         0,  0, 0,  0, 0,       0, 0, 0, 0,  100)  #160x100
             ]
             self.input_n = 1
             self.input_h = 39
@@ -132,8 +132,8 @@ class ModelConfig(object):
         
         elif self.Model_type == "Test":
             self.layer_list = [
-                LayerMetaData("convolution",     1, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("convolution",     5, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("convolution",     1, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("convolution",     5, 2, 2,  1, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
                 #LayerMetaData("fully",           0, 0, 0,  0, 0,       0, 0, 0, 0,   2)
                 #LayerMetaData("convolution",     1, 2, 2,  4, 1, 'VALID', 0, 0, 0,   0),
@@ -141,11 +141,11 @@ class ModelConfig(object):
                 #LayerMetaData("convolution",      2,  2,  2,  1, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("convolution",      1,  3,  3,  1, 1, 'SAME', 0, 0, 0,   0),
                 #LayerMetaData("pooling",          0,  0,  0,   0, 0,       0, 2, 2, 1,   0),
-                #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   256)
+                LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   1)
                 ]
             self.input_n = 1
-            self.input_h = 4
-            self.input_w = 4
+            self.input_h = 3
+            self.input_w = 1
             self.input_c = 1
             self.input_bit = 1
             self.filter_bit = 16
