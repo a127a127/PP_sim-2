@@ -265,7 +265,7 @@ class SameColumnFirstMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 
@@ -531,7 +531,7 @@ class SameRowFirstMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 
@@ -816,7 +816,7 @@ class SCFParallelsimMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 
@@ -1102,7 +1102,7 @@ class SRFParallelsimMapping(object):
                             inputs.append(nn)
                 
                 self.mapping_to_pe[rt_h][rt_w][pe_h][pe_w][nlayer] = inputs
-                #self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
+                self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
 
                 rt_h, rt_w, pe_h, pe_w = next_layer_id[0], next_layer_id[1], next_layer_id[2], next_layer_id[3]
 

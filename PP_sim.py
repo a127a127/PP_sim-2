@@ -79,7 +79,7 @@ def main():
 
     ### Generate computation order graph ### 
     start_order_time = time.time()
-    print("--- Generate computation order graph ---")
+    print("--- Generate computation order ---")
     order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
