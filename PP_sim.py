@@ -78,7 +78,7 @@ def main():
         mapping_information.mapping_layout(path)
 
     ### Trace ###
-    isTrace_order      = False
+    isTrace_order      = True
     isTrace_controller = False   
 
     ### Generate computation order graph ### 
