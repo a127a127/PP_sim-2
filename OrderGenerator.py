@@ -113,6 +113,9 @@ class OrderGenerator(object):
                 self.fm_data_transfer_event_idx[nlayer].append(dict()) # {PE: transfer_event_idx}
        #-----------------------------------------------#  
 
+        self.feature_map_data_num  = 0
+        self.intermediate_data_num = 0
+
         self.Computation_order = []
         self.generate_order()
         
@@ -381,6 +384,8 @@ class OrderGenerator(object):
                                             else:
                                                 pos = data[1]
                                             self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
+                                        
+                                        self.feature_map_data_num += len(transfer_outputs)
                                        #--------------------------#
 
                            # 2. 要傳到別的pe做activation 要生transfer
@@ -403,6 +408,8 @@ class OrderGenerator(object):
                                         self.Computation_order[event_idx].proceeding_event.append(transfer_event_idx)
                                     
                                     wr_and_transfer_event_dict[des_pe].append(transfer_event_idx) # for dependency
+                                    
+                                    self.intermediate_data_num += len(transfer_outputs)
                                    #--------------------------#
 
                            # 3. aggregator
@@ -536,7 +543,9 @@ class OrderGenerator(object):
                                             else:
                                                 pos = data[1]
                                             self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
-                                       #--------------------------#  
+                                        
+                                        self.feature_map_data_num += len(transfer_outputs)
+                                       #--------------------------#
                        #========================#
 
             elif self.model_info.layer_list[nlayer].layer_type == "fully":
@@ -759,6 +768,8 @@ class OrderGenerator(object):
                                 for data in transfer_outputs:
                                     pos = data[1] # f
                                     self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
+                                
+                                self.feature_map_data_num += len(transfer_outputs)
                                #--------------------------#
 
                    # 2. 要傳到別的pe做activation 要生transfer
@@ -781,6 +792,8 @@ class OrderGenerator(object):
                                 self.Computation_order[event_idx].proceeding_event.append(transfer_event_idx)
                             
                             wr_and_transfer_event_dict[des_pe].append(transfer_event_idx) # for dependency
+                            
+                            self.intermediate_data_num += len(transfer_outputs)
                            #--------------------------#
 
                    # 3. aggregator
@@ -905,7 +918,10 @@ class OrderGenerator(object):
                                 for data in transfer_outputs:
                                     pos = data[1] # f
                                     self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
-                               #--------------------------#    
+                                
+                                self.feature_map_data_num += len(transfer_outputs)
+                               #--------------------------#
+                                
                #=============#
 
             elif self.model_info.layer_list[nlayer].layer_type == "pooling":
@@ -1006,6 +1022,9 @@ class OrderGenerator(object):
                                 else:
                                     pos = data[1]
                                 self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
+                            
+                            
+                            self.feature_map_data_num += len(transfer_outputs)
                            #--------------------------#
         
         print('Order generated!')

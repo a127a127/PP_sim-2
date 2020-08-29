@@ -1,15 +1,19 @@
 import csv
 from tqdm import tqdm
 
-path = './statistics/Caffenet/Same_Column_First_Mapping/Pipeline/'
+model = "DeepID"
+mapping = "Same_Column_First_Mapping"
+scheduling = "Pipeline"
+
+path = './statistics/'+ model + '/' + mapping + '/' + scheduling + '/'
 new_arr = []
 with open(path+'PE_utilization.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     idx = 0
-    scale = 100
+    scale = 2
     for row in tqdm(csv_reader):
-        if idx % scale == 0:
-        #if idx > 1800000:
+        #if idx % scale == 0:
+        if idx > 600000:
             new_arr.append(row)
         idx += 1
 

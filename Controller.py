@@ -12,7 +12,7 @@ import csv
 # import matplotlib.pyplot as plt
 
 import time
-
+import gc
 
 class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
@@ -92,6 +92,8 @@ class Controller(object):
 
             self.Non_pipeline_trigger = []
 
+        self.busy_xb = 0
+
         self.run()
         self.print_statistics_result()
 
@@ -137,6 +139,7 @@ class Controller(object):
                 if self.done_event == 0:
                     pass
                 else:
+                    # gc.collect()
                     print("完成比例:", int(self.done_event/len(self.Computation_order) * 100), "%")
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
@@ -343,6 +346,10 @@ class Controller(object):
                 self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
                 if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
                     self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+
+                # free mem
+                # event_idx = self.Computation_order.index(event)
+                # self.Computation_order[event_idx] = 0
                 
         self.edram_rd_pe_idx = check_pe_idx
         
@@ -371,6 +378,8 @@ class Controller(object):
                 pe.CU_IR_energy += self.hw_config.Energy_ir_in_cu * ou_num * self.hw_config.OU_h 
                 pe.CU_OR_energy += self.hw_config.Energy_or_in_cu * ou_num * self.hw_config.OU_w * self.hw_config.ADC_resolution
 
+                self.busy_xb += ou_num
+
             # Trigger
             pro_event_idx = event.proceeding_event[0] # 只會有一個pro event
             pro_event = self.Computation_order[pro_event_idx]
@@ -388,7 +397,7 @@ class Controller(object):
             for cycle in range(self.cycle_ctr, finish_cycle):
                 self.pe_state_for_plot[cycle].add(pe)
             
-            # # CU util
+            # CU util
             # for cycle in range(len(self.cu_state_for_plot), finish_cycle):
             #     self.cu_state_for_plot.append(set())
             # for cycle in range(self.cycle_ctr, finish_cycle):
@@ -400,7 +409,6 @@ class Controller(object):
                 self.layer_state_for_plot.append(set())
             for cycle in range(self.cycle_ctr, finish_cycle):
                 self.layer_state_for_plot[cycle].add(event.nlayer)
-            
             if finish_cycle > self.layer_finish_cycle[event.nlayer]:
                 self.layer_finish_cycle[event.nlayer] = finish_cycle
 
@@ -413,6 +421,10 @@ class Controller(object):
                 self.pe_state_cu_busy.append(set())
             for cycle in range(self.cycle_ctr, finish_cycle):
                 self.pe_state_cu_busy[cycle].add(pe)
+            
+            # free mem
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
                 
         self.cu_operation_pe_idx = set()
 
@@ -456,6 +468,10 @@ class Controller(object):
 
             if pe.pe_saa_erp:
                 check_pe_idx.add(pe)
+            
+            # free mem
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
         
         self.pe_saa_pe_idx = check_pe_idx
               
@@ -496,6 +512,11 @@ class Controller(object):
 
             if pe.activation_erp:
                 check_pe_idx.add(pe)
+            
+            # free mem
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
+
         self.activation_pe_idx = check_pe_idx
 
     def event_edram_wr(self):
@@ -535,11 +556,12 @@ class Controller(object):
                         else:
                             self.Trigger[finish_cycle].append([pe, pro_event])
 
-            # PE util
-            self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
             # pe performance breakdown
             pe.pe_finish_cycle = self.cycle_ctr
+
+            # PE util
+            self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
             # layer
             self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
@@ -548,6 +570,11 @@ class Controller(object):
 
             if pe.edram_wr_erp:
                 check_pe_idx.add(pe)
+
+            # free mem
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
+
         self.edram_wr_pe_idx = check_pe_idx
 
     def event_pooling(self):
@@ -586,6 +613,10 @@ class Controller(object):
 
             if pe.pooling_erp:
                 check_pe_idx.add(pe)
+            
+            # free mem
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
 
         self.pooling_pe_idx = check_pe_idx
 
@@ -667,6 +698,10 @@ class Controller(object):
 
             # pe performance breakdown
             src_pe.pe_finish_cycle = self.cycle_ctr - 1
+
+            # free mem
+            event_idx = self.Computation_order.index(event)
+            self.Computation_order[event_idx] = 0
 
         self.data_transfer_erp = []
 
@@ -818,15 +853,15 @@ class Controller(object):
         self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
-        print("output pe utilization...")
-        self.pe_utilization()
-        # print("output cu utilization...")
-        # self.cu_utilization()
-        print("output layer utilization...")
-        self.layer_utilization()
+        #print("output pe utilization...")
+        #self.pe_utilization()
+        #print("output cu utilization...")
+        #self.cu_utilization()
+        #print("output layer utilization...")
+        #self.layer_utilization()
         # print("output performance anaylsis...")
         # self.performance_statistics()
-        self.layer_behavior()
+        # self.layer_behavior()
         self.cu_performance_breakdown()
         self.pe_performance_breakdown()
 
@@ -863,6 +898,12 @@ class Controller(object):
             writer.writerow(["Crossbar Array", self.CU_crossbar_energy])
             writer.writerow(["IR", self.CU_IR_energy])
             writer.writerow(["OR", self.CU_OR_energy])
+
+            writer.writerow([])
+            writer.writerow(["Busy XB", self.busy_xb])
+            writer.writerow(["Avg", self.busy_xb/self.cycle_ctr])
+            writer.writerow(["USED_PE", self.ordergenerator.mp_info.USED_PE])
+            writer.writerow(["USED_XB", self.ordergenerator.mp_info.USED_PE*96])
 
     def PE_energy_breakdown(self):
         # PE breakdown

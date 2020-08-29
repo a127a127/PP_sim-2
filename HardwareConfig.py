@@ -28,6 +28,8 @@ class HardwareConfig(object):
             self.Router_num_y = 1
             self.Router_num_x = 2
         
+        # self.Router_num_y = 14
+        # self.Router_num_x = 12
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
@@ -79,12 +81,13 @@ class HardwareConfig(object):
         self.Energy_ou_crossbar = 2.4 * 0.01 / 1.2 / 8 * ((self.OU_h * self.OU_w) / (128 * 128))
         self.Energy_ou_adc      = 16 * 0.01 / 1.2 / 8 * self.OU_w * \
                                   (2**self.ADC_resolution / (self.ADC_resolution+1)) / (2**8/(8+1))
-        self.Energy_ou_ssa      = 0.05 * 0.01 / 2 / 1.2 * self.OU_w
+        self.Energy_ou_ssa      = self.Energy_shift_and_add * self.OU_w
         self.Energy_ir_in_cu    = 1.24 * 0.01 / 1.2 / 256 # per bit
         self.Energy_or_in_cu    = 0.23 * 0.01 / 1.2 / 128 # per bit
 
-        # Off chip fetch
-        self.Fetch_cycle = 1
+        # Off chip fetch: 目前還沒有資料
+        self.Fetch_cycle  = 1 # per data
+        self.Energy_fecth = 0 # per data
         
     def __str__(self):
         return str(self.__dict__)
