@@ -4,38 +4,15 @@ from math import floor
 class HardwareConfig(object):
     def __init__(self, model_config):
         # Ref: ISAAC: A Convolutional Neural Network Accelerator with In-Situ Analog Arithmetic in Crossbars
-
-        model_type = model_config.Model_type
-        if model_type == "Lenet": # 12 PEs
-            self.Router_num_y = 2
-            self.Router_num_x = 2
-        elif model_type == "Cifar10": # 5 PEs
-            self.Router_num_y = 1
-            self.Router_num_x = 2
-        elif model_type == "DeepID": # 8 PEs
-            self.Router_num_y = 1
-            self.Router_num_x = 2
-        elif model_type == "Caffenet":
-            self.Router_num_y = 10
-            self.Router_num_x = 10
-        elif model_type == "Overfeat":
-            self.Router_num_y = 12
-            self.Router_num_x = 12
-        elif model_type == "VGG16":
-            self.Router_num_y = 14
-            self.Router_num_x = 14
-        elif model_type == "Test":
-            self.Router_num_y = 1
-            self.Router_num_x = 2
         
-        # self.Router_num_y = 14
-        # self.Router_num_x = 12
+        self.Router_num_y = 14
+        self.Router_num_x = 13
         self.Router_num = self.Router_num_y * self.Router_num_x
         self.PE_num_y = 2
         self.PE_num_x = 2
         self.PE_num = self.PE_num_y * self.PE_num_x
-        self.CU_num = 12 #12
-        self.Xbar_num = 8 #8
+        self.CU_num = 12
+        self.Xbar_num = 8
         self.Xbar_h = 128
         self.Xbar_w = 128
         self.OU_h = 9

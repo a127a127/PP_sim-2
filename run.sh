@@ -1,23 +1,24 @@
-#model="Caffenet"
-#model="Overfeat"
-#model="VGG16"
 model="Lenet"
 #model="Cifar10"
 #model="DeepID"
 #model="Test"
+#model="Caffenet"
+#model="Overfeat"
+#model="VGG16"
 
-python3 PP_sim.py $model SCF Non_pipeline
-python3 PP_sim.py $model SCF Pipeline
-python3 PP_sim.py $model SRF Non_pipeline
-python3 PP_sim.py $model SRF Pipeline
+python3 PP_sim.py $model HIR Non-pipeline 1 1
+#python3 PP_sim.py $model HIR Pipeline 1 1
+#python3 PP_sim.py $model LIR Non-pipeline 1 1
+#python3 PP_sim.py $model LIR Pipeline 1 1
 
-python3 PP_sim.py $model SCFParal Non_pipeline 2
-python3 PP_sim.py $model SCFParal Pipeline 2
-python3 PP_sim.py $model SRFParal Non_pipeline 2
-python3 PP_sim.py $model SRFParal Pipeline 2
+#python3 PP_sim.py $model HIR Non-pipeline 2 2
+#python3 PP_sim.py $model HIR Pipeline 2 2
+#python3 PP_sim.py $model LIR Non-pipeline 2 2
+#python3 PP_sim.py $model LIR Pipeline 2 2
 
-python3 PP_sim.py $model SCFParal Non_pipeline 4
-python3 PP_sim.py $model SCFParal Pipeline 4
-python3 PP_sim.py $model SRFParal Non_pipeline 4
-python3 PP_sim.py $model SRFParal Pipeline 4
+#python3 PP_sim.py $model HIR Non-pipeline 4 4
+#python3 PP_sim.py $model HIR Pipeline 4 4
+#python3 PP_sim.py $model LIR Non-pipeline 4 4
+#python3 PP_sim.py $model LIR Pipeline 4 4
+
 

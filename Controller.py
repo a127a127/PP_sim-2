@@ -24,7 +24,7 @@ class Controller(object):
         self.scheduling_str = scheduling_str
         if self.scheduling_str == "Pipeline":
             self.isPipeLine = True
-        elif self.scheduling_str == "Non_pipeline":
+        elif self.scheduling_str == "Non-pipeline":
             self.isPipeLine = False
         if replacement == "Ideal":
             self.ideal_replacement = True
@@ -902,8 +902,10 @@ class Controller(object):
             writer.writerow([])
             writer.writerow(["Busy XB", self.busy_xb])
             writer.writerow(["Avg", self.busy_xb/self.cycle_ctr])
-            writer.writerow(["USED_PE", self.ordergenerator.mp_info.USED_PE])
-            writer.writerow(["USED_XB", self.ordergenerator.mp_info.USED_PE*96])
+
+            writer.writerow([])
+            layer_used_xb_num = self.ordergenerator.mp_info.layer_used_xb_num
+            writer.writerow([str(layer_used_xb_num)])
 
     def PE_energy_breakdown(self):
         # PE breakdown

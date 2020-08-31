@@ -4,16 +4,14 @@ import sys, csv
 from math import ceil
 import numpy as np
 
-USED_PE = 8
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
-RTY, RTX, PEY, PEX = 1, 1, 0, 0 # 第一個不能放的PE idx
+RTY, RTX, PEY, PEX = 11, 1, 0, 0 # 第一個不能放的PE idx
 # Lenet: 1, 1, 0, 0
 # Cifar10: 0, 1, 0, 1
 # DeepID: 0, 1, 1, 0
 # Caffenet: 8, 0, 0, 1
 # Overfeat: 11, 1, 0, 0
 # VGG16: 12, 11, 0, 0
-RTY, RTX, PEY, PEX, CUN, XBN = 0, 1, 0, 0, 0, 0
 
 class SameColumnFirstMapping(object):
     def __init__(self, model_config, hw_config):
@@ -45,11 +43,8 @@ class SameColumnFirstMapping(object):
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
         self.layer_used_pe = []
-        self.layer_used_xb = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
-            self.layer_used_xb.append(0)
-        self.USED_PE = USED_PE
         self.map()
 
         if False:
@@ -98,8 +93,7 @@ class SameColumnFirstMapping(object):
                         else:
                             Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
                         self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer].append(MappingMetaData(Inp, Cols, Filters))
-                        self.layer_used_xb[nlayer] += 1
-
+                        
                         # 算下一個XB的位置
                         xb_n += 1
                         if xb_n >= self.hw_config.Xbar_num:
@@ -131,31 +125,30 @@ class SameColumnFirstMapping(object):
                                                     exit()
                 
                 # next layer next PE
-                # if cu_n != 0 or xb_n != 0:
-                #     cu_n, xb_n = 0, 0
-                #     pe_w += 1
-                #     if pe_w >= self.hw_config.PE_num_x:
-                #         pe_w = 0
-                #         pe_h += 1
-                #         if pe_h >= self.hw_config.PE_num_y:
-                #             pe_h = 0
-                #             if rt_h % 2 == 0:
-                #                 rt_w += 1
-                #                 if rt_w >= self.hw_config.Router_num_x:
-                #                     rt_w -= 1
-                #                     rt_h += 1
-                #                     if rt_h >= self.hw_config.Router_num_y:
-                #                         print("no enough crossbar")
-                #                         exit()
-                #             else:
-                #                 rt_w -= 1
-                #                 if rt_w < 0:
-                #                     rt_w = 0
-                #                     rt_h += 1
-                #                     if rt_h >= self.hw_config.Router_num_y:
-                #                         print("no enough crossbar")
-                #                         exit()
-                
+                if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
+                    pe_w += 1
+                    if pe_w >= self.hw_config.PE_num_x:
+                        pe_w = 0
+                        pe_h += 1
+                        if pe_h >= self.hw_config.PE_num_y:
+                            pe_h = 0
+                            if rt_h % 2 == 0:
+                                rt_w += 1
+                                if rt_w >= self.hw_config.Router_num_x:
+                                    rt_w -= 1
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        print("no enough crossbar")
+                                        exit()
+                            else:
+                                rt_w -= 1
+                                if rt_w < 0:
+                                    rt_w = 0
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        print("no enough crossbar")
+                                        exit()
                 # else:
                 #     if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                 #         self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -330,7 +323,6 @@ class SameRowFirstMapping(object):
         self.layer_used_pe = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
-        self.USED_PE = USED_PE
         self.map()
 
     def map(self):
@@ -597,7 +589,6 @@ class SCFParallelsimMapping(object):
         self.layer_used_pe = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
-        self.USED_PE = USED_PE
         self.map()
 
     def map(self):
@@ -670,41 +661,38 @@ class SCFParallelsimMapping(object):
                                                     rt_h, rt_w = 0, 0
                                                     #print("no enough crossbar")
                                                     #exit()
-                                # if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
-                                #     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                        if (rt_h, rt_w, pe_h, pe_w, cu_n, xb_n) == (RTY, RTX, PEY, PEX, CUN, XBN):
-                            rt_h, rt_w, pe_h, pe_w, cu_n, xb_n = 0, 0, 0, 0, 0, 0
+                                if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                                    rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 
                 # next layer next PE
-                # if cu_n != 0 or xb_n != 0:
-                #     cu_n, xb_n = 0, 0
-                #     pe_w += 1
-                #     if pe_w >= self.hw_config.PE_num_x:
-                #         pe_w = 0
-                #         pe_h += 1
-                #         if pe_h >= self.hw_config.PE_num_y:
-                #             pe_h = 0
-                #             if rt_h % 2 == 0:
-                #                 rt_w += 1
-                #                 if rt_w >= self.hw_config.Router_num_x:
-                #                     rt_w -= 1
-                #                     rt_h += 1
-                #                     if rt_h >= self.hw_config.Router_num_y:
-                #                         rt_h, rt_w = 0, 0
-                #                         # print("no enough crossbar")
-                #                         # exit()
-                #             else:
-                #                 rt_w -= 1
-                #                 if rt_w < 0:
-                #                     rt_w = 0
-                #                     rt_h += 1
-                #                     if rt_h >= self.hw_config.Router_num_y:
-                #                         rt_h, rt_w = 0, 0
-                #                         # print("no enough crossbar")
-                #                         # exit()
-                #     if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
-                #         rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                
+                if cu_n != 0 or xb_n != 0:
+                    cu_n, xb_n = 0, 0
+                    pe_w += 1
+                    if pe_w >= self.hw_config.PE_num_x:
+                        pe_w = 0
+                        pe_h += 1
+                        if pe_h >= self.hw_config.PE_num_y:
+                            pe_h = 0
+                            if rt_h % 2 == 0:
+                                rt_w += 1
+                                if rt_w >= self.hw_config.Router_num_x:
+                                    rt_w -= 1
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
+                            else:
+                                rt_w -= 1
+                                if rt_w < 0:
+                                    rt_w = 0
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
+                                        # print("no enough crossbar")
+                                        # exit()
+                    if rt_h == RTY and rt_w == RTX and pe_h == PEY and pe_w == PEX:
+                        rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
                 # else:
                     # if len(self.layer_used_pe[nlayer]) < self.hw_config.total_pe_num:
                     #     self.layer_used_pe[nlayer].remove((rt_h, rt_w, pe_h, pe_w))
@@ -886,7 +874,6 @@ class SRFParallelsimMapping(object):
         self.layer_used_pe = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
-        self.USED_PE = USED_PE
         self.map()
 
     def map(self):
