@@ -5,12 +5,12 @@ from math import ceil
 import numpy as np
 
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
-RTY, RTX, PEY, PEX = 11, 1, 0, 0 # 第一個不能放的PE idx
+RTY, RTX, PEY, PEX = 8, 0, 0, 1 # 第一個不能放的PE idx
 # Lenet: 1, 1, 0, 0
 # Cifar10: 0, 1, 0, 1
 # DeepID: 0, 1, 1, 0
 # Caffenet: 8, 0, 0, 1
-# Overfeat: 11, 1, 0, 0
+# Overfeat: 11, 1, 0, 0 
 # VGG16: 12, 11, 0, 0
 
 class SameColumnFirstMapping(object):
@@ -43,9 +43,10 @@ class SameColumnFirstMapping(object):
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
         self.layer_used_pe = []
+        self.layer_used_xb_num = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
-        self.map()
+            self.layer_used_xb_num.append(0)
 
         if False:
             used_pe = 0
@@ -321,8 +322,10 @@ class SameRowFirstMapping(object):
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
         self.layer_used_pe = []
+        self.layer_used_xb_num = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
+            self.layer_used_xb_num.append(0)
         self.map()
 
     def map(self):
@@ -587,8 +590,10 @@ class SCFParallelsimMapping(object):
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
         self.layer_used_pe = []
+        self.layer_used_xb_num = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
+            self.layer_used_xb_num.append(0)
         self.map()
 
     def map(self):
@@ -872,8 +877,10 @@ class SRFParallelsimMapping(object):
                                 for nlayer in range(self.model_info.layer_length):
                                     self.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx].append([])
         self.layer_used_pe = []
+        self.layer_used_xb_num = []
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
+            self.layer_used_xb_num.append(0)
         self.map()
 
     def map(self):
