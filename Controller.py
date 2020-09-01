@@ -298,6 +298,7 @@ class Controller(object):
                 for data in edram_rd_data:
                     if not pe.edram_buffer.get(data):
                         fetch_data.append(data)
+                        pe.edram_buffer.miss += 1
 
             if fetch_data:
                 # fetch data
@@ -842,6 +843,8 @@ class Controller(object):
                             self.CU_crossbar_energy + self.CU_IR_energy + self.CU_OR_energy + \
                             self.Total_energy_interconnect
 
+
+
         print("Total Cycles:", self.cycle_ctr)
         if not self.isPipeLine:
             print("Cycles each layer:", self.cycles_each_layer)
@@ -853,17 +856,18 @@ class Controller(object):
         self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
-        #print("output pe utilization...")
-        #self.pe_utilization()
+        print("output pe utilization...")
+        self.pe_utilization()
         #print("output cu utilization...")
         #self.cu_utilization()
-        #print("output layer utilization...")
-        #self.layer_utilization()
+        print("output layer utilization...")
+        self.layer_utilization()
         # print("output performance anaylsis...")
         # self.performance_statistics()
         # self.layer_behavior()
         self.cu_performance_breakdown()
         self.pe_performance_breakdown()
+        self.miss_rate()
 
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
@@ -906,6 +910,14 @@ class Controller(object):
             writer.writerow([])
             layer_used_xb_num = self.ordergenerator.mp_info.layer_used_xb_num
             writer.writerow([str(layer_used_xb_num)])
+
+
+            writer.writerow([])
+            fm_num  = self.ordergenerator.transfer_feature_map_data_num
+            inter_num = self.ordergenerator.transfer_intermediate_data_num
+            writer.writerow(["transfer data between PE"])
+            writer.writerow(["feature map data", fm_num])
+            writer.writerow(["intermediate data", inter_num])
 
     def PE_energy_breakdown(self):
         # PE breakdown
@@ -1091,3 +1103,18 @@ class Controller(object):
                 if row[0] != 0 or row[1] != 0 or row[2] !=0 :
                     row.insert(0, "PE"+str(pe_idx))
                     writer.writerow(row)
+
+    def miss_rate(self):
+        with open(self.path+'/Miss_rate.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for pe_pos in self.PE_array:
+                rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
+                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
+                arr = ["PE"+str(idx)]
+
+                pe = self.PE_array[pe_pos]
+                miss = pe.edram_buffer.miss
+                
+                arr.append(miss)
+                writer.writerow(arr)
+

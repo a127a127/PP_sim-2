@@ -319,9 +319,9 @@ class HighInputReuseMapping(object):
                 #for w in range(mapping_width_num_xb):
                 for h in range(mapping_height_num_xb):
                     if h != mapping_height_num_xb-1:
-                        Inp = [i for i in range(h * self.hw_config.Xbar_h,(h+1) * self.hw_config.Xbar_h)]
+                        Inp = [i for i in range(h * data_per_xb,(h+1) * data_per_xb)]
                     else:
-                        Inp = [i for i in range(h * self.hw_config.Xbar_h, matrix_height)]
+                        Inp = [i for i in range(h * data_per_xb, matrix_height)]
                     for w in range(mapping_width_num_xb):
                         self.layer_used_pe[nlayer].add((rt_h, rt_w, pe_h, pe_w))
                         # map to a crossbar

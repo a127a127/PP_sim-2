@@ -5,6 +5,7 @@ class OnChipBuffer(): # LRU
         self.size = size
         self.buffer = OrderedDict()
         self.maximal_usage = 0
+        self.miss = 0
         
     def put(self, key, value):
         if key in self.buffer:

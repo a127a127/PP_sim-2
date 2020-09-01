@@ -113,8 +113,8 @@ class OrderGenerator(object):
                 self.fm_data_transfer_event_idx[nlayer].append(dict()) # {PE: transfer_event_idx}
        #-----------------------------------------------#  
 
-        self.feature_map_data_num  = 0
-        self.intermediate_data_num = 0
+        self.transfer_feature_map_data_num  = 0
+        self.transfer_intermediate_data_num = 0
 
         self.Computation_order = []
         self.generate_order()
@@ -385,7 +385,7 @@ class OrderGenerator(object):
                                                 pos = data[1]
                                             self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                                         
-                                        self.feature_map_data_num += len(transfer_outputs)
+                                        self.transfer_feature_map_data_num += len(transfer_outputs)
                                        #--------------------------#
 
                            # 2. 要傳到別的pe做activation 要生transfer
@@ -409,7 +409,7 @@ class OrderGenerator(object):
                                     
                                     wr_and_transfer_event_dict[des_pe].append(transfer_event_idx) # for dependency
                                     
-                                    self.intermediate_data_num += len(transfer_outputs)
+                                    self.transfer_intermediate_data_num += len(transfer_outputs)
                                    #--------------------------#
 
                            # 3. aggregator
@@ -544,7 +544,7 @@ class OrderGenerator(object):
                                                 pos = data[1]
                                             self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                                         
-                                        self.feature_map_data_num += len(transfer_outputs)
+                                        self.transfer_feature_map_data_num += len(transfer_outputs)
                                        #--------------------------#
                        #========================#
 
@@ -769,7 +769,7 @@ class OrderGenerator(object):
                                     pos = data[1] # f
                                     self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                                 
-                                self.feature_map_data_num += len(transfer_outputs)
+                                self.transfer_feature_map_data_num += len(transfer_outputs)
                                #--------------------------#
 
                    # 2. 要傳到別的pe做activation 要生transfer
@@ -793,7 +793,7 @@ class OrderGenerator(object):
                             
                             wr_and_transfer_event_dict[des_pe].append(transfer_event_idx) # for dependency
                             
-                            self.intermediate_data_num += len(transfer_outputs)
+                            self.transfer_intermediate_data_num += len(transfer_outputs)
                            #--------------------------#
 
                    # 3. aggregator
@@ -919,7 +919,7 @@ class OrderGenerator(object):
                                     pos = data[1] # f
                                     self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                                 
-                                self.feature_map_data_num += len(transfer_outputs)
+                                self.transfer_feature_map_data_num += len(transfer_outputs)
                                #--------------------------#
                                 
                #=============#
@@ -1024,7 +1024,7 @@ class OrderGenerator(object):
                                 self.fm_data_transfer_event_idx[nlayer][pos][data_transfer_des] = transfer_event_idx
                             
                             
-                            self.feature_map_data_num += len(transfer_outputs)
+                            self.transfer_feature_map_data_num += len(transfer_outputs)
                            #--------------------------#
         
         print('Order generated!')
