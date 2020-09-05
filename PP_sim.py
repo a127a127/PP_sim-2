@@ -4,6 +4,7 @@ from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
+from Visualizer import Visualizer
 
 import time, sys, os, pickle, math
 
@@ -103,6 +104,8 @@ def main():
     else:
         with open(filename, 'rb') as input:
             order_generator = pickle.load(input)
+
+    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}.png")
 
     ## Power and performance simulation ###
     start_simulation_time = time.time()
