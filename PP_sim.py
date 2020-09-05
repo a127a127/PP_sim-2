@@ -5,6 +5,7 @@ from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
+from Visualizer import Visualizer
 
 import time, sys, os
 
@@ -99,6 +100,8 @@ def main():
     order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+
+    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}.png")
     
     ## Power and performance simulation ###
     start_simulation_time = time.time()
