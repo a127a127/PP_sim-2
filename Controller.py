@@ -5,7 +5,6 @@ from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
 
-import numpy as np
 import csv
 # import matplotlib
 # matplotlib.use('Agg')

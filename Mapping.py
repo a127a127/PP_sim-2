@@ -2,7 +2,6 @@ from Model import Model
 from MappingMetaData import MappingMetaData
 import sys, csv
 from math import ceil
-import numpy as np
 
 class CaculateMappedCrossbarNum(object):
     def __init__(self, model_config, hw_config, partition_h, partition_w):

@@ -1,7 +1,6 @@
 from Model import Model
 from PE import PE
 from EventMetaData import EventMetaData
-import numpy as np
 import math
 import collections
 from tqdm import tqdm

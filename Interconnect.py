@@ -1,5 +1,4 @@
 from Router import Router
-import numpy as np
 import time
 
 class Interconnect(object):
@@ -8,10 +7,9 @@ class Interconnect(object):
         self.rt_h = hw_config.Router_num_y
         self.rt_w = hw_config.Router_num_x
         for h in range(self.rt_h):
+            self.router_array.append([])
             for w in range(self.rt_w):
-                self.router_array.append(Router(h, w))
-        self.router_array = np.array(self.router_array)
-        self.router_array = self.router_array.reshape(self.rt_h, self.rt_w)
+                self.router_array[h].append(Router(h, w))
         self.busy_router = set()
 
     def input_packet(self, packet):
