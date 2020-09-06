@@ -2,8 +2,8 @@ from PE import PE
 
 from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
-#from Interconnect import Interconnect
-#from Packet import Packet
+from Interconnect import Interconnect
+from Packet import Packet
 
 import numpy as np
 import csv
@@ -16,12 +16,14 @@ import gc
 
 class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
+        self.congestion =  True
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
         self.trace = trace
         self.mapping_str = mapping_str
         self.scheduling_str = scheduling_str
+        self.interconnect = Interconnect(self.hw_config)
         if self.scheduling_str == "Pipeline":
             self.isPipeLine = True
         elif self.scheduling_str == "Non-pipeline":
@@ -74,8 +76,8 @@ class Controller(object):
             self.layer_finish_cycle.append(0)
 
         # pe performance breakdown
-        self.pe_state_cu_busy = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
-        self.pe_state_wait_transfer = [0]
+        # self.pe_state_cu_busy = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
+        # self.pe_state_wait_transfer = [0]
 
         # Pipeline control
         if not self.isPipeLine: # Non_pipeline
@@ -115,19 +117,8 @@ class Controller(object):
             if event.nlayer != 0:
                 break
         
-        t_edram = 0
-        t_cuop = 0
-        t_pesaa = 0
-        t_act = 0
-        t_wr = 0
-
-        t_pool = 0
-        t_transfer = 0
-        t_fetch = 0
-
-        t_trigger = 0
-        t_buffer = 0
-        t_ = time.time()
+        self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger = 0, 0, 0, 0, 0, 0, 0, 0, 0
+        # self.t_buffer = 0
 
         start_time = time.time()
         
@@ -142,15 +133,14 @@ class Controller(object):
                     # gc.collect()
                     print("完成比例:", int(self.done_event/len(self.Computation_order) * 100), "%")
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
-                    print("edram:", t_edram, "t_cuop", t_cuop, "pesaa", t_pesaa, "act", t_act, "wr", t_wr)
-                    print("pooling:", t_pool, "transfer", t_transfer, "fetch", t_fetch)
-                    print("trigger", t_trigger, "buffer", t_buffer)
-                    print("t:", time.time()-t_)
+                    print("edram:", self.t_edram, "t_cuop", self.t_cuop, "pesaa", self.t_pesaa, "act", self.t_act, "wr", self.t_wr)
+                    print("pooling:", self.t_pool, "transfer", self.t_transfer, "fetch", self.t_fetch)
+                    print("trigger", self.t_trigger)
                     print()
-                    t_edram, t_cuop, t_pesaa, t_act, t_wr = 0, 0, 0, 0, 0
-                    t_pool, t_transfer, t_fetch = 0, 0, 0
-                    t_trigger, t_buffer =  0, 0
-                    t_ = time.time()
+                    self.t_edram, self.t_cuop, self.t_pesaa, self.t_act, self.t_wr = 0, 0, 0, 0, 0
+                    self.t_pool, self.t_transfer, self.t_fetch = 0, 0, 0
+                    self.t_trigger = 0
+                    #self.t_buffer =  0
 
             self.cycle_ctr += 1
 
@@ -158,10 +148,10 @@ class Controller(object):
                 self.pe_state_for_plot.append(set())
             if len(self.layer_state_for_plot) == self.cycle_ctr:
                 self.layer_state_for_plot.append(set())
-            if len(self.pe_state_cu_busy) == self.cycle_ctr:
-                self.pe_state_cu_busy.append(set())
-            if len(self.pe_state_wait_transfer) == self.cycle_ctr:
-                self.pe_state_wait_transfer.append(set())
+            # if len(self.pe_state_cu_busy) == self.cycle_ctr:
+            #     self.pe_state_cu_busy.append(set())
+            # if len(self.pe_state_wait_transfer) == self.cycle_ctr:
+            #     self.pe_state_wait_transfer.append(set())
 
             ## Pipeline stage control ###
             if not self.isPipeLine: # Non_pipeline
@@ -179,8 +169,8 @@ class Controller(object):
                         pe = trigger[0]
                         event = trigger[1]
                         if event.event_type == "edram_rd_ir":
-                            transfer_data = trigger[2]
-                            for data in transfer_data:
+                            data_list = trigger[2]
+                            for data in data_list:
                                 pe.edram_buffer.put(data, data)
                             cu_idx = event.position_idx[4]
                             pe.edram_rd_ir_erp[cu_idx].append(event)
@@ -195,18 +185,18 @@ class Controller(object):
                                 cu_dict[pe].add(cu_idx)
                             
                             # pe performance breakdown
-                            pe_set.add(pe)
+                            # pe_set.add(pe)
                             
                         elif event.event_type == "edram_rd":
                             if len(trigger) == 3: # transfer data此時寫入buffer 
-                                transfer_data = trigger[2]
-                                for data in transfer_data:
+                                data_list = trigger[2]
+                                for data in data_list:
                                     pe.edram_buffer.put(data, data)
                             pe.edram_rd_erp.append(event)
                             self.edram_rd_pe_idx.add(pe)
 
                             # pe performance breakdown
-                            #pe_set.add(pe)
+                            # pe_set.add(pe)
 
                         else:
                             print("error event type:", event.event_type)
@@ -217,67 +207,97 @@ class Controller(object):
                             pe.cu_wait_transfer[cu_idx] += (self.cycle_ctr - self.transfer_start_cycle)
 
                     # pe performance breakdown
-                    for pe in pe_set:
-                        pe.pe_wait_transfer += (self.cycle_ctr - self.transfer_start_cycle)
+                    # for pe in pe_set:
+                    #     pe.pe_wait_transfer += (self.cycle_ctr - self.transfer_start_cycle)
 
                     self.Non_pipeline_trigger = []
 
-
             if self.trace:
                 print("cycle:", self.cycle_ctr)
-            
-            staa = time.time()
             self.Trigger_event()
-            t_trigger += time.time() - staa
-
-            staa = time.time()
             self.event_edram_rd()
-            t_edram += time.time() - staa
-
-            staa = time.time()
             self.event_cu_op()
-            t_cuop += time.time() - staa
-
-            staa = time.time()
             self.event_pe_saa()
-            t_pesaa += time.time() - staa
-
-            staa = time.time()
             self.event_act()
-            t_act += time.time() - staa
-
-            staa = time.time()
             self.event_edram_wr()
-            t_wr += time.time() - staa
-
-            staa = time.time()
             self.event_pooling()
-            t_pool += time.time() - staa
-            
-            staa = time.time()
             self.event_transfer()
-            t_transfer += time.time() - staa
-
-            staa = time.time()
             self.fetch()
-            t_fetch += time.time() - staa
-            
-            
-            # ### Buffer utilization (time history)
-            # staa = time.time()
-            # if self.cycle_ctr % 200 == 0:
-            # #if True:
-            #     for pe in self.check_buffer_pe_set:
-            #         pe.buffer_size_util[0].append(self.cycle_ctr)
-            #         pe.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
-            #     self.check_buffer_pe_set = set()
-            # t_buffer += time.time() - staa
+            for s in range(self.hw_config.interconnect_step_num):
+                self.interconnect_fn()
+            # self.record_buffer_util()
 
             ### Finish
             if self.done_event == len(self.Computation_order):
                 break
+
+    def Trigger_event(self):
+        tt = time.time()
+        if self.cycle_ctr in self.Trigger:
+            for trigger in self.Trigger[self.cycle_ctr]:
+                pe = trigger[0]
+                event = trigger[1]
+                
+                if event.event_type == "edram_rd_ir":
+                    # transfer_data = trigger[2]
+                    # for data in transfer_data:
+                    #     pe.edram_buffer.put(data, data)
+                    cu_idx = event.position_idx[4]
+                    pe.edram_rd_ir_erp[cu_idx].appendleft(event)
+                    if not pe.cu_state[cu_idx]: # state == False
+                        self.edram_rd_pe_idx.add(pe)
+                        if cu_idx not in pe.edram_rd_cu_idx:
+                            pe.edram_rd_cu_idx.appendleft(cu_idx)
+                    
+                elif event.event_type == "cu_operation":
+                    cu_idx = event.position_idx[4]
+                    pe.cu_operation_erp[cu_idx].appendleft(event)
+                    self.cu_operation_pe_idx.add(pe)
+                    pe.cu_operation_cu_idx.appendleft(cu_idx)
+                
+                elif event.event_type == "pe_saa":
+                    if len(trigger) == 3: # 讓此CU可以做其他event
+                        cu_idx = trigger[2]
+                        if pe.edram_rd_ir_erp[cu_idx]:
+                            if cu_idx not in pe.edram_rd_cu_idx:
+                                pe.edram_rd_cu_idx.append(cu_idx)
+                            self.edram_rd_pe_idx.add(pe)
+                        pe.cu_state[cu_idx] = False
+                    pe.pe_saa_erp.append(event)
+                    self.pe_saa_pe_idx.add(pe)
+                    
+                elif event.event_type == "edram_wr":
+                    pe.edram_wr_erp.append(event)
+                    self.edram_wr_pe_idx.add(pe)
+                
+                elif event.event_type == "activation":
+                    pe.activation_erp.append(event)
+                    self.activation_pe_idx.add(pe)
+                
+                elif event.event_type == "data_transfer":
+                    self.data_transfer_erp.append(event)
+                
+                elif event.event_type == "edram_rd":
+                    if len(trigger) == 3: # transfer data此時寫入buffer 
+                        transfer_data = trigger[2]
+                        for data in transfer_data:
+                            pe.edram_buffer.put(data, data)
+                    pe.edram_rd_erp.appendleft(event)
+                    self.edram_rd_pe_idx.add(pe)
+                
+                elif event.event_type == "pooling":
+                    pe.pooling_erp.append(event)
+                    self.pooling_pe_idx.add(pe)
+
+                else:
+                    print("error event type:", event.event_type)
+
+            del self.Trigger[self.cycle_ctr]
         
+        self.t_trigger += time.time() - tt
+
     def event_edram_rd(self):
+        tt = time.time()
         check_pe_idx = set()
         for pe in self.edram_rd_pe_idx:
             if pe.edram_rd_erp: # 非CU的edram read
@@ -353,8 +373,11 @@ class Controller(object):
                 # self.Computation_order[event_idx] = 0
                 
         self.edram_rd_pe_idx = check_pe_idx
+
+        self.t_edram += time.time() - tt
         
     def event_cu_op(self):
+        tt = time.time()
         for pe in self.cu_operation_pe_idx:
             cu_idx = pe.cu_operation_cu_idx.popleft()
             pe.cu_state[cu_idx] = True
@@ -418,10 +441,10 @@ class Controller(object):
             pe.cu_finish_cycle[cu_idx] = max(finish_cycle, pe.cu_finish_cycle[cu_idx])
 
             # pe performance breakdown
-            for cycle in range(len(self.pe_state_cu_busy), finish_cycle):
-                self.pe_state_cu_busy.append(set())
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                self.pe_state_cu_busy[cycle].add(pe)
+            # for cycle in range(len(self.pe_state_cu_busy), finish_cycle):
+            #     self.pe_state_cu_busy.append(set())
+            # for cycle in range(self.cycle_ctr, finish_cycle):
+            #     self.pe_state_cu_busy[cycle].add(pe)
             
             # free mem
             # event_idx = self.Computation_order.index(event)
@@ -429,7 +452,10 @@ class Controller(object):
                 
         self.cu_operation_pe_idx = set()
 
+        self.t_cuop += time.time() - tt
+
     def event_pe_saa(self):
+        tt = time.time()
         check_pe_idx = set()
         for pe in self.pe_saa_pe_idx:
             event = pe.pe_saa_erp.popleft()
@@ -475,8 +501,10 @@ class Controller(object):
             # self.Computation_order[event_idx] = 0
         
         self.pe_saa_pe_idx = check_pe_idx
+        self.t_pesaa += time.time() - tt
               
     def event_act(self):
+        tt = time.time()
         check_pe_idx = set()
         for pe in self.activation_pe_idx:
             event = pe.activation_erp.popleft()
@@ -520,7 +548,10 @@ class Controller(object):
 
         self.activation_pe_idx = check_pe_idx
 
+        self.t_act += time.time() - tt
+
     def event_edram_wr(self):
+        tt = time.time()
         check_pe_idx = set()
         for pe in self.edram_wr_pe_idx:
             event = pe.edram_wr_erp.popleft()
@@ -559,7 +590,7 @@ class Controller(object):
 
 
             # pe performance breakdown
-            pe.pe_finish_cycle = self.cycle_ctr
+            # pe.pe_finish_cycle = self.cycle_ctr
 
             # PE util
             self.pe_state_for_plot[self.cycle_ctr].add(pe)
@@ -577,8 +608,11 @@ class Controller(object):
             # self.Computation_order[event_idx] = 0
 
         self.edram_wr_pe_idx = check_pe_idx
+        
+        self.t_wr += time.time() - tt
 
     def event_pooling(self):
+        tt = time.time()
         check_pe_idx = set()
         for pe in self.pooling_pe_idx:
             event = pe.pooling_erp.popleft()
@@ -621,7 +655,10 @@ class Controller(object):
 
         self.pooling_pe_idx = check_pe_idx
 
+        self.t_pool += time.time() - tt
+
     def event_transfer(self):
+        tt = time.time()
         for event in self.data_transfer_erp:
             if self.trace:
                 print("\tdo data_transfer event idx:", self.Computation_order.index(event))
@@ -661,52 +698,66 @@ class Controller(object):
 
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
+                self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
-                pe_set = set() # pe performance breakdown
-                # Trigger
-                finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
-                for pro_event_idx in event.proceeding_event:
-                    pro_event = self.Computation_order[pro_event_idx]
-                    pro_event.current_number_of_preceding_event += 1
-                    if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                        if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
-                            self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
-                            self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
-                        else:
-                            if finish_cycle not in self.Trigger:
-                                self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
+                if self.congestion:
+                    for i in range(len(transfer_data)-1):
+                        data = transfer_data[i]
+                        packet = Packet(data_transfer_src, data_transfer_des, data, [])
+                        self.interconnect.input_packet(packet)
+                    data = transfer_data[-1]
+                    packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
+                    self.interconnect.input_packet(packet)
+                    self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
+                else:
+                    # Trigger
+                    # pe_set = set() # pe performance breakdown
+                    finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
+                    for pro_event_idx in event.proceeding_event:
+                        pro_event = self.Computation_order[pro_event_idx]
+                        pro_event.current_number_of_preceding_event += 1
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                            if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                                self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
+                                self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                             else:
-                                self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
-                            
-                            if pro_event.event_type == "edram_rd_ir":
-                                # cu performance breakdown
-                                cu_idx = pro_event.position_idx[4]
-                                des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
+                                if finish_cycle not in self.Trigger:
+                                    self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
+                                else:
+                                    self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
+                                
+                                if pro_event.event_type == "edram_rd_ir":
+                                    # cu performance breakdown
+                                    cu_idx = pro_event.position_idx[4]
+                                    des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
 
-                            # pe performance breakdown
-                            pe_set.add(des_pe)
-                    else:
-                        for data in transfer_data: # 沒有trigger event先放data
-                            des_pe.edram_buffer.put(data, data)
+                                # pe performance breakdown
+                                # pe_set.add(des_pe)
+                        else:
+                            for data in transfer_data: # 沒有trigger event先放data
+                                des_pe.edram_buffer.put(data, data)
                 
-                # pe performance breakdown
-                for pe in pe_set:
-                    for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
-                        self.pe_state_wait_transfer.append(set())
-                    for cycle in range(self.cycle_ctr+1, finish_cycle):
-                        self.pe_state_wait_transfer[cycle].add(pe)
+                    # pe performance breakdown
+                    # for pe in pe_set:
+                    #     for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
+                    #         self.pe_state_wait_transfer.append(set())
+                    #     for cycle in range(self.cycle_ctr+1, finish_cycle):
+                    #         self.pe_state_wait_transfer[cycle].add(pe)
 
             # pe performance breakdown
-            src_pe.pe_finish_cycle = self.cycle_ctr - 1
+            # src_pe.pe_finish_cycle = self.cycle_ctr - 1
 
             # free mem
-            event_idx = self.Computation_order.index(event)
-            self.Computation_order[event_idx] = 0
+            # event_idx = self.Computation_order.index(event)
+            # self.Computation_order[event_idx] = 0
 
         self.data_transfer_erp = []
 
+        self.t_transfer += time.time() - tt
+
     def fetch(self):
+        tt = time.time()
         for fe in self.fetch_array:
             transfer_data = fe.data
             num_data = len(transfer_data)
@@ -723,9 +774,11 @@ class Controller(object):
             
             # Trigger
             if finish_cycle not in self.Trigger:
-                self.Trigger[finish_cycle] = [[des_pe, event, transfer_data]]
+                self.Trigger[finish_cycle] = [[des_pe, event]]
             else:
-                self.Trigger[finish_cycle].append([des_pe, event, transfer_data])
+                self.Trigger[finish_cycle].append([des_pe, event])
+            for data in transfer_data:
+                des_pe.edram_buffer.put(data, data)
             
             pos_idx = event.position_idx
             pe_pos = pos_idx[:4]
@@ -737,74 +790,48 @@ class Controller(object):
                 pe.cu_wait_transfer[cu_idx] += self.hw_config.Fetch_cycle + transfer_distance + 2
 
             # pe performance breakdown
-            for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
-                self.pe_state_wait_transfer.append(set())
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                self.pe_state_wait_transfer[cycle].add(pe)
+            # for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
+            #     self.pe_state_wait_transfer.append(set())
+            # for cycle in range(self.cycle_ctr, finish_cycle):
+            #     self.pe_state_wait_transfer[cycle].add(pe)
 
         self.fetch_array = []
 
-    def Trigger_event(self):
-        if self.cycle_ctr in self.Trigger:
-            for trigger in self.Trigger[self.cycle_ctr]:
-                pe = trigger[0]
-                event = trigger[1]
-                
-                if event.event_type == "edram_rd_ir":
-                    transfer_data = trigger[2]
-                    for data in transfer_data:
-                        pe.edram_buffer.put(data, data)
-                    cu_idx = event.position_idx[4]
-                    pe.edram_rd_ir_erp[cu_idx].appendleft(event)
-                    if not pe.cu_state[cu_idx]: # state == False
-                        self.edram_rd_pe_idx.add(pe)
-                        if cu_idx not in pe.edram_rd_cu_idx:
-                            pe.edram_rd_cu_idx.appendleft(cu_idx)
-                    
-                elif event.event_type == "cu_operation":
-                    cu_idx = event.position_idx[4]
-                    pe.cu_operation_erp[cu_idx].appendleft(event)
-                    self.cu_operation_pe_idx.add(pe)
-                    pe.cu_operation_cu_idx.appendleft(cu_idx)
-                
-                elif event.event_type == "pe_saa":
-                    if len(trigger) == 3: # 讓此CU可以做其他event
-                        cu_idx = trigger[2]
-                        if pe.edram_rd_ir_erp[cu_idx]:
-                            if cu_idx not in pe.edram_rd_cu_idx:
-                                pe.edram_rd_cu_idx.append(cu_idx)
-                            self.edram_rd_pe_idx.add(pe)
-                        pe.cu_state[cu_idx] = False
-                    pe.pe_saa_erp.append(event)
-                    self.pe_saa_pe_idx.add(pe)
-                    
-                elif event.event_type == "edram_wr":
-                    pe.edram_wr_erp.append(event)
-                    self.edram_wr_pe_idx.add(pe)
-                
-                elif event.event_type == "activation":
-                    pe.activation_erp.append(event)
-                    self.activation_pe_idx.add(pe)
-                
-                elif event.event_type == "data_transfer":
-                    self.data_transfer_erp.append(event)
-                
-                elif event.event_type == "edram_rd":
-                    if len(trigger) == 3: # transfer data此時寫入buffer 
-                        transfer_data = trigger[2]
-                        for data in transfer_data:
-                            pe.edram_buffer.put(data, data)
-                    pe.edram_rd_erp.appendleft(event)
-                    self.edram_rd_pe_idx.add(pe)
-                
-                elif event.event_type == "pooling":
-                    pe.pooling_erp.append(event)
-                    self.pooling_pe_idx.add(pe)
+        self.t_fetch += time.time() - tt
 
-                else:
-                    print("error event type:", event.event_type)
+    def interconnect_fn(self):
+        arrived = self.interconnect.step()
+        for packet in arrived:
+            des_pe_id = packet.destination
+            des_pe = self.PE_array[des_pe_id]
+            data = packet.data
+            pro_event_list = packet.pro_event_list
+            des_pe.edram_buffer.put(data, data)
+            # Trigger
+            for proceeding_index in pro_event_list:
+                pro_event = self.Computation_order[proceeding_index]
+                pro_event.current_number_of_preceding_event += 1
+                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                    if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                        self.Non_pipeline_trigger.append([des_pe, pro_event, []])
+                    else:
+                        finish_cycle = self.cycle_ctr + 1
+                        if finish_cycle not in self.Trigger:
+                            self.Trigger[finish_cycle] = [[des_pe, pro_event]]
+                        else:
+                            self.Trigger[finish_cycle].append([des_pe, pro_event])
 
-            del self.Trigger[self.cycle_ctr]
+
+    def record_buffer_util(self):
+        # time history
+        tt = time.time()
+        fre = 200
+        if self.cycle_ctr % fre == 0:
+            for pe in self.check_buffer_pe_set:
+                pe.buffer_size_util[0].append(self.cycle_ctr)
+                pe.buffer_size_util[1].append(len(pe.edram_buffer.buffer))
+            self.check_buffer_pe_set = set()
+        self.t_buffer += time.time() - tt
 
     def print_statistics_result(self):
         print("print_statistics_result")
@@ -866,7 +893,7 @@ class Controller(object):
         # self.performance_statistics()
         # self.layer_behavior()
         self.cu_performance_breakdown()
-        self.pe_performance_breakdown()
+        # self.pe_performance_breakdown()
         self.miss_rate()
 
     def output_result(self):
