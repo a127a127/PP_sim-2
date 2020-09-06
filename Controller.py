@@ -130,7 +130,7 @@ class Controller(object):
                     pass
                 else:
                     # gc.collect()
-                    print("完成比例:", int(self.done_event/len(self.Computation_order) * 100), "%")
+                    print("Completed:", int(self.done_event/len(self.Computation_order) * 100), "%")
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", self.t_edram, "t_cuop", self.t_cuop, "pesaa", self.t_pesaa, "act", self.t_act, "wr", self.t_wr)
                     print("pooling:", self.t_pool, "transfer", self.t_transfer, "fetch", self.t_fetch)
