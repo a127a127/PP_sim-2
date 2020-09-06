@@ -3,7 +3,7 @@ from PE import PE
 from EventMetaData import EventMetaData
 import math
 import collections
-from tqdm import tqdm
+# from tqdm import tqdm
 
 class OrderGenerator(object):
     def __init__(self, model_config, hw_config, mapping_information, trace):
@@ -22,8 +22,10 @@ class OrderGenerator(object):
                 arr.append(set())
             self.fm_data_used_pe_idx.append(arr)
         
-        for nlayer in tqdm(range(self.model_info.layer_length)):
-            if self.model_info.layer_list[nlayer].layer_type == "convolution":
+        for nlayer in range(self.model_info.layer_length):
+            layer_type = self.model_info.layer_list[nlayer].layer_type
+            print(layer_type, nlayer)
+            if layer_type == "convolution":
                 strides = self.model_info.strides[nlayer]
                 pad = self.model_info.pad[nlayer]
                 o_height = self.model_info.input_h[nlayer+1]
@@ -67,7 +69,7 @@ class OrderGenerator(object):
                                     n = w + h * self.model_info.input_w[nlayer] + c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]
                                     self.fm_data_used_pe_idx[nlayer][n].add(pe_pos)
                             
-            elif self.model_info.layer_list[nlayer].layer_type == "fully":
+            elif layer_type == "fully":
                 input_vector_data = []
                 for h in range(self.model_info.filter_length[nlayer]):
                     input_vector_data.append((nlayer, h, 0, 0))
@@ -89,7 +91,7 @@ class OrderGenerator(object):
                             n = input_vector_data[pos][1]
                             self.fm_data_used_pe_idx[nlayer][n].add(pe_pos)
                             
-            elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+            elif layer_type == "pooling":
                 for pe_pos in self.mp_info.layer_used_pe[nlayer]:
                     rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
                     pey_idx, pex_idx = pe_pos[2], pe_pos[3]
@@ -121,9 +123,10 @@ class OrderGenerator(object):
         self.print_order()
        
     def generate_order(self):
-        for nlayer in tqdm(range(self.model_info.layer_length)):
-            #print("Generate layer", nlayer, self.model_info.layer_list[nlayer].layer_type)
-            if self.model_info.layer_list[nlayer].layer_type == "convolution":
+        for nlayer in range(self.model_info.layer_length):
+            layer_type = self.model_info.layer_list[nlayer].layer_type
+            print("Generate layer", nlayer, layer_type)
+            if layer_type == "convolution":
                #----決定每個filter的aggregator----#
                 pe_filter_processing = dict() # {PE1:{"act":[f1, f2], "transfer": {des_pe1:[f3, f4], des_pe2:[f5,f6]}, "aggregate":[f7]}, PE2: ...}
                 
@@ -547,7 +550,7 @@ class OrderGenerator(object):
                                        #--------------------------#
                        #========================#
 
-            elif self.model_info.layer_list[nlayer].layer_type == "fully":
+            elif layer_type == "fully":
                #----決定每個filter的aggregator----# # 和conv一樣
                 pe_filter_processing = dict() # {PE1:{"act":[f1, f2], "transfer": {des_pe1:[f3, f4], des_pe2:[f5,f6]}, "aggregate":[f7]}, PE2: ...}
                 
@@ -923,7 +926,7 @@ class OrderGenerator(object):
                                 
                #=============#
 
-            elif self.model_info.layer_list[nlayer].layer_type == "pooling":
+            elif layer_type == "pooling":
                 eDRAM_read_bits = self.hw_config.eDRAM_read_bits # per cycle
                 eDRAM_read_data = math.floor(eDRAM_read_bits / self.model_config.input_bit) # per cycle
                 pooling_data = self.model_info.pooling_h[nlayer] * self.model_info.pooling_w[nlayer] # per pooling
