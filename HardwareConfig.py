@@ -17,7 +17,7 @@ class HardwareConfig(object):
         self.Xbar_w = 128
         self.OU_h = 9
         self.OU_w = 8
-
+        
         self.total_pe_num = self.Router_num * self.PE_num
 
         self.cell_bit_width = 2
@@ -26,7 +26,7 @@ class HardwareConfig(object):
         self.ADC_resolution = 3 # bits
         self.Router_flit_size = 32 # bits
         
-        self.cycle_time = 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper # ns # TODO:可能是edram read
+        self.cycle_time = 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper # ns # TODO:最長的那個
         self.interconnect_step_num = int(self.cycle_time // self.Frequency)
         # assume data from a router to another router cost one cycle
 

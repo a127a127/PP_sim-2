@@ -31,7 +31,18 @@ def main():
     # Caffenet: (6, 1, 0, 1, 5, 2)
     # Overfeat: (10, 11, 1, 0, 4, 2)
     # VGG16:    (0, 7, 1, 1, 11, 0)
-    CANT_USE_XB_INDEX = (0, 0, 0, 0, 0, 0)
+    if model_name == "Lenet":
+        CANT_USE_XB_INDEX = (0, 0, 1, 1, 3, 2)
+    elif model_name == "Cifar10":
+        CANT_USE_XB_INDEX = (0, 0, 0, 0, 6, 5)
+    elif model_name == "DeepID":
+        CANT_USE_XB_INDEX = (0, 0, 0, 0, 8, 0)
+    elif model_name == "Caffenet":
+        CANT_USE_XB_INDEX = (6, 1, 0, 1, 5, 2)
+    elif model_name == "Overfeat":
+        CANT_USE_XB_INDEX = (10, 11, 1, 0, 4, 2)
+    elif model_name == "VGG16":
+        CANT_USE_XB_INDEX = (0, 7, 1, 1, 11, 0)
 
     if mapping == "LIR":
         print("Low Input data Reuse Mapping")
