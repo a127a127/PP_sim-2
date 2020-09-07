@@ -131,6 +131,8 @@ class Controller(object):
                 else:
                     # gc.collect()
                     print("Completed:", int(self.done_event/len(self.Computation_order) * 100), "%")
+                    print("Model:", self.model_config.Model_type)
+                    print("Mapping:", self.mapping_str , "Scheduling:", self.scheduling_str)
                     print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
                     print("edram:", self.t_edram, "t_cuop", self.t_cuop, "pesaa", self.t_pesaa, "act", self.t_act, "wr", self.t_wr)
                     print("pooling:", self.t_pool, "transfer", self.t_transfer, "fetch", self.t_fetch)
