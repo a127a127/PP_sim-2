@@ -5,7 +5,7 @@ from math import ceil
 import numpy as np
 
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
-RTY, RTX, PEY, PEX = 8, 0, 0, 1 # 第一個不能放的PE idx
+RTY, RTX, PEY, PEX = 0, 1, 0, 1 # 第一個不能放的PE idx
 # Lenet: 1, 1, 0, 0
 # Cifar10: 0, 1, 0, 1
 # DeepID: 0, 1, 1, 0
@@ -55,13 +55,15 @@ class SameColumnFirstMapping(object):
                 used_pe += len(self.layer_used_pe[nlayer])
             print("used PE", used_pe)
             exit()
+        
+        self.map()
 
     def map(self):
         rt_h, rt_w = 0, 0
         pe_h, pe_w = 0, 0
         cu_n = 0
         xb_n = 0
-        
+
         for nlayer in range(self.model_info.layer_length):
             if self.model_info.layer_list[nlayer].layer_type == "convolution":
                 print("Convolution", nlayer)

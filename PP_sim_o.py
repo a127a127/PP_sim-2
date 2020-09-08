@@ -17,7 +17,7 @@ def main():
     scheduling = sys.argv[3]
 
     model_config = ModelConfig(model)
-    hw_config = HardwareConfig(model_config)
+    hw_config = HardwareConfig()
 
     ### Mapping ##
     start_mapping_time = time.time()
@@ -49,7 +49,7 @@ def main():
     
     ### Scheduling ###
     print("Scheduling policy: ", end="")
-    if scheduling == "Non_pipeline":
+    if scheduling == "Non-pipeline":
         print("Non-pipeline")
     elif scheduling == "Pipeline":
         print("Pipeline")
