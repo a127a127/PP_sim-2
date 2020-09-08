@@ -1,5 +1,5 @@
-#model="Lenet"
-model="Cifar10"
+model="Lenet"
+#model="Cifar10"
 #model="DeepID"
 #model="Test"
 #model="Caffenet"

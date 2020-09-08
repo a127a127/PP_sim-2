@@ -5,7 +5,6 @@ from math import ceil
 import numpy as np
 
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
-RTY, RTX, PEY, PEX = 0, 1, 0, 1 # 第一個不能放的PE idx
 # Lenet: 1, 1, 0, 0
 # Cifar10: 0, 1, 0, 1
 # DeepID: 0, 1, 1, 0
@@ -566,6 +565,17 @@ class SCFParallelsimMapping(object):
     def __init__(self, model_config, hw_config, parall):
         self.Parall = parall
         print("Model:", model_config.Model_type)
+        if model_config.Model_type == "Lenet":
+            RTY, RTX, PEY, PEX = 1, 1, 0, 0
+        elif model_config.Model_type == "Cifar10":
+            RTY, RTX, PEY, PEX = 0, 1, 0, 1
+        elif model_config.Model_type == "DeepID":
+            RTY, RTX, PEY, PEX = 0, 1, 1, 0
+        elif model_config.Model_type == "Caffenet":
+            RTY, RTX, PEY, PEX = 8, 0, 0, 1
+        elif model_config.Model_type == "Overfeat":
+            RTY, RTX, PEY, PEX = 11, 1, 0, 0 
+        
         self.model_info = Model(model_config)
         self.hw_config = hw_config
 
@@ -596,9 +606,9 @@ class SCFParallelsimMapping(object):
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
             self.layer_used_xb_num.append(0)
-        self.map()
+        self.map(RTY, RTX, PEY, PEX)
 
-    def map(self):
+    def map(self, RTY, RTX, PEY, PEX):
         rt_h, rt_w = 0, 0
         pe_h, pe_w = 0, 0
         cu_n = 0
@@ -853,6 +863,17 @@ class SRFParallelsimMapping(object):
     def __init__(self, model_config, hw_config, parall):
         self.Parall = parall
         print("Model:", model_config.Model_type)
+        if model_config.Model_type == "Lenet":
+            RTY, RTX, PEY, PEX = 1, 1, 0, 0
+        elif model_config.Model_type == "Cifar10":
+            RTY, RTX, PEY, PEX = 0, 1, 0, 1
+        elif model_config.Model_type == "DeepID":
+            RTY, RTX, PEY, PEX = 0, 1, 1, 0
+        elif model_config.Model_type == "Caffenet":
+            RTY, RTX, PEY, PEX = 8, 0, 0, 1
+        elif model_config.Model_type == "Overfeat":
+            RTY, RTX, PEY, PEX = 11, 1, 0, 0 
+
         self.model_info = Model(model_config)
         self.hw_config  = hw_config
 
@@ -883,9 +904,9 @@ class SRFParallelsimMapping(object):
         for nlayer in range(self.model_info.layer_length):
             self.layer_used_pe.append(set())
             self.layer_used_xb_num.append(0)
-        self.map()
+        self.map(RTY, RTX, PEY, PEX)
 
-    def map(self):
+    def map(self, RTY, RTX, PEY, PEX):
         rt_h, rt_w = 0, 0
         pe_h, pe_w = 0, 0
         cu_n = 0
