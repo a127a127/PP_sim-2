@@ -2,7 +2,6 @@ from Model import Model
 from MappingMetaData import MappingMetaData
 import sys, csv
 from math import ceil
-import numpy as np
 
 # Lenet:8, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
 # Lenet: 1, 1, 0, 0

@@ -927,8 +927,8 @@ class OrderGenerator(object):
                #=============#
 
             elif layer_type == "pooling":
-                eDRAM_read_bits = self.hw_config.eDRAM_read_bits # per cycle
-                eDRAM_read_data = math.floor(eDRAM_read_bits / self.model_config.input_bit) # per cycle
+                eDRAM_buffer_read_bits = self.hw_config.eDRAM_buffer_read_bits # per cycle
+                eDRAM_read_data = math.floor(eDRAM_buffer_read_bits / self.model_config.input_bit) # per cycle
                 pooling_data = self.model_info.pooling_h[nlayer] * self.model_info.pooling_w[nlayer] # per pooling
                 num_pooling_per_cycle = math.floor(eDRAM_read_data / pooling_data) # 一個cycle最多可以做幾個pooling
                 for pe_pos in self.mp_info.layer_used_pe[nlayer]:
