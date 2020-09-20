@@ -31,6 +31,7 @@ class HardwareConfig(object):
         self.bus_wires = 384
 
         # router
+        self.router_frequency = 1.2 # GHz
         self.router_flit_size = 32 # bits
         self.router_ports = 8
 
@@ -62,10 +63,10 @@ class HardwareConfig(object):
         self.links_frequency = 1.6 # GHz
         self.links_bw = 6.4 # GB/s
 
-        self.cycle_time = 7.68 * self.OU_w # 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from 張老師 paper
-        self.eDRAM_buffer_read_bits  = floor(256 * 1.2 * self.cycle_time) # bits / per cycle
+        self.cycle_time = 7.68 # 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from W. H. Chen's paper
+        self.interconnect_step_num = int(self.cycle_time // self.router_frequency) # router frequency = PE frequency
+        self.eDRAM_buffer_read_bits  = floor(256 * self.PE_frequency * self.cycle_time) # bits / per cycle
         # self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
-        self.interconnect_step_num = int(self.cycle_time // self.PE_frequency)
 
         # Power (W)
         self.Power_eDRAM_buffer = 20.7 / 1000
