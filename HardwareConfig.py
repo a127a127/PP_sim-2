@@ -104,7 +104,7 @@ class HardwareConfig(object):
         self.Energy_router        = self.Power_router / self.PE_frequency / self.router_flit_size / 4 # flit size = 32 # shared by 4 PEs
         self.Energy_link          = self.Power_link / self.links_frequency / self.links_bw / 8 / 77 / 4 # 8 bits = 1 byte # total links = 7*6+5*7=77
 
-        # Leakage ()
+        # Leakage
         # self.Leakage_eDRAM_buffer = 0
         # self.Leakage_bus = 0
         # self.Leakage_activation = 0
@@ -120,9 +120,8 @@ class HardwareConfig(object):
         # self.Leakage_link = 0
 
 
-        # Off chip fetch: 目前還沒有資料
-        self.Fetch_cycle  = 1 # per data
-        self.Energy_fecth = 0 # per data
+        # Off chip fetch: no data
+        self.Fetch_cycle  = 20
         
     def __str__(self):
         return str(self.__dict__)
