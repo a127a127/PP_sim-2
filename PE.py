@@ -72,15 +72,15 @@ class PE(object):
         self.idle_other    = 0
 
         ### cu performance breakdown
-        self.cu_finish_cycle  = []
-        self.cu_wait_transfer = []
-        self.cu_busy          = []
-        self.cu_idle          = []
-        for i in range(self.hw_config.CU_num):
-            self.cu_wait_transfer.append(0)
-            self.cu_busy.append(0)
-            self.cu_finish_cycle.append(0)
-            self.cu_idle.append(0)
+        # self.cu_finish_cycle  = []
+        # self.cu_wait_transfer = []
+        # self.cu_busy          = []
+        # self.cu_idle          = []
+        # for i in range(self.hw_config.CU_num):
+        #     self.cu_wait_transfer.append(0)
+        #     self.cu_busy.append(0)
+        #     self.cu_finish_cycle.append(0)
+        #     self.cu_idle.append(0)
         
         ### pe performance breakdown
         self.pe_finish_cycle  = 0
@@ -93,6 +93,13 @@ class PE(object):
         self.cu_state = []
         for i in range(self.hw_config.CU_num):
             self.cu_state.append(False)
+        
+        ### CU performance breakdown
+        self.cu_performance_breakdown = []
+        self.cu_busy_end_time = []
+        for i in range(self.hw_config.CU_num):
+            self.cu_performance_breakdown.append([0,0,0]) # [pre-layer, compute-overlap, transfer]
+            self.cu_busy_end_time.append(1)
 
 
     def __str__(self):

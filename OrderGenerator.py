@@ -278,6 +278,7 @@ class OrderGenerator(object):
                                     # 一個cu operation內有多少ou要做
                                     num_ou_in_xb = dict() # {XB1: 4, XB2: 4}
                                     max_ou = 0
+                                    filters = set() # CU performance breakdown new
                                     for xb_idx in range(self.hw_config.Xbar_num):
                                         xbar_inputs = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]
                                         if inp_n < len(xbar_inputs):
@@ -287,8 +288,17 @@ class OrderGenerator(object):
                                             num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
                                             num_ou_in_xb[xb_idx] = num_ou
                                             max_ou = max(num_ou, max_ou)
-                                    cu_op_inputs  = max_ou
-                                    cu_op_outputs = num_ou_in_xb
+                                            filter_list = inp.Filters # CU performance breakdown new
+                                            for f in filter_list: # CU performance breakdown new
+                                                filters.add(f) # CU performance breakdown new
+
+                                    cu_op_inputs  = [max_ou, num_ou_in_xb]
+
+                                    computed_data = [] # CU performance breakdown new
+                                    for c in filters: # CU performance breakdown new
+                                        pos = window_w + window_h * o_width +  c * o_width * o_height
+                                        computed_data.append(pos)
+                                    cu_op_outputs = computed_data # CU perfomrance breakdown new
 
                                     event = EventMetaData("cu_operation", cu_op_position_idx, preceding_count, [cu_operation_event_idx+1], nlayer, cu_op_inputs, cu_op_outputs)
                                     self.Computation_order.append(event)
@@ -671,6 +681,7 @@ class OrderGenerator(object):
                             # 一個cu operation內有多少ou要做
                             num_ou_in_xb = dict() # {XB1: 4, XB2: 4}
                             max_ou = 0
+                            filters = set() # CU performance breakdown new
                             for xb_idx in range(self.hw_config.Xbar_num):
                                 xbar_inputs = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]
                                 if inp_n < len(xbar_inputs):
@@ -680,8 +691,15 @@ class OrderGenerator(object):
                                     num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
                                     num_ou_in_xb[xb_idx] = num_ou
                                     max_ou = max(num_ou, max_ou)
-                            cu_op_inputs  = max_ou
-                            cu_op_outputs = num_ou_in_xb
+                                    filter_list = inp.Filters # CU performance breakdown new
+                                    for f in filter_list: # CU performance breakdown new
+                                        filters.add(f) # CU performance breakdown new
+                            cu_op_inputs  = [max_ou, num_ou_in_xb]
+                            computed_data = [] # CU performance breakdown new
+                            for c in filters: # CU performance breakdown new
+                                pos = window_w + window_h * o_width +  c * o_width * o_height
+                                computed_data.append(pos)
+                            cu_op_outputs = computed_data # CU perfomrance breakdown new
 
                             event = EventMetaData("cu_operation", cu_op_position_idx, preceding_count, [cu_operation_event_idx+1], nlayer, cu_op_inputs, cu_op_outputs)
                             self.Computation_order.append(event)
