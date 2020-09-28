@@ -406,7 +406,10 @@ class Controller(object):
                         data_list = []
                         for data in edram_rd_data:
                             h, w, c = data[1], data[2], data[3]
-                            pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                            if model_info.layer_list[layer].layer_type != "fully":
+                                pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                            else:
+                                pos = h
                             data_start_compute_time = self.data_table[layer][pos][0]
                             data_end_compute_time = self.data_table[layer][pos][1]
                             data_list.append([data_start_compute_time, data_end_compute_time])
@@ -826,17 +829,23 @@ class Controller(object):
                         self.interconnect.input_packet(packet)
                         # CU performance breakdown new
                         h, w, c = data[1], data[2], data[3]
-                        pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                        if model_info.layer_list[layer].layer_type != "fully":
+                            pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                        else:
+                            pos = h
                         self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
 
                     data = transfer_data[-1]
-                    h, w, c = data[1], data[2], data[3]
                     packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
                     self.interconnect.input_packet(packet)
                     # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
 
                     # CU performance breakdown new
-                    pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                    h, w, c = data[1], data[2], data[3]
+                    if model_info.layer_list[layer].layer_type != "fully":
+                        pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                    else:
+                        pos = h
                     self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
 
                 else:
@@ -939,10 +948,14 @@ class Controller(object):
             pro_event_list = packet.pro_event_list
             des_pe.edram_buffer.put(data, data)
 
-            # CU performance breakdown
-            layer, h, w, c = data[0], data[1], data[2], data[3]
-            pos = w + h * model_info.input_w[layer+1] + c * model_info.input_w[layer+1] * model_info.input_h[layer+1]
-            self.data_table[layer][pos][2] = self.cycle_ctr
+            # # CU performance breakdown
+            # layer, h, w, c = data[0], data[1], data[2], data[3]
+            # print(layer, h, w, c) # 4, 4, 4, 32
+            # print(model_info.input_w[layer+1], model_info.input_h[layer+1]) # 5, 5
+            # pos = w + h * model_info.input_w[layer+1] + c * model_info.input_w[layer+1] * model_info.input_h[layer+1]
+            # print(pos) # 824
+            # print(len(self.data_table[layer])) # 800
+            # self.data_table[layer][pos][2] = self.cycle_ctr
 
             # Trigger
             for proceeding_index in pro_event_list:

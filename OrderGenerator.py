@@ -697,7 +697,7 @@ class OrderGenerator(object):
                             cu_op_inputs  = [max_ou, num_ou_in_xb]
                             computed_data = [] # CU performance breakdown new
                             for c in filters: # CU performance breakdown new
-                                pos = window_w + window_h * o_width +  c * o_width * o_height
+                                pos = c
                                 computed_data.append(pos)
                             cu_op_outputs = computed_data # CU perfomrance breakdown new
 
