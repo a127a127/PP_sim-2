@@ -818,23 +818,24 @@ class Controller(object):
                 des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
                 if self.congestion:
+                    model_info = self.ordergenerator.model_info
+                    layer = event.nlayer+1
                     for i in range(len(transfer_data)-1):
                         data = transfer_data[i]
                         packet = Packet(data_transfer_src, data_transfer_des, data, [])
                         self.interconnect.input_packet(packet)
-                        layer, h, w, c = data[0], data[1], data[2], data[3]
-                        model_info = self.ordergenerator.model_info
+                        # CU performance breakdown new
+                        h, w, c = data[1], data[2], data[3]
                         pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
                         self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
 
                     data = transfer_data[-1]
+                    h, w, c = data[1], data[2], data[3]
                     packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
                     self.interconnect.input_packet(packet)
                     # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
 
                     # CU performance breakdown new
-                    layer, h, w, c = data[0], data[1], data[2], data[3]
-                    model_info = self.ordergenerator.model_info
                     pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
                     self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
 
@@ -930,6 +931,7 @@ class Controller(object):
 
     def interconnect_fn(self):
         arrived = self.interconnect.step()
+        model_info = self.ordergenerator.model_info
         for packet in arrived:
             des_pe_id = packet.destination
             des_pe = self.PE_array[des_pe_id]
@@ -939,8 +941,7 @@ class Controller(object):
 
             # CU performance breakdown
             layer, h, w, c = data[0], data[1], data[2], data[3]
-            model_info = self.ordergenerator.model_info
-            pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+            pos = w + h * model_info.input_w[layer+1] + c * model_info.input_w[layer+1] * model_info.input_h[layer+1]
             self.data_table[layer][pos][2] = self.cycle_ctr
 
             # Trigger
@@ -956,7 +957,6 @@ class Controller(object):
                             self.Trigger[finish_cycle] = [[des_pe, pro_event]]
                         else:
                             self.Trigger[finish_cycle].append([des_pe, pro_event])
-
 
     def record_buffer_util(self):
         # time history
