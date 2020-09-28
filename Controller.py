@@ -828,12 +828,14 @@ class Controller(object):
                         packet = Packet(data_transfer_src, data_transfer_des, data, [])
                         self.interconnect.input_packet(packet)
                         # CU performance breakdown new
-                        h, w, c = data[1], data[2], data[3]
-                        if model_info.layer_list[layer].layer_type != "fully":
-                            pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
-                        else:
-                            pos = h
-                        self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
+                        pro_event = self.Computation_order[event.proceeding_event[0]]
+                        if pro_event.event_type == "edram_rd_ir":
+                            h, w, c = data[1], data[2], data[3]
+                            if model_info.layer_list[layer].layer_type != "fully":
+                                pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                            else:
+                                pos = h
+                            self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
 
                     data = transfer_data[-1]
                     packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
@@ -841,12 +843,14 @@ class Controller(object):
                     # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
 
                     # CU performance breakdown new
-                    h, w, c = data[1], data[2], data[3]
-                    if model_info.layer_list[layer].layer_type != "fully":
-                        pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
-                    else:
-                        pos = h
-                    self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
+                    pro_event = self.Computation_order[event.proceeding_event[0]]
+                    if pro_event.event_type == "edram_rd_ir":
+                        h, w, c = data[1], data[2], data[3]
+                        if model_info.layer_list[layer].layer_type != "fully":
+                            pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                        else:
+                            pos = h
+                        self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
 
                 else:
                     # Trigger
