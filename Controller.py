@@ -4,18 +4,15 @@ from EventMetaData import EventMetaData
 from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
-
 import csv
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
-
 import time
-import gc
+#import gc
 
 class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
         self.congestion =  True
+        self.record_PE = False
+        self.record_layer = False
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
@@ -67,16 +64,10 @@ class Controller(object):
         self.Trigger = dict()
 
         # Utilization
-        self.pe_state_for_plot = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
-        self.cu_state_for_plot = [0] # [{CU1, CU2}, {CU1, CU2}, ...]
-        self.layer_state_for_plot = [0] # [{layer0, layer1}, {layer0}, {layer0, layer1}...]
-        self.layer_finish_cycle = []
-        for nlayer in range(len(model_config.layer_list)):
-            self.layer_finish_cycle.append(0)
-
-        # pe performance breakdown
-        # self.pe_state_cu_busy = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
-        # self.pe_state_wait_transfer = [0]
+        if self.record_PE:
+            self.pe_state_for_plot = [0] # [{PE1, PE2}, {PE1, PE2}, {PE1}, {PE1}, ...]
+        if self.record_layer:
+            self.layer_state_for_plot = [0] # [{layer0, layer1}, {layer0}, {layer0, layer1}...]
 
         # CU performance breakdonw new
         self.data_table = []
@@ -125,7 +116,6 @@ class Controller(object):
                 break
         
         self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger, self.t_inter = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        # self.t_buffer = 0
 
         start_time = time.time()
         
@@ -148,25 +138,22 @@ class Controller(object):
                     self.t_edram, self.t_cuop, self.t_pesaa, self.t_act, self.t_wr = 0, 0, 0, 0, 0
                     self.t_pool, self.t_transfer, self.t_fetch = 0, 0, 0
                     self.t_trigger, self.t_inter = 0, 0
-                    #self.t_buffer =  0
             
-            if self.cycle_ctr % 1000000 == 0:
-                if self.done_event == 0:
-                    pass
-                else:
-                    collected = gc.collect()
-                    print("Garbage collector: collected", collected, "objects.")
+            #if self.cycle_ctr % 1000000 == 0:
+            #    if self.done_event == 0:
+            #        pass
+            #    else:
+            #        collected = gc.collect()
+            #        print("Garbage collector: collected", collected, "objects.")
 
             self.cycle_ctr += 1
 
-            if len(self.pe_state_for_plot) == self.cycle_ctr:
-                self.pe_state_for_plot.append(set())
-            if len(self.layer_state_for_plot) == self.cycle_ctr:
-                self.layer_state_for_plot.append(set())
-            # if len(self.pe_state_cu_busy) == self.cycle_ctr:
-            #     self.pe_state_cu_busy.append(set())
-            # if len(self.pe_state_wait_transfer) == self.cycle_ctr:
-            #     self.pe_state_wait_transfer.append(set())
+            if self.record_PE:
+                if len(self.pe_state_for_plot) == self.cycle_ctr:
+                    self.pe_state_for_plot.append(set())
+            if self.record_layer:
+                if len(self.layer_state_for_plot) == self.cycle_ctr:
+                    self.layer_state_for_plot.append(set())
 
             ## Pipeline stage control ###
             if not self.isPipeLine: # Non_pipeline
@@ -193,15 +180,6 @@ class Controller(object):
                             if cu_idx not in pe.edram_rd_cu_idx:
                                 pe.edram_rd_cu_idx.append(cu_idx)
                             
-                            # cu performance breakdown
-                            # if pe not in cu_dict:
-                            #     cu_dict[pe] = {cu_idx}
-                            # else:
-                            #     cu_dict[pe].add(cu_idx)
-                            
-                            # pe performance breakdown
-                            # pe_set.add(pe)
-                            
                         elif event.event_type == "edram_rd":
                             if len(trigger) == 3: # transfer data此時寫入buffer 
                                 data_list = trigger[2]
@@ -210,21 +188,9 @@ class Controller(object):
                             pe.edram_rd_erp.append(event)
                             self.edram_rd_pe_idx.add(pe)
 
-                            # pe performance breakdown
-                            # pe_set.add(pe)
-
                         else:
                             print("error event type:", event.event_type)
                     
-                    # cu performance breakdown
-                    # for pe in cu_dict:
-                    #     for cu_idx in cu_dict[pe]:
-                    #         pe.cu_wait_transfer[cu_idx] += (self.cycle_ctr - self.transfer_start_cycle)
-
-                    # pe performance breakdown
-                    # for pe in pe_set:
-                    #     pe.pe_wait_transfer += (self.cycle_ctr - self.transfer_start_cycle)
-
                     self.Non_pipeline_trigger = []
 
             if self.trace:
@@ -380,12 +346,12 @@ class Controller(object):
                     self.Trigger[finish_cycle].append([pe, pro_event])
                 
                 # PE util
-                self.pe_state_for_plot[self.cycle_ctr].add(pe)
+                if self.record_PE:
+                    self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
                 # layer
-                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
-                if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
-                    self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+                if self.record_layer:
+                    self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
 
                 # CU performance breakdwon new
                 if event.event_type == "edram_rd_ir":
@@ -528,26 +494,18 @@ class Controller(object):
             else:
                 self.Trigger[finish_cycle].append([pe, pro_event, cu_idx])
             
-            # PE util
-            for cycle in range(len(self.pe_state_for_plot), finish_cycle):
-                self.pe_state_for_plot.append(set())
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                self.pe_state_for_plot[cycle].add(pe)
             
-            # CU util
-            # for cycle in range(len(self.cu_state_for_plot), finish_cycle):
-            #     self.cu_state_for_plot.append(set())
-            # for cycle in range(self.cycle_ctr, finish_cycle):
-            #     cu_plot_idx = pe.plot_idx * self.hw_config.CU_num + cu_idx
-            #     self.cu_state_for_plot[cycle].add(cu_plot_idx)
-
-            # layer
-            for cycle in range(len(self.layer_state_for_plot), finish_cycle):
-                self.layer_state_for_plot.append(set())
-            for cycle in range(self.cycle_ctr, finish_cycle):
-                self.layer_state_for_plot[cycle].add(event.nlayer)
-            if finish_cycle > self.layer_finish_cycle[event.nlayer]:
-                self.layer_finish_cycle[event.nlayer] = finish_cycle
+            if self.record_PE: # PE util
+                for cycle in range(len(self.pe_state_for_plot), finish_cycle):
+                    self.pe_state_for_plot.append(set())
+                for cycle in range(self.cycle_ctr, finish_cycle):
+                    self.pe_state_for_plot[cycle].add(pe)
+            
+            if self.record_layer: # layer
+                for cycle in range(len(self.layer_state_for_plot), finish_cycle):
+                    self.layer_state_for_plot.append(set())
+                for cycle in range(self.cycle_ctr, finish_cycle):
+                    self.layer_state_for_plot[cycle].add(event.nlayer)
 
             # CU performance breakdown new
             for pos in event.outputs:
@@ -555,20 +513,6 @@ class Controller(object):
                 self.data_table[event.nlayer+1][pos][0] = start_time
             pe.cu_busy_end_time[cu_idx] = finish_cycle
             
-            # cu performance breakdown
-            # pe.cu_busy[cu_idx] += event.inputs + 2
-            # pe.cu_finish_cycle[cu_idx] = max(finish_cycle, pe.cu_finish_cycle[cu_idx])
-
-            # pe performance breakdown
-            # for cycle in range(len(self.pe_state_cu_busy), finish_cycle):
-            #     self.pe_state_cu_busy.append(set())
-            # for cycle in range(self.cycle_ctr, finish_cycle):
-            #     self.pe_state_cu_busy[cycle].add(pe)
-            
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
-                
         self.cu_operation_pe_idx = set()
 
         self.t_cuop += time.time() - tt
@@ -604,21 +548,15 @@ class Controller(object):
                     else:
                         self.Trigger[finish_cycle].append([pe, pro_event])
             
-            # PE util
-            self.pe_state_for_plot[self.cycle_ctr].add(pe)
+            if self.record_PE: # PE util
+                self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
-            # layer
-            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
-            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
-                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+            if self.record_layer: # layer
+                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
 
             if pe.pe_saa_erp:
                 check_pe_idx.add(pe)
             
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
-        
         self.pe_saa_pe_idx = check_pe_idx
         self.t_pesaa += time.time() - tt
               
@@ -650,20 +588,14 @@ class Controller(object):
                 else:
                     self.Trigger[finish_cycle].append([pe, pro_event])
             
-            # PE util
-            self.pe_state_for_plot[self.cycle_ctr].add(pe)
+            if self.record_PE: # PE util
+                self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
-            # layer
-            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
-            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
-                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+            if self.record_layer: # layer
+                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
 
             if pe.activation_erp:
                 check_pe_idx.add(pe)
-            
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
 
         self.activation_pe_idx = check_pe_idx
 
@@ -707,27 +639,16 @@ class Controller(object):
                         else:
                             self.Trigger[finish_cycle].append([pe, pro_event])
 
+            if self.record_PE: # PE util
+                self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
-            # pe performance breakdown
-            # pe.pe_finish_cycle = self.cycle_ctr
-
-            # PE util
-            self.pe_state_for_plot[self.cycle_ctr].add(pe)
-
-            # layer
-            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
-            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
-                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+            if self.record_layer: # layer
+                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
 
             if pe.edram_wr_erp:
                 check_pe_idx.add(pe)
 
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
-
         self.edram_wr_pe_idx = check_pe_idx
-        
         self.t_wr += time.time() - tt
 
     def event_pooling(self):
@@ -757,23 +678,16 @@ class Controller(object):
                     else:
                         self.Trigger[finish_cycle].append([pe, pro_event])
             
-            # PE util
-            self.pe_state_for_plot[self.cycle_ctr].add(pe)
+            if self.record_PE: # PE util
+                self.pe_state_for_plot[self.cycle_ctr].add(pe)
 
-            # layer
-            self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
-            if self.cycle_ctr > self.layer_finish_cycle[event.nlayer]:
-                self.layer_finish_cycle[event.nlayer] = self.cycle_ctr
+            if self.record_layer: # layer
+                self.layer_state_for_plot[self.cycle_ctr].add(event.nlayer)
 
             if pe.pooling_erp:
                 check_pe_idx.add(pe)
             
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
-
         self.pooling_pe_idx = check_pe_idx
-
         self.t_pool += time.time() - tt
 
     def event_transfer(self):
@@ -801,7 +715,6 @@ class Controller(object):
                     if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                         if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                             self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
-                            # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
                         else:
                             if finish_cycle not in self.Trigger:
                                 self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
@@ -840,7 +753,6 @@ class Controller(object):
                     data = transfer_data[-1]
                     packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
                     self.interconnect.input_packet(packet)
-                    # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
 
                     # CU performance breakdown new
                     pro_event = self.Computation_order[event.proceeding_event[0]]
@@ -869,28 +781,11 @@ class Controller(object):
                                     self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
                                 else:
                                     self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
-                                
-                                # if pro_event.event_type == "edram_rd_ir":
-                                #     # cu performance breakdown
-                                #     cu_idx = pro_event.position_idx[4]
-                                #     des_pe.cu_wait_transfer[cu_idx] += transfer_distance + 1
 
-                                # pe performance breakdown
-                                # pe_set.add(des_pe)
                         else:
                             for data in transfer_data: # 沒有trigger event先放data
                                 des_pe.edram_buffer.put(data, data)
                 
-                    # pe performance breakdown
-                    # for pe in pe_set:
-                    #     for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
-                    #         self.pe_state_wait_transfer.append(set())
-                    #     for cycle in range(self.cycle_ctr+1, finish_cycle):
-                    #         self.pe_state_wait_transfer[cycle].add(pe)
-
-            # pe performance breakdown
-            # src_pe.pe_finish_cycle = self.cycle_ctr - 1
-
             # free mem
             # event_idx = self.Computation_order.index(event)
             # self.Computation_order[event_idx] = 0
@@ -923,21 +818,6 @@ class Controller(object):
             for data in transfer_data:
                 des_pe.edram_buffer.put(data, data)
             
-            
-            # cu performance breakdown
-            # pos_idx = event.position_idx
-            # pe_pos = pos_idx[:4]
-            # pe = self.PE_array[pe_pos]
-            # if event.event_type == "edram_rd_ir":
-            #     cu_idx = pos_idx[4]
-            #     pe.cu_wait_transfer[cu_idx] += self.hw_config.Fetch_cycle + transfer_distance + 2
-
-            # pe performance breakdown
-            # for cycle in range(len(self.pe_state_wait_transfer), finish_cycle):
-            #     self.pe_state_wait_transfer.append(set())
-            # for cycle in range(self.cycle_ctr, finish_cycle):
-            #     self.pe_state_wait_transfer[cycle].add(pe)
-
         self.fetch_array = []
 
         self.t_fetch += time.time() - tt
@@ -951,15 +831,6 @@ class Controller(object):
             data = packet.data
             pro_event_list = packet.pro_event_list
             des_pe.edram_buffer.put(data, data)
-
-            # # CU performance breakdown
-            # layer, h, w, c = data[0], data[1], data[2], data[3]
-            # print(layer, h, w, c) # 4, 4, 4, 32
-            # print(model_info.input_w[layer+1], model_info.input_h[layer+1]) # 5, 5
-            # pos = w + h * model_info.input_w[layer+1] + c * model_info.input_w[layer+1] * model_info.input_h[layer+1]
-            # print(pos) # 824
-            # print(len(self.data_table[layer])) # 800
-            # self.data_table[layer][pos][2] = self.cycle_ctr
 
             # Trigger
             for proceeding_index in pro_event_list:
@@ -1036,16 +907,14 @@ class Controller(object):
         self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
-        print("output pe utilization...")
-        self.pe_utilization()
+        #print("output pe utilization...")
+        #self.pe_utilization()
         #print("output cu utilization...")
         #self.cu_utilization()
-        print("output layer utilization...")
-        self.layer_utilization()
+        #print("output layer utilization...")
+        #self.layer_utilization()
         print("output performance anaylsis...")
-        # self.layer_behavior()
         self.cu_performance_breakdown()
-        # self.pe_performance_breakdown()
         self.miss_rate()
 
     def output_result(self):
@@ -1204,24 +1073,7 @@ class Controller(object):
                 if self.layer_state_for_plot[cycle]:
                     for layer in self.layer_state_for_plot[cycle]:
                         writer.writerow([cycle, layer])
-
-    def layer_behavior(self):
-        self.layer_used_cycle = []
-        for nlayer in range(len(self.model_config.layer_list)):
-            self.layer_used_cycle.append(0)
-        for cycle in range(1, len(self.layer_state_for_plot)):
-            if self.layer_state_for_plot[cycle]:
-                for layer in self.layer_state_for_plot[cycle]:
-                    self.layer_used_cycle[layer] += 1
-        
-        with open(self.path+'/Layer_behavior.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["", "busy_time", "idle_time"])
-            for nlayer in range(len(self.model_config.layer_list)):
-                busy_time = self.layer_used_cycle[nlayer]
-                idle_time = self.layer_finish_cycle[nlayer] - busy_time
-                writer.writerow([nlayer, busy_time, idle_time])
-
+    
     def cu_performance_breakdown(self):
         Plot = [] # [PE0, PE1, PE2, ...]
         p_total = 0
@@ -1249,68 +1101,7 @@ class Controller(object):
                         row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
                         writer.writerow(row)
             writer.writerow(["SUM", p_total, o_total, t_total])
-
-        # Old version
-        # for pe_pos in self.PE_array:
-        #     pe = self.PE_array[pe_pos]
-        #     for cu_idx in range(len(pe.cu_busy)):
-        #         pe.cu_idle[cu_idx] = pe.cu_finish_cycle[cu_idx] - pe.cu_busy[cu_idx] - pe.cu_wait_transfer[cu_idx]
-        
-        # Plot = [] # [PE0, PE1, PE2, ...]
-        # for pe_n in range(len(self.PE_array)):
-        #     Plot.append([])
-        # for pe_pos in self.PE_array:
-        #     pe = self.PE_array[pe_pos]
-        #     for cu_idx in range(self.hw_config.CU_num):
-        #         cu_busy = pe.cu_busy[cu_idx]
-        #         cu_wait_transfer = pe.cu_wait_transfer[cu_idx]
-        #         cu_idle = pe.cu_idle[cu_idx]
-        #         Plot[pe.plot_idx].append([cu_busy, cu_wait_transfer, cu_idle])
-
-        # with open(self.path+'/CU_performance_breakdown.csv', 'w', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     writer.writerow(["", "busy", "wait_transfer", "idle"])
-        #     for pe_idx in range(len(Plot)):
-        #         cu_list = Plot[pe_idx]
-        #         for cu_idx in range(len(cu_list)):
-        #             row = cu_list[cu_idx]
-        #             if row[0] != 0 or row[1] != 0 or row[2] !=0 :
-        #                 row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
-        #                 writer.writerow(row)
-
-    def pe_performance_breakdown(self):
-        for cycle in range(1, len(self.pe_state_for_plot)):
-            if self.pe_state_wait_transfer[cycle]:
-                for pe in self.pe_state_wait_transfer[cycle]:
-                    if pe not in self.pe_state_for_plot[cycle]:
-                        pe.pe_wait_transfer += 1
-            if self.pe_state_for_plot[cycle]:
-                for pe in self.pe_state_for_plot[cycle]:
-                    if pe in self.pe_state_cu_busy[cycle]:
-                        pe.pe_busy_cu    += 1
-                    else:
-                        pe.pe_busy_other += 1
-        
-        for pe_pos in self.PE_array:
-            pe = self.PE_array[pe_pos]
-            pe.pe_idle = pe.pe_finish_cycle - pe.pe_busy_cu - pe.pe_busy_other - pe.pe_wait_transfer
-        
-        Plot = [] # [PE0, PE1, PE2, ...]
-        for pe_n in range(len(self.PE_array)):
-            Plot.append([])
-        for pe_pos in self.PE_array:
-            pe = self.PE_array[pe_pos]
-            Plot[pe.plot_idx] = [pe.pe_busy_cu, pe.pe_busy_other, pe.pe_wait_transfer, pe.pe_idle]
-        
-        with open(self.path+'/PE_performance_breakdown.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["", "busy_cu", "busy_other", "wait_transfer", "idle"])
-            for pe_idx in range(len(Plot)):
-                row = Plot[pe_idx]
-                if row[0] != 0 or row[1] != 0 or row[2] !=0 :
-                    row.insert(0, "PE"+str(pe_idx))
-                    writer.writerow(row)
-
+    
     def miss_rate(self):
         with open(self.path+'/Miss_rate.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
