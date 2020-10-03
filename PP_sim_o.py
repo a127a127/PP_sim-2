@@ -40,11 +40,11 @@ def main():
     if mapping == "SCF":
         print("Same Column First Mapping")
         mapping_information = SCF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
-        mapping_str = "Same_Column_First_Mapping"
+        mapping_str = "Same_Column_First_Mapping"+sys.argv[4]+"_"+sys.argv[5]
     elif mapping == "SRF":
         print("Same Row First Mapping")
         mapping_information = SRF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
-        mapping_str = "Same_Row_First_Mapping"
+        mapping_str = "Same_Row_First_Mapping"+sys.argv[4]+"_"+sys.argv[5]
 
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
