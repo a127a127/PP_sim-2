@@ -98,7 +98,7 @@ class PE(object):
         self.cu_performance_breakdown = []
         self.cu_busy_end_time = []
         for i in range(self.hw_config.CU_num):
-            self.cu_performance_breakdown.append([0,0,0]) # [pre-layer, compute-overlap, transfer]
+            self.cu_performance_breakdown.append([0,0,0]) # [pre-layer, compute&overlap, transfer]
             self.cu_busy_end_time.append(1)
 
 

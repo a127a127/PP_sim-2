@@ -1,8 +1,5 @@
-from Mapping_o import SameColumnFirstMapping
-from Mapping_o import SameRowFirstMapping
-from Mapping_o import SCFParallelsimMapping
-from Mapping_o import SRFParallelsimMapping
-
+from Mapping_o import SCF
+from Mapping_o import SRF
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
@@ -15,35 +12,40 @@ def main():
     model      = sys.argv[1]
     mapping    = sys.argv[2]
     scheduling = sys.argv[3]
+    partition_h = int(sys.argv[4])
+    partition_w = int(sys.argv[5])
 
     model_config = ModelConfig(model)
     hw_config = HardwareConfig()
 
     ### Mapping ##
+
+    # Used PE: Lenet:6, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
+    if model == "Lenet":
+        cant_use_pe = (0, 1, 1, 0)
+    elif model == "Cifar10":
+        cant_use_pe = (0, 1, 0, 1)
+    elif model == "DeepID":
+        cant_use_pe = (0, 1, 1, 0)
+    elif model == "Caffenet":
+        cant_use_pe = (6, 2, 0, 1)
+    elif model == "Overfeat":
+        cant_use_pe = (10, 12, 0, 0)
+    elif model == "VGG16":
+        cant_use_pe = (13, 4, 0, 0)
+
     start_mapping_time = time.time()
     print("--- Mapping ---")
     print("Mapping policy:  ", end="")
     if mapping == "SCF":
         print("Same Column First Mapping")
-        mapping_information = SameColumnFirstMapping(model_config, hw_config)
+        mapping_information = SCF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
         mapping_str = "Same_Column_First_Mapping"
     elif mapping == "SRF":
         print("Same Row First Mapping")
-        mapping_information = SameRowFirstMapping(model_config, hw_config)
+        mapping_information = SRF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
         mapping_str = "Same_Row_First_Mapping"
-    elif mapping == "SCFParal":
-        print("'SCF Parallelsim Mapping"+sys.argv[4])
-        paral = int(sys.argv[4])
-        mapping_information = SCFParallelsimMapping(model_config, hw_config, paral)
-        mapping_str = "SCFParallelsim_Mapping"+sys.argv[4]
-    elif mapping == "SRFParal":
-        print("SRF Parallelsim Mapping"+sys.argv[4])
-        paral = int(sys.argv[4])
-        mapping_information = SRFParallelsimMapping(model_config, hw_config, paral)
-        mapping_str = "SRFParallelsim_Mapping"+sys.argv[4]
-    else:
-        print("Wrong mapping type")
-        exit()
+
     end_mapping_time = time.time()
     print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
     

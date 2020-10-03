@@ -903,20 +903,20 @@ class Controller(object):
         print()
 
         self.output_result()
-        print("Energy breakdown:")
-        self.PE_energy_breakdown()
         print("output buffer utilization...")
         self.buffer_analysis()
+        print("output performance anaylsis...")
+        self.cu_performance_breakdown()
+        self.miss_rate()
+        # print("Energy breakdown...")
+        # self.PE_energy_breakdown()
         #print("output pe utilization...")
         #self.pe_utilization()
         #print("output cu utilization...")
         #self.cu_utilization()
         #print("output layer utilization...")
         #self.layer_utilization()
-        print("output performance anaylsis...")
-        self.cu_performance_breakdown()
-        self.miss_rate()
-
+        
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -954,11 +954,6 @@ class Controller(object):
             writer.writerow([])
             writer.writerow(["Busy XB", self.busy_xb])
             writer.writerow(["Avg", self.busy_xb/self.cycle_ctr])
-
-            writer.writerow([])
-            layer_used_xb_num = self.ordergenerator.mp_info.layer_used_xb_num
-            writer.writerow([str(layer_used_xb_num)])
-
 
             writer.writerow([])
             fm_num  = self.ordergenerator.transfer_feature_map_data_num
