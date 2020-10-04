@@ -285,11 +285,11 @@ class Controller(object):
         tt = time.time()
         check_pe_idx = set()
         for pe in self.edram_rd_pe_idx:
-            if pe.edram_rd_erp: # 非CU的edram read
+            if pe.edram_rd_erp:
                 event = pe.edram_rd_erp.popleft()
                 if pe.edram_rd_erp or pe.edram_rd_cu_idx:
                     check_pe_idx.add(pe)
-            else:
+            else: # eDRAM read to IR
                 cu_idx = pe.edram_rd_cu_idx.popleft()
                 event = pe.edram_rd_ir_erp[cu_idx].popleft()
                 if pe.edram_rd_cu_idx:
@@ -394,8 +394,8 @@ class Controller(object):
         self.t_edram += time.time() - tt
     
     def overlap_a(self, line, data_list):
-        flag  = True
         for d in data_list:
+            flag  = True
             s, e = d[0], d[1]
 
             for i in range(len(line)):
@@ -511,7 +511,7 @@ class Controller(object):
             for pos in event.outputs:
                 start_time = self.cycle_ctr
                 self.data_table[event.nlayer+1][pos][0] = start_time
-            pe.cu_busy_end_time[cu_idx] = finish_cycle
+            pe.cu_busy_end_time[cu_idx] = max(finish_cycle-1, pe.cu_busy_end_time[cu_idx])
             
         self.cu_operation_pe_idx = set()
 
@@ -766,7 +766,6 @@ class Controller(object):
 
                 else:
                     # Trigger
-                    # pe_set = set() # pe performance breakdown
                     # TODO: CU performance breakdown new
                     finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
                     for pro_event_idx in event.proceeding_event:
@@ -824,7 +823,6 @@ class Controller(object):
 
     def interconnect_fn(self):
         arrived = self.interconnect.step()
-        model_info = self.ordergenerator.model_info
         for packet in arrived:
             des_pe_id = packet.destination
             des_pe = self.PE_array[des_pe_id]
@@ -903,20 +901,17 @@ class Controller(object):
         print()
 
         self.output_result()
-        print("output buffer utilization...")
         self.buffer_analysis()
-        print("output performance anaylsis...")
         self.cu_performance_breakdown()
+        self.PE_energy_breakdown()
         self.miss_rate()
-        # print("Energy breakdown...")
-        # self.PE_energy_breakdown()
-        #print("output pe utilization...")
-        #self.pe_utilization()
-        #print("output cu utilization...")
-        #self.cu_utilization()
-        #print("output layer utilization...")
-        #self.layer_utilization()
-        
+        if self.record_PE: # PE util
+            print("output pe utilization...")
+            self.pe_utilization()
+        if self.record_layer: # layer
+            print("output layer utilization...")
+            self.layer_utilization()
+            
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -1044,31 +1039,6 @@ class Controller(object):
         #         writer.writerow(util[0])
         #         writer.writerow(util[1])
 
-    def pe_utilization(self):
-        with open(self.path+'/PE_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for cycle in range(1, len(self.pe_state_for_plot)):
-                if self.pe_state_for_plot[cycle]:
-                    for pe in self.pe_state_for_plot[cycle]:
-                        plot_idx = pe.plot_idx
-                        writer.writerow([cycle, plot_idx])
-
-    def cu_utilization(self):
-        with open(self.path+'/CU_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for cycle in range(1, len(self.cu_state_for_plot)):
-                if self.cu_state_for_plot[cycle]:
-                    for cu_idx in self.cu_state_for_plot[cycle]:
-                        writer.writerow([cycle, cu_idx])
-
-    def layer_utilization(self):
-        with open(self.path+'/Layer_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for cycle in range(1, len(self.layer_state_for_plot)):
-                if self.layer_state_for_plot[cycle]:
-                    for layer in self.layer_state_for_plot[cycle]:
-                        writer.writerow([cycle, layer])
-    
     def cu_performance_breakdown(self):
         Plot = [] # [PE0, PE1, PE2, ...]
         p_total = 0
@@ -1111,3 +1081,28 @@ class Controller(object):
                 arr.append(miss)
                 writer.writerow(arr)
 
+    def pe_utilization(self):
+        with open(self.path+'/PE_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for cycle in range(1, len(self.pe_state_for_plot)):
+                if self.pe_state_for_plot[cycle]:
+                    for pe in self.pe_state_for_plot[cycle]:
+                        plot_idx = pe.plot_idx
+                        writer.writerow([cycle, plot_idx])
+
+    def cu_utilization(self):
+        with open(self.path+'/CU_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for cycle in range(1, len(self.cu_state_for_plot)):
+                if self.cu_state_for_plot[cycle]:
+                    for cu_idx in self.cu_state_for_plot[cycle]:
+                        writer.writerow([cycle, cu_idx])
+
+    def layer_utilization(self):
+        with open(self.path+'/Layer_utilization.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for cycle in range(1, len(self.layer_state_for_plot)):
+                if self.layer_state_for_plot[cycle]:
+                    for layer in self.layer_state_for_plot[cycle]:
+                        writer.writerow([cycle, layer])
+    
