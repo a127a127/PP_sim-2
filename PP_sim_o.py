@@ -19,7 +19,7 @@ def main():
     hw_config = HardwareConfig()
 
     ### Mapping ##
-
+    cant_use_pe = (13, 12, 1, 1)
     # Used PE: Lenet:6, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
     if model == "Lenet":
         cant_use_pe = (0, 1, 1, 0)

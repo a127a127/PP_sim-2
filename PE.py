@@ -65,30 +65,6 @@ class PE(object):
         self.CU_IR_energy            = 0.
         self.CU_OR_energy            = 0.
 
-        ### Performance analysis
-        self.busy_cu       = 0
-        self.busy_other    = 0
-        self.idle_transfer = 0
-        self.idle_other    = 0
-
-        ### cu performance breakdown
-        # self.cu_finish_cycle  = []
-        # self.cu_wait_transfer = []
-        # self.cu_busy          = []
-        # self.cu_idle          = []
-        # for i in range(self.hw_config.CU_num):
-        #     self.cu_wait_transfer.append(0)
-        #     self.cu_busy.append(0)
-        #     self.cu_finish_cycle.append(0)
-        #     self.cu_idle.append(0)
-        
-        ### pe performance breakdown
-        self.pe_finish_cycle  = 0
-        self.pe_wait_transfer = 0
-        self.pe_busy_cu       = 0
-        self.pe_busy_other    = 0
-        self.pe_idle          = 0
-
         ### CU state
         self.cu_state = []
         for i in range(self.hw_config.CU_num):
@@ -98,7 +74,7 @@ class PE(object):
         self.cu_performance_breakdown = []
         self.cu_busy_end_time = []
         for i in range(self.hw_config.CU_num):
-            self.cu_performance_breakdown.append([0,0,0]) # [pre-layer, compute&overlap, transfer]
+            self.cu_performance_breakdown.append([0,0,0,0,0]) # [pre-layer, compute, transfer, overlap, other]
             self.cu_busy_end_time.append(1)
 
 

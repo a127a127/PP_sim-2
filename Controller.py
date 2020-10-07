@@ -357,7 +357,6 @@ class Controller(object):
                 if event.event_type == "edram_rd_ir":
                     busy_start_time = self.cycle_ctr
                     busy_end_time = pe.cu_busy_end_time[cu_idx]
-                    idle = [busy_end_time, busy_start_time]
     
                     model_info = self.ordergenerator.model_info
                     layer = event.nlayer
@@ -369,7 +368,9 @@ class Controller(object):
                         pe.cu_performance_breakdown[cu_idx][1] += compute_n_overlap
                         pe.cu_performance_breakdown[cu_idx][2] += p_transfer
                     else:
-                        data_list = []
+                        data_list1 = []
+                        data_list2 = []
+                        data_list3 = []
                         for data in edram_rd_data:
                             h, w, c = data[1], data[2], data[3]
                             if model_info.layer_list[layer].layer_type != "fully":
@@ -378,12 +379,32 @@ class Controller(object):
                                 pos = h
                             data_start_compute_time = self.data_table[layer][pos][0]
                             data_end_compute_time = self.data_table[layer][pos][1]
-                            data_list.append([data_start_compute_time, data_end_compute_time])
+                            data_end_transfer_time = self.data_table[layer][pos][2]
+                                
+                            data_list1.append([data_start_compute_time, data_end_compute_time])
+                            data_list2.append([data_end_compute_time, data_end_transfer_time])
+                            data_list3.append([data_start_compute_time, data_end_transfer_time])
                         
-                        prelayer, compute_n_overlap, p_transfer = self.overlap_a(idle, data_list)
+                        idle1 = [busy_end_time, busy_start_time]
+                        prelayer, t_compute,    ooo, f1 = self.overlap_a(idle1, data_list1)
+                        
+                        idle2 = [busy_end_time, busy_start_time]
+                        ppp,      t_transfer,   ooo, f2 = self.overlap_a(idle2, data_list2)
+                        
+                        idle3 = [busy_end_time, busy_start_time]
+                        ppp,      t_com_n_tans, ooo, f3 = self.overlap_a(idle3, data_list3)
+                        
+                        p_transfer = t_com_n_tans - t_compute
+                        p_compute  = t_com_n_tans - t_transfer
+                        overlap = t_com_n_tans - p_transfer - p_compute
+                        other = busy_start_time - busy_end_time 
+                        other -= (p_transfer + p_compute + overlap + prelayer)
+
                         pe.cu_performance_breakdown[cu_idx][0] += prelayer
-                        pe.cu_performance_breakdown[cu_idx][1] += compute_n_overlap
+                        pe.cu_performance_breakdown[cu_idx][1] += p_compute
                         pe.cu_performance_breakdown[cu_idx][2] += p_transfer
+                        pe.cu_performance_breakdown[cu_idx][3] += overlap
+                        pe.cu_performance_breakdown[cu_idx][4] += other
 
                 # free mem
                 # event_idx = self.Computation_order.index(event)
@@ -394,8 +415,8 @@ class Controller(object):
         self.t_edram += time.time() - tt
     
     def overlap_a(self, line, data_list):
+        flag  = True
         for d in data_list:
-            flag  = True
             s, e = d[0], d[1]
 
             for i in range(len(line)):
@@ -409,38 +430,65 @@ class Controller(object):
 
             if flag: # start from idle
                 if I1 == 0:
-                    flag = False
-                    if I2 % 2 == 0:
-                        del line[I1+1 : I2]
-                    else:
-                        line.insert(I2, e)
-                        del line[I1+1 : I2]
+                    if I2 != 0:
+                        flag = False
+                        if I2 % 2 == 0:
+                            del line[I1+1 : I2]
+                        else:
+                            if e != line[I2]:
+                                line.insert(I2, e)
+                                del line[I1+1 : I2]
+                            else:
+                                del line[I1+1 : I2+1]
                 else:
                     if I1 % 2 == 1 and I2 % 2 == 1:
                         line.insert(I1, s)
-                        line.insert(I2+1, e)
-                        del line[I1+1: I2+1]
+                        if e != line[I2+1]:
+                            line.insert(I2+1, e)
+                            del line[I1+1: I2+1]
+                        else:
+                            del line[I1+1: I2+2]
                     elif I1 % 2 == 1 and I2 % 2 == 0:
                         line.insert(I1, s)
                         del line[I1+1 : I2+1]
                     elif I1 % 2 == 0 and I2 % 2 == 0:
                         del line[I1 : I2]
                     elif I1 % 2 == 0 and I2 % 2 == 1:
-                        line.insert(I2, e)
-                        del line[I1 : I2]
+                        if e != line[I2]:
+                            line.insert(I2, e)
+                            del line[I1 : I2]
+                        else:
+                            del line[I1 : I2+1]
             else: # start from busy
-                if I1 % 2 == 1 and I2 % 2 == 1:
-                    del line[I1 : I2]
-                elif I1 % 2 == 1 and I2 % 2 == 0:
-                    line.insert(I2, e)
-                    del line[I1 : I2]
-                elif I1 % 2 == 0 and I2 % 2 == 0:
-                    line.insert(I1, s)
-                    line.insert(I2+1, e)
-                    del line[I1+1 : I2+1]
-                elif I1 % 2 == 0 and I2 % 2 == 1:
-                    line.insert(I1, s)
-                    del line[I1+1 : I2+1]
+                if I1 == 0:
+                    if I2 != 0:
+                        if I2 % 2 == 0:
+                            if e != line[I2]:
+                                line.insert(I2, e)
+                                del line[I1+1 : I2]
+                            else:
+                                del line[I1+1 : I2+1]
+                        else:
+                            del line[I1+1 : I2]
+                else:
+                    if I1 % 2 == 1 and I2 % 2 == 1:
+                        del line[I1 : I2]
+                    elif I1 % 2 == 1 and I2 % 2 == 0:
+                        if e != line[I2]:
+                            line.insert(I2, e)
+                            del line[I1 : I2]
+                        else:
+                            del line[I1 : I2+1]
+                    elif I1 % 2 == 0 and I2 % 2 == 0:
+                        line.insert(I1, s)
+                        if e != line[I2+1]:
+                            line.insert(I2+1, e)
+                            del line[I1+1 : I2+1]
+                        else:
+                            del line[I1+1 : I2+2]
+                    elif I1 % 2 == 0 and I2 % 2 == 1:
+                        line.insert(I1, s)
+                        del line[I1+1 : I2+1]
 
         prelayer = 0
         compute_n_overlap = 0
@@ -452,8 +500,8 @@ class Controller(object):
         for i in range(0, len(line) - 1, 2):
             compute_n_overlap += line[i+1] - line[i]
 
-        transfer += line[-1] - line[0] - compute_n_overlap
-        return prelayer, compute_n_overlap, transfer
+        transfer += (line[-1] - line[0] - compute_n_overlap)
+        return prelayer, compute_n_overlap, transfer, flag
        
     def event_cu_op(self):
         tt = time.time()
@@ -733,27 +781,12 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
-                if self.congestion:
-                    model_info = self.ordergenerator.model_info
-                    layer = event.nlayer+1
-                    for i in range(len(transfer_data)-1):
-                        data = transfer_data[i]
-                        packet = Packet(data_transfer_src, data_transfer_des, data, [])
-                        self.interconnect.input_packet(packet)
-                        # CU performance breakdown new
-                        pro_event = self.Computation_order[event.proceeding_event[0]]
-                        if pro_event.event_type == "edram_rd_ir":
-                            h, w, c = data[1], data[2], data[3]
-                            if model_info.layer_list[layer].layer_type != "fully":
-                                pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
-                            else:
-                                pos = h
-                            self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
-
-                    data = transfer_data[-1]
-                    packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
+                model_info = self.ordergenerator.model_info
+                layer = event.nlayer+1
+                for i in range(len(transfer_data)-1):
+                    data = transfer_data[i]
+                    packet = Packet(data_transfer_src, data_transfer_des, data, [])
                     self.interconnect.input_packet(packet)
-
                     # CU performance breakdown new
                     pro_event = self.Computation_order[event.proceeding_event[0]]
                     if pro_event.event_type == "edram_rd_ir":
@@ -762,28 +795,22 @@ class Controller(object):
                             pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
                         else:
                             pos = h
-                        self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
+                        self.data_table[layer][pos][1] = self.cycle_ctr - 1 # end compute time
 
-                else:
-                    # Trigger
-                    # TODO: CU performance breakdown new
-                    finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
-                    for pro_event_idx in event.proceeding_event:
-                        pro_event = self.Computation_order[pro_event_idx]
-                        pro_event.current_number_of_preceding_event += 1
-                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                            if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
-                                self.Non_pipeline_trigger.append([des_pe, pro_event, transfer_data])
-                                # self.transfer_start_cycle = self.cycle_ctr # cu performance breakdown
-                            else:
-                                if finish_cycle not in self.Trigger:
-                                    self.Trigger[finish_cycle] = [[des_pe, pro_event, transfer_data]]
-                                else:
-                                    self.Trigger[finish_cycle].append([des_pe, pro_event, transfer_data])
+                data = transfer_data[-1]
+                packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
+                self.interconnect.input_packet(packet)
 
-                        else:
-                            for data in transfer_data: # 沒有trigger event先放data
-                                des_pe.edram_buffer.put(data, data)
+                # CU performance breakdown new
+                pro_event = self.Computation_order[event.proceeding_event[0]]
+                if pro_event.event_type == "edram_rd_ir":
+                    h, w, c = data[1], data[2], data[3]
+                    if model_info.layer_list[layer].layer_type != "fully":
+                        pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                    else:
+                        pos = h
+                    self.data_table[layer][pos][1] = self.cycle_ctr - 1  # end compute time
+
                 
             # free mem
             # event_idx = self.Computation_order.index(event)
@@ -823,12 +850,23 @@ class Controller(object):
 
     def interconnect_fn(self):
         arrived = self.interconnect.step()
+        model_info = self.ordergenerator.model_info
         for packet in arrived:
             des_pe_id = packet.destination
             des_pe = self.PE_array[des_pe_id]
             data = packet.data
             pro_event_list = packet.pro_event_list
             des_pe.edram_buffer.put(data, data)
+
+            # CU performance breakdown new
+            if len(data) == 4: # inter-layer data transfer
+                layer = data[0]
+                h, w, c = data[1], data[2], data[3]
+                if model_info.layer_list[layer].layer_type != "fully":
+                    pos = w + h * model_info.input_w[layer] + c * model_info.input_w[layer] * model_info.input_h[layer]
+                else:
+                    pos = h
+                self.data_table[layer][pos][2] = self.cycle_ctr
 
             # Trigger
             for proceeding_index in pro_event_list:
@@ -1041,32 +1079,41 @@ class Controller(object):
 
     def cu_performance_breakdown(self):
         Plot = [] # [PE0, PE1, PE2, ...]
-        p_total = 0
-        o_total = 0
-        t_total = 0
+        # [pre-layer, compute, transfer, overlap, other]
+        p_total  = 0
+        c_total  = 0
+        t_total  = 0
+        ov_total = 0
+        ot_total = 0
+        n_CU = 0
         for pe_n in range(len(self.PE_array)):
             Plot.append([])
+        
         for pe_pos in self.PE_array:
             pe = self.PE_array[pe_pos]
             for cu_idx in range(self.hw_config.CU_num):
                 bd = pe.cu_performance_breakdown[cu_idx]
-                pre_layer, compute_overlap, transfer = bd[0], bd[1], bd[2]
+                pre_layer, compute, transfer, overlap, other = bd[0], bd[1], bd[2], bd[3], bd[4]
                 p_total += pre_layer
-                o_total += compute_overlap
+                c_total += compute
                 t_total += transfer
-                Plot[pe.plot_idx].append([pre_layer, compute_overlap, transfer])
+                ov_total += overlap
+                ot_total += other
+                if pre_layer != 0 or compute != 0 or transfer != 0 or overlap != 0 or other != 0:
+                    Plot[pe.plot_idx].append([pre_layer, compute, transfer, overlap, other])
+                    n_CU += 1
         with open(self.path+'/CU_performance_breakdown.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["", "previous-layer", "idle for other", "idle for transfer"])
+            writer.writerow(["", "previous-layer", "idle for compute", "idle for transfer", "overlap", "other","", "# CU"])
+            writer.writerow(["SUM", p_total, c_total, t_total, ov_total, ot_total, "", n_CU])
+            writer.writerow(["Avg", p_total/n_CU, c_total/n_CU, t_total/n_CU, ov_total/n_CU, ot_total/n_CU, "", n_CU])
             for pe_idx in range(len(Plot)):
                 cu_list = Plot[pe_idx]
                 for cu_idx in range(len(cu_list)):
                     row = cu_list[cu_idx]
-                    if row[0] != 0 or row[1] != 0 or row[2] !=0 :
-                        row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
-                        writer.writerow(row)
-            writer.writerow(["SUM", p_total, o_total, t_total])
-    
+                    row.insert(0, "PE"+str(pe_idx)+"_CU"+str(cu_idx))
+                    writer.writerow(row)
+
     def miss_rate(self):
         with open(self.path+'/Miss_rate.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
