@@ -17,7 +17,7 @@ class HardwareConfig(object):
         self.Xbar_h = 128
         self.Xbar_w = 128
         self.OU_h = 9
-        self.OU_w = 8    
+        self.OU_w = 8
         self.total_pe_num = self.Router_num * self.PE_num
         
         self.PE_frequency = 1.2 # GHz
