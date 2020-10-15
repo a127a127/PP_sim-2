@@ -87,6 +87,7 @@ class Controller(object):
         self.busy_xb = 0
 
         self.transfer_cycles = 0
+        self.transfer_data   = 0
 
         self.run()
         self.print_statistics_result()
@@ -619,10 +620,12 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
                 
+                self.transfer_data += num_data
                 for i in range(len(transfer_data)-1):
                     data = transfer_data[i]
                     packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
                     self.interconnect.input_packet(packet)
+                
 
                 data = transfer_data[-1]
                 packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
@@ -651,6 +654,8 @@ class Controller(object):
 
             # Cycle
             finish_cycle = self.cycle_ctr + 1 + self.hw_config.Fetch_cycle + transfer_distance + 1
+            self.transfer_cycles += self.hw_config.Fetch_cycle + transfer_distance + 1
+            self.transfer_data   += num_data
             
             # Trigger
             if finish_cycle not in self.Trigger:
@@ -781,7 +786,10 @@ class Controller(object):
             writer.writerow(["feature map data", fm_num])
             writer.writerow(["intermediate data", inter_num])
 
+            writer.writerow([])
+            writer.writerow(["transfer data", self.transfer_data])
             writer.writerow(["transfer cycles", self.transfer_cycles])
+            writer.writerow(["Avg", self.transfer_cycles/self.transfer_data])
 
             writer.writerow([])
             writer.writerow(["", "Event"])
