@@ -3,7 +3,6 @@ from PE import PE
 from EventMetaData import EventMetaData
 import math
 import collections
-# from tqdm import tqdm
 
 class OrderGenerator(object):
     def __init__(self, model_config, hw_config, mapping_information, trace):

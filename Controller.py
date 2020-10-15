@@ -11,8 +11,8 @@ import time
 class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
         self.congestion =  True
-        self.record_PE = True
-        self.record_layer = True
+        self.record_PE = False
+        self.record_layer = False
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
@@ -116,7 +116,6 @@ class Controller(object):
                 break
         
         self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger, self.t_inter = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
         start_time = time.time()
         
         self.cycle_ctr = 0
@@ -652,7 +651,7 @@ class Controller(object):
             saa_amount = event.inputs
             pe.Or_energy += self.hw_config.Energy_or * self.input_bit * saa_amount
             pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * saa_amount
-            pe.PE_shift_and_add_energy += self.hw_config.Energy_shift_and_add * saa_amount
+            pe.PE_shift_and_add_energy += self.hw_config.Energy_shift_and_add_in_PE * saa_amount
             pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * saa_amount
             pe.Or_energy += self.hw_config.Energy_or * self.input_bit * saa_amount
 
@@ -1038,7 +1037,7 @@ class Controller(object):
         if self.record_layer: # layer
             print("output layer utilization...")
             self.layer_utilization()
-            
+
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
@@ -1227,14 +1226,6 @@ class Controller(object):
                     for pe in self.pe_state_for_plot[cycle]:
                         plot_idx = pe.plot_idx
                         writer.writerow([cycle, plot_idx])
-
-    def cu_utilization(self):
-        with open(self.path+'/CU_utilization.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for cycle in range(1, len(self.cu_state_for_plot)):
-                if self.cu_state_for_plot[cycle]:
-                    for cu_idx in self.cu_state_for_plot[cycle]:
-                        writer.writerow([cycle, cu_idx])
 
     def layer_utilization(self):
         with open(self.path+'/Layer_utilization.csv', 'w', newline='') as csvfile:
