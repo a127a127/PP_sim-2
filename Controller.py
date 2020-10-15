@@ -86,6 +86,8 @@ class Controller(object):
 
         self.busy_xb = 0
 
+        self.transfer_cycles = 0
+
         self.run()
         self.print_statistics_result()
 
@@ -107,7 +109,6 @@ class Controller(object):
                     pe.edram_rd_cu_idx.append(cu_idx) # 要檢查的CU idx
 
         self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger, self.t_inter = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        start_time = time.time()
         
         self.cycle_ctr = 0
         self.done_event = 0
@@ -617,17 +618,14 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
-
-                model_info = self.ordergenerator.model_info
-                layer = event.nlayer+1
-                end_compute_time = self.cycle_ctr - 1 
+                
                 for i in range(len(transfer_data)-1):
                     data = transfer_data[i]
-                    packet = Packet(data_transfer_src, data_transfer_des, data, [])
+                    packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
                     self.interconnect.input_packet(packet)
 
                 data = transfer_data[-1]
-                packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event)
+                packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
                 self.interconnect.input_packet(packet)
 
             # free mem
@@ -668,13 +666,15 @@ class Controller(object):
 
     def interconnect_fn(self):
         arrived = self.interconnect.step()
-        model_info = self.ordergenerator.model_info
         for packet in arrived:
             des_pe_id = packet.destination
             des_pe = self.PE_array[des_pe_id]
             data = packet.data
             pro_event_list = packet.pro_event_list
             des_pe.edram_buffer.put(data, data)
+            start_transfer_cycle = packet.start_transfer_cycle
+            end_transfer_cycle = self.cycle_ctr
+            self.transfer_cycles += end_transfer_cycle - start_transfer_cycle
 
             # Trigger
             for proceeding_index in pro_event_list:
@@ -781,6 +781,8 @@ class Controller(object):
             writer.writerow(["feature map data", fm_num])
             writer.writerow(["intermediate data", inter_num])
 
+            writer.writerow(["transfer cycles", self.transfer_cycles])
+
             writer.writerow([])
             writer.writerow(["", "Event"])
             writer.writerow(["Total", len(self.Computation_order)])
@@ -825,27 +827,9 @@ class Controller(object):
                         writer.writerow(arr)
 
     def buffer_analysis(self):
-        # num轉KB
-        for pe_pos in self.PE_array:
-            pe = self.PE_array[pe_pos]
-            pe.edram_buffer.maximal_usage *= self.input_bit/8/1000
-            # for i in range(len(pe.buffer_size_util[1])):
-            #     pe.buffer_size_util[1][i] *= self.input_bit/8/1000
-
         with open(self.path+'/Buffer_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["", "Size(KB)"])
-            for pe_pos in self.PE_array:
-                pe = self.PE_array[pe_pos]
-                if pe.edram_buffer.maximal_usage == 0:
-                    continue
-                rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
-                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
-                writer.writerow(["PE"+str(idx), pe.edram_buffer.maximal_usage])
-        
-        with open(self.path+'/Buffer_utilization2.csv', 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(["", "tmp_data", "fm_data"])
+            writer.writerow(["", "tmp_data", "fm_data", "sum"])
             for pe_pos in self.PE_array:
                 pe  = self.PE_array[pe_pos]
                 buf = pe.edram_buffer.buffer
@@ -857,11 +841,12 @@ class Controller(object):
                         fm_data += 1
                 tmp_data *= self.input_bit/8/1000
                 fm_data *= self.input_bit/8/1000
-                if tmp_data == 0 and fm_data == 0:
+                summ = tmp_data + fm_data
+                if summ == 0:
                     continue
                 rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
                 idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
-                writer.writerow(["PE"+str(idx), tmp_data, fm_data]) 
+                writer.writerow(["PE"+str(idx), tmp_data, fm_data, summ]) 
 
         # ### time history
         # with open(self.path+'/Buffer_time_history.csv', 'w', newline='') as csvfile:
