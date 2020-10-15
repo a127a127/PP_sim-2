@@ -51,7 +51,7 @@ class PE(object):
         self.pure_computation_time = 0
 
         ### Energy
-        self.Edram_buffer_energy     = 0.
+        self.eDRAM_buffer_energy     = 0.
         self.Bus_energy              = 0.
         self.PE_shift_and_add_energy = 0.
         self.Or_energy               = 0.

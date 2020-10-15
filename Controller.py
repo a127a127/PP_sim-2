@@ -92,6 +92,8 @@ class Controller(object):
     def run(self):
         print("estimation start")
         for event in self.Computation_order:
+            if event.nlayer != 0:
+                break
             if event.preceding_event_count == 0:
                 # append edram read event
                 pos = event.position_idx
@@ -104,9 +106,6 @@ class Controller(object):
                 if cu_idx not in pe.edram_rd_cu_idx:
                     pe.edram_rd_cu_idx.append(cu_idx) # 要檢查的CU idx
 
-            if event.nlayer != 0:
-                break
-        
         self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger, self.t_inter = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         start_time = time.time()
         
@@ -118,17 +117,19 @@ class Controller(object):
                 if self.done_event == 0:
                     pass
                 else:
-                    print("Completed:", int(self.done_event/len(self.Computation_order) * 100), "%")
-                    print("Model:", self.model_config.Model_type)
-                    print("Mapping:", self.mapping_str , "Scheduling:", self.scheduling_str)
-                    print("Cycle",self.cycle_ctr, "Done event:", self.done_event, "time per event", (time.time()-start_time)/self.done_event, "time per cycle", (time.time()-start_time)/self.cycle_ctr)
-                    print("edram:", self.t_edram, "t_cuop", self.t_cuop, "pesaa", self.t_pesaa, "act", self.t_act, "wr", self.t_wr)
-                    print("pooling:", self.t_pool, "transfer", self.t_transfer, "fetch", self.t_fetch)
-                    print("trigger", self.t_trigger, "interconnect", self.t_inter)
+                    print("-----------------------------------------------------------------------")
+                    print("Completed: {} %".format(int(self.done_event/len(self.Computation_order) * 100)))
+                    print("Model: {}".format(self.model_config.Model_type))
+                    print("Mapping: {}, Scheduling: {}".format(self.mapping_str, self.scheduling_str))
+                    print("Cycle: {}, Done event: {}".format(self.cycle_ctr, self.done_event))
                     print()
-                    self.t_edram, self.t_cuop, self.t_pesaa, self.t_act, self.t_wr = 0, 0, 0, 0, 0
-                    self.t_pool, self.t_transfer, self.t_fetch = 0, 0, 0
-                    self.t_trigger, self.t_inter = 0, 0
+                    print("edram: {:.6f}, cuop : {:.6f}, pesaa:    {:.6f}, act  : {:.6f}".format(self.t_edram, self.t_cuop, self.t_pesaa, self.t_act))
+                    print("write: {:.6f}, pool : {:.6f}, transfer: {:.6f}, fetch: {:.6f}".format(self.t_wr, self.t_pool, self.t_transfer, self.t_fetch))
+                    print("trigger: {:.6f}, interconnect: {:.6f}".format(self.t_trigger, self.t_inter))
+                    self.t_edram, self.t_cuop, self.t_pesaa = 0, 0, 0
+                    self.t_act,   self.t_wr,   self.t_pool  = 0, 0, 0
+                    self.t_transfer, self.t_fetch = 0, 0
+                    self.t_trigger,  self.t_inter = 0, 0
             
             #if self.cycle_ctr % 1000000 == 0:
             #    if self.done_event == 0:
@@ -309,11 +310,11 @@ class Controller(object):
                 # Energy
                 num_data = len(edram_rd_data)
                 if event.event_type == "edram_rd_ir":
-                    pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
+                    pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
                     pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data # bus
                     pe.CU_IR_energy += self.hw_config.Energy_ir_in_cu * self.input_bit * num_data # write
                 else: # edram_rd
-                    pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
+                    pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
                     pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data # bus
                 
                 # Trigger
@@ -502,7 +503,7 @@ class Controller(object):
             edram_write_data = event.outputs
             num_data = len(edram_write_data)
             pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data
-            pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data
+            pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data
 
             # Write data
             for data in edram_write_data:
@@ -615,7 +616,7 @@ class Controller(object):
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
-                des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
+                des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
                 model_info = self.ordergenerator.model_info
                 layer = event.nlayer+1
@@ -648,7 +649,7 @@ class Controller(object):
 
             # Energy
             self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-            des_pe.Edram_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
+            des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
 
             # Cycle
             finish_cycle = self.cycle_ctr + 1 + self.hw_config.Fetch_cycle + transfer_distance + 1
@@ -701,9 +702,7 @@ class Controller(object):
         self.t_buffer += time.time() - tt
 
     def print_statistics_result(self):
-        print("print_statistics_result")
-        # self.color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w', 'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
-        self.Edram_buffer_energy     = 0.
+        self.eDRAM_buffer_energy     = 0.
         self.Bus_energy              = 0.
         self.PE_shift_and_add_energy = 0.
         self.Or_energy               = 0.
@@ -719,7 +718,7 @@ class Controller(object):
 
         for pe_pos in self.PE_array:
             pe = self.PE_array[pe_pos]
-            self.Edram_buffer_energy     += pe.Edram_buffer_energy
+            self.eDRAM_buffer_energy     += pe.eDRAM_buffer_energy
             self.Bus_energy              += pe.Bus_energy
             self.PE_shift_and_add_energy += pe.PE_shift_and_add_energy
             self.Or_energy               += pe.Or_energy
@@ -731,17 +730,11 @@ class Controller(object):
             self.CU_crossbar_energy      += pe.CU_crossbar_energy
             self.CU_IR_energy            += pe.CU_IR_energy
             self.CU_OR_energy            += pe.CU_OR_energy
-        self.Total_energy = self.Edram_buffer_energy + self.Bus_energy + self.PE_shift_and_add_energy + \
+        self.Total_energy = self.eDRAM_buffer_energy + self.Bus_energy + self.PE_shift_and_add_energy + \
                             self.Or_energy + self.Activation_energy + self.Pooling_energy + \
                             self.CU_shift_and_add_energy + self.CU_dac_energy + self.CU_adc_energy + \
                             self.CU_crossbar_energy + self.CU_IR_energy + self.CU_OR_energy + \
                             self.Total_energy_interconnect
-
-        print("Total Cycles:", self.cycle_ctr)
-        if not self.isPipeLine:
-            print("Cycles each layer:", self.cycles_each_layer)
-        print("Cycles time:", self.hw_config.cycle_time, "ns\n")
-        print()
 
         self.output_result()
         self.buffer_analysis()
@@ -757,24 +750,13 @@ class Controller(object):
     def output_result(self):
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["Event Total", len(self.Computation_order)])
-            writer.writerow(["edram_rd_ir_ctr", self.ordergenerator.edram_rd_ir_ctr])
-            writer.writerow(["cu_op_ctr", self.ordergenerator.cu_op_ctr])
-            writer.writerow(["pe_saa_ctr", self.ordergenerator.pe_saa_ctr])
-            writer.writerow(["edram_wr_ctr", self.ordergenerator.edram_wr_ctr])
-            writer.writerow(["edram_rd_ctr", self.ordergenerator.edram_rd_ctr])
-            writer.writerow(["pooling_ctr", self.ordergenerator.pooling_ctr])
-            writer.writerow(["data_transfer_ctr", self.ordergenerator.data_transfer_ctr])
-            
-            writer.writerow([])
             writer.writerow(["Cycles", self.cycle_ctr])
-            writer.writerow([])
-            writer.writerow(["Total energy consumption(nJ)", self.Total_energy])
+            writer.writerow(["Energy(nJ)", self.Total_energy])
             writer.writerow([])
             writer.writerow(["", "Energy(nJ)"])
             writer.writerow(["Interconnect", self.Total_energy_interconnect])
 
-            writer.writerow(["Edram Buffer", self.Edram_buffer_energy])
+            writer.writerow(["eDRAM Buffer", self.eDRAM_buffer_energy])
             writer.writerow(["Bus", self.Bus_energy])
             writer.writerow(["PE Shift and Add", self.PE_shift_and_add_energy])
             writer.writerow(["OR", self.Or_energy])
@@ -798,6 +780,17 @@ class Controller(object):
             writer.writerow(["transfer data between PE"])
             writer.writerow(["feature map data", fm_num])
             writer.writerow(["intermediate data", inter_num])
+
+            writer.writerow([])
+            writer.writerow(["", "Event"])
+            writer.writerow(["Total", len(self.Computation_order)])
+            writer.writerow(["edram_rd_ir", self.ordergenerator.edram_rd_ir_ctr])
+            writer.writerow(["cu_op", self.ordergenerator.cu_op_ctr])
+            writer.writerow(["pe_saa", self.ordergenerator.pe_saa_ctr])
+            writer.writerow(["edram_wr", self.ordergenerator.edram_wr_ctr])
+            writer.writerow(["edram_rd", self.ordergenerator.edram_rd_ctr])
+            writer.writerow(["pooling", self.ordergenerator.pooling_ctr])
+            writer.writerow(["data_transfer", self.ordergenerator.data_transfer_ctr])
 
     def PE_energy_breakdown(self):
         # PE breakdown
