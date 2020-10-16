@@ -46,7 +46,7 @@ class Controller(object):
                         pe = PE(self.hw_config, self.model_config.input_bit, pe_pos)
                         self.PE_array[pe_pos] = pe
 
-        self.fetch_array = []
+        self.fetch_dict = dict() # {cycle: list}
         
         self.Total_energy_interconnect = 0
 
@@ -81,13 +81,18 @@ class Controller(object):
             self.this_layer_cycle_ctr = 0
             self.cycles_each_layer = []
             print("events_each_layer:", self.events_each_layer)
-
             self.Non_pipeline_trigger = []
 
-        self.busy_xb = 0
-
+        self.t_edram, self.t_cuop, self.t_pesaa = 0, 0, 0
+        self.t_act,   self.t_wr,   self.t_pool  = 0, 0, 0
+        self.t_transfer, self.t_fetch = 0, 0
+        self.t_trigger,  self.t_inter = 0, 0
+        self.cycle_ctr = 0
+        self.done_event = 0
         self.transfer_cycles = 0
         self.transfer_data   = 0
+        self.fetch_data      = 0
+        self.busy_xb = 0
 
         self.run()
         self.print_statistics_result()
@@ -98,7 +103,7 @@ class Controller(object):
             if event.nlayer != 0:
                 break
             if event.preceding_event_count == 0:
-                # append edram read event
+                # append edram read to ir event
                 pos = event.position_idx
                 pe_idx = (pos[0], pos[1], pos[2], pos[3])
                 pe = self.PE_array[pe_idx]
@@ -108,32 +113,24 @@ class Controller(object):
                 self.edram_rd_pe_idx.add(pe) # 要檢查的PE idx
                 if cu_idx not in pe.edram_rd_cu_idx:
                     pe.edram_rd_cu_idx.append(cu_idx) # 要檢查的CU idx
-
-        self.t_edram , self.t_cuop , self.t_pesaa, self.t_act, self.t_wr, self.t_pool, self.t_transfer, self.t_fetch, self.t_trigger, self.t_inter = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         
-        self.cycle_ctr = 0
-        self.done_event = 0
-
         while True:
             if self.cycle_ctr % 10000 == 0:
-                if self.done_event == 0:
-                    pass
-                else:
-                    print("-----------------------------------------------------------------------")
-                    print("Completed: {} %".format(int(self.done_event/len(self.Computation_order) * 100)))
-                    print("Model: {}".format(self.model_config.Model_type))
-                    print("Mapping: {}, Scheduling: {}".format(self.mapping_str, self.scheduling_str))
-                    print("Cycle: {}, Done event: {}".format(self.cycle_ctr, self.done_event))
-                    print()
-                    print("edram: {:.6f}, cuop : {:.6f}, pesaa:    {:.6f}, act  : {:.6f}".format(self.t_edram, self.t_cuop, self.t_pesaa, self.t_act))
-                    print("write: {:.6f}, pool : {:.6f}, transfer: {:.6f}, fetch: {:.6f}".format(self.t_wr, self.t_pool, self.t_transfer, self.t_fetch))
-                    print("trigger: {:.6f}, interconnect: {:.6f}".format(self.t_trigger, self.t_inter))
-                    self.t_edram, self.t_cuop, self.t_pesaa = 0, 0, 0
-                    self.t_act,   self.t_wr,   self.t_pool  = 0, 0, 0
-                    self.t_transfer, self.t_fetch = 0, 0
-                    self.t_trigger,  self.t_inter = 0, 0
+                print("-----------------------------------------------------------------------")
+                print("Completed: {} %".format(int(self.done_event/len(self.Computation_order) * 100)))
+                print("Model: {}".format(self.model_config.Model_type))
+                print("Mapping: {}, Scheduling: {}".format(self.mapping_str, self.scheduling_str))
+                print("Cycle: {}, Done event: {}".format(self.cycle_ctr, self.done_event))
+                print()
+                print("edram: {:.6f}, cuop : {:.6f}, pesaa:    {:.6f}, act  : {:.6f}".format(self.t_edram, self.t_cuop, self.t_pesaa, self.t_act))
+                print("write: {:.6f}, pool : {:.6f}, transfer: {:.6f}, fetch: {:.6f}".format(self.t_wr, self.t_pool, self.t_transfer, self.t_fetch))
+                print("trigger: {:.6f}, interconnect: {:.6f}".format(self.t_trigger, self.t_inter))
+                self.t_edram, self.t_cuop, self.t_pesaa = 0, 0, 0
+                self.t_act,   self.t_wr,   self.t_pool  = 0, 0, 0
+                self.t_transfer, self.t_fetch = 0, 0
+                self.t_trigger,  self.t_inter = 0, 0
             
-            #if self.cycle_ctr % 1000000 == 0:
+            # if self.cycle_ctr % 1000000 == 0:
             #    if self.done_event == 0:
             #        pass
             #    else:
@@ -181,7 +178,7 @@ class Controller(object):
 
             if self.trace:
                 print("cycle:", self.cycle_ctr)
-            self.Trigger_event()
+            self.trigger_event()
             self.event_edram_rd()
             self.event_cu_op()
             self.event_pe_saa()
@@ -190,11 +187,7 @@ class Controller(object):
             self.event_pooling()
             self.event_transfer()
             self.fetch()
-
-            tt = time.time()
-            for s in range(self.hw_config.interconnect_step_num):
-                self.interconnect_fn()
-            self.t_inter += time.time() - tt
+            self.interconnect_fn()
 
             # self.record_buffer_util()
             
@@ -202,7 +195,7 @@ class Controller(object):
             if self.done_event == len(self.Computation_order):
                 break
 
-    def Trigger_event(self):
+    def trigger_event(self):
         tt = time.time()
         if self.cycle_ctr in self.Trigger:
             for trigger in self.Trigger[self.cycle_ctr]:
@@ -210,9 +203,6 @@ class Controller(object):
                 event = trigger[1]
                 
                 if event.event_type == "edram_rd_ir":
-                    # transfer_data = trigger[2]
-                    # for data in transfer_data:
-                    #     pe.edram_buffer.put(data, data)
                     cu_idx = event.position_idx[4]
                     pe.edram_rd_ir_erp[cu_idx].appendleft(event)
                     if not pe.cu_state[cu_idx]: # state == False
@@ -249,10 +239,6 @@ class Controller(object):
                     self.data_transfer_erp.append(event)
                 
                 elif event.event_type == "edram_rd":
-                    # if len(trigger) == 3: # transfer data此時寫入buffer 
-                    #     transfer_data = trigger[2]
-                    #     for data in transfer_data:
-                    #         pe.edram_buffer.put(data, data)
                     pe.edram_rd_erp.appendleft(event)
                     self.edram_rd_pe_idx.add(pe)
                 
@@ -296,7 +282,11 @@ class Controller(object):
                 if self.trace:
                     print("\tfetch edram_rd_ir event_idx:", self.Computation_order.index(event))
                 des_pe = pe
-                self.fetch_array.append(FetchEvent(event, des_pe, fetch_data))
+                fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
+                if fetch_finished in self.fetch_dict:
+                    self.fetch_dict[fetch_finished].append(FetchEvent(event, des_pe, fetch_data))
+                else:
+                    self.fetch_dict[fetch_finished] = [FetchEvent(event, des_pe, fetch_data)]
 
             else: # do edram rd
                 if self.trace:
@@ -591,7 +581,6 @@ class Controller(object):
             transfer_data = event.outputs
             data_transfer_src = event.position_idx[0]
             data_transfer_des = event.position_idx[1]
-            src_pe = self.PE_array[data_transfer_src]
             des_pe = self.PE_array[data_transfer_des]
 
             if data_transfer_src == data_transfer_des:
@@ -618,15 +607,12 @@ class Controller(object):
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
-                des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
                 
                 self.transfer_data += num_data
                 for i in range(len(transfer_data)-1):
                     data = transfer_data[i]
                     packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
                     self.interconnect.input_packet(packet)
-                
-
                 data = transfer_data[-1]
                 packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
                 self.interconnect.input_packet(packet)
@@ -641,59 +627,67 @@ class Controller(object):
 
     def fetch(self):
         tt = time.time()
-        for fe in self.fetch_array:
-            transfer_data = fe.data
-            num_data = len(transfer_data)
-            des_pe = fe.des_pe
-            event = fe.event
-            transfer_distance = des_pe.position[0]
+        if self.cycle_ctr in self.fetch_dict:
+            fetch_list = self.fetch_dict[self.cycle_ctr]
+            del self.fetch_dict[self.cycle_ctr]
+            for fe in fetch_list:
+                transfer_data = fe.data
+                des_pe = fe.des_pe
+                event = fe.event
+                event_id = self.Computation_order.index(event)
+                transfer_distance = des_pe.position[0]
 
-            # Energy
-            self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-            des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # write
+                data_transfer_des = des_pe.position
+                data_transfer_src = (0, data_transfer_des[1], data_transfer_des[2], data_transfer_des[3])
+                num_data = len(transfer_data)
+                self.transfer_data += num_data
+                self.fetch_data    += num_data
 
-            # Cycle
-            finish_cycle = self.cycle_ctr + 1 + self.hw_config.Fetch_cycle + transfer_distance + 1
-            self.transfer_cycles += self.hw_config.Fetch_cycle + transfer_distance + 1
-            self.transfer_data   += num_data
-            
-            # Trigger
-            if finish_cycle not in self.Trigger:
-                self.Trigger[finish_cycle] = [[des_pe, event]]
-            else:
-                self.Trigger[finish_cycle].append([des_pe, event])
-            for data in transfer_data:
-                des_pe.edram_buffer.put(data, data)
-            
-        self.fetch_array = []
+                # Energy
+                self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
+                self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * transfer_distance
+
+                for i in range(len(transfer_data)-1):
+                    data = transfer_data[i]
+                    packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
+                    self.interconnect.input_packet(packet)
+                data = transfer_data[-1]
+                packet = Packet(data_transfer_src, data_transfer_des, data, [event_id], self.cycle_ctr)
+                self.interconnect.input_packet(packet)
 
         self.t_fetch += time.time() - tt
 
     def interconnect_fn(self):
-        arrived = self.interconnect.step()
-        for packet in arrived:
-            des_pe_id = packet.destination
-            des_pe = self.PE_array[des_pe_id]
-            data = packet.data
-            pro_event_list = packet.pro_event_list
-            des_pe.edram_buffer.put(data, data)
-            start_transfer_cycle = packet.start_transfer_cycle
-            end_transfer_cycle = self.cycle_ctr
-            self.transfer_cycles += end_transfer_cycle - start_transfer_cycle
+        tt = time.time()
+        for s in range(self.hw_config.interconnect_step_num):
+            arrived = self.interconnect.step()
+            for packet in arrived:
+                des_pe_id = packet.destination
+                des_pe = self.PE_array[des_pe_id]
+                data = packet.data
+                pro_event_list = packet.pro_event_list
+                des_pe.edram_buffer.put(data, data)
+                # Energy
+                des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
+                start_transfer_cycle = packet.start_transfer_cycle
+                end_transfer_cycle = self.cycle_ctr
+                self.transfer_cycles += end_transfer_cycle - start_transfer_cycle
 
-            # Trigger
-            for proceeding_index in pro_event_list:
-                pro_event = self.Computation_order[proceeding_index]
-                pro_event.current_number_of_preceding_event += 1
-                if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
-                    if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
-                        self.Non_pipeline_trigger.append([des_pe, pro_event, []])
-                    else:
-                        finish_cycle = self.cycle_ctr + 1
-                        if finish_cycle not in self.Trigger:
-                            self.Trigger[finish_cycle] = [[des_pe, pro_event]]
+                # Trigger
+                for proceeding_index in pro_event_list:
+                    pro_event = self.Computation_order[proceeding_index]
+                    pro_event.current_number_of_preceding_event += 1
+                    if pro_event.preceding_event_count <= pro_event.current_number_of_preceding_event:
+                        if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                            self.Non_pipeline_trigger.append([des_pe, pro_event, []])
                         else:
-                            self.Trigger[finish_cycle].append([des_pe, pro_event])
+                            finish_cycle = self.cycle_ctr + 1
+                            if finish_cycle not in self.Trigger:
+                                self.Trigger[finish_cycle] = [[des_pe, pro_event]]
+                            else:
+                                self.Trigger[finish_cycle].append([des_pe, pro_event])
+        
+        self.t_inter += time.time() - tt
 
     def record_buffer_util(self):
         # time history
@@ -790,6 +784,7 @@ class Controller(object):
             writer.writerow(["transfer data", self.transfer_data])
             writer.writerow(["transfer cycles", self.transfer_cycles])
             writer.writerow(["Avg", self.transfer_cycles/self.transfer_data])
+            writer.writerow(["fetch data", self.fetch_data])
 
             writer.writerow([])
             writer.writerow(["", "Event"])

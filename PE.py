@@ -24,7 +24,7 @@ class PE(object):
 
         size = self.hw_config.eDRAM_buffer_size * 1024 * 8 / input_bit
         self.edram_buffer = OnChipBuffer(size)
-        self.buffer_size_util = [[], []] # [cycle, size]
+        # self.buffer_size_util = [[], []] # [cycle, size]
 
         ### # Event queue's CU index
         self.edram_rd_cu_idx     = collections.deque() # set()

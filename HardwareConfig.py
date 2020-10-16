@@ -118,6 +118,7 @@ class HardwareConfig(object):
 
         # Off chip fetch: no data
         self.Fetch_cycle  = 20
+        self.Energy_fetch = 0
         
     def __str__(self):
         return str(self.__dict__)
