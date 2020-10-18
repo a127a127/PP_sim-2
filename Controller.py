@@ -8,7 +8,7 @@ import time
 #import gc
 
 class Controller(object):
-    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, replacement, path):
+    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path):
         self.congestion =  True
         self.record_PE = False
         self.record_layer = False
@@ -23,10 +23,6 @@ class Controller(object):
             self.isPipeLine = True
         elif self.scheduling_str == "Non-pipeline":
             self.isPipeLine = False
-        if replacement == "Ideal":
-            self.ideal_replacement = True
-        elif replacement == "LRU":
-            self.ideal_replacement = False
 
         self.path = path
         
