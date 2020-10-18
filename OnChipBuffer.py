@@ -4,7 +4,6 @@ class OnChipBuffer(): # LRU
     def __init__(self, size):
         self.size = size
         self.buffer = OrderedDict()
-        self.maximal_usage = 0
         self.miss = 0
         
     def put(self, key, value):
@@ -13,9 +12,8 @@ class OnChipBuffer(): # LRU
 
         if self.size == len(self.buffer):
             self.buffer.popitem(last=False)
-
+            
         self.buffer.update({key: value})
-        self.maximal_usage = max(len(self.buffer), self.maximal_usage)
 
     def get(self, key):
         value = self.buffer.get(key)
@@ -24,9 +22,6 @@ class OnChipBuffer(): # LRU
         self.buffer.pop(key)
         self.buffer.update({key: value})
         return value
-    
-    def pop(self, key):
-        self.buffer.pop(key)
     
     def __str__(self):
         return str(self.buffer)

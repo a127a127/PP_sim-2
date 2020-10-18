@@ -22,7 +22,7 @@ class PE(object):
 
         self.state = False
 
-        size = self.hw_config.eDRAM_buffer_size * 1024 * 8 / input_bit
+        size = self.hw_config.eDRAM_buffer_size * 1024 * 8 // input_bit
         self.edram_buffer = OnChipBuffer(size)
         # self.buffer_size_util = [[], []] # [cycle, size]
 

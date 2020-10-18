@@ -266,17 +266,16 @@ class Controller(object):
             edram_rd_data = event.inputs
                     
             isfetch = False
-            if event.event_type == "edram_rd_ir":
-                # data in buffer?
-                for data in edram_rd_data:
-                    if not pe.edram_buffer.get(data):
-                        # fetch_data.append(data)
-                        isfetch = True
-                        pe.edram_buffer.miss += 1
+            #if event.event_type == "edram_rd_ir":
+            for data in edram_rd_data:
+                if not pe.edram_buffer.get(data):
+                    # fetch_data.append(data)
+                    isfetch = True
+                    pe.edram_buffer.miss += 1
 
             if isfetch:
                 if self.trace:
-                    print("\tfetch edram_rd_ir event_idx:", self.Computation_order.index(event))
+                    print("\tfetch event_idx:", self.Computation_order.index(event))
                 fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
                 if fetch_finished in self.fetch_dict:
                     self.fetch_dict[fetch_finished].append(event)
@@ -824,7 +823,7 @@ class Controller(object):
     def buffer_analysis(self):
         with open(self.path+'/Buffer_utilization.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(["", "tmp_data", "fm_data", "sum"])
+            writer.writerow(["", "SUM(KB)", "", "tmp_data", "fm_data"])
             for pe_pos in self.PE_array:
                 pe  = self.PE_array[pe_pos]
                 buf = pe.edram_buffer.buffer
@@ -834,14 +833,14 @@ class Controller(object):
                         tmp_data += 1
                     elif len(data) == 4: # feature map data
                         fm_data += 1
-                tmp_data *= self.input_bit/8/1000
-                fm_data *= self.input_bit/8/1000
+                tmp_data *= self.input_bit/8/1024
+                fm_data *= self.input_bit/8/1024
                 summ = tmp_data + fm_data
                 if summ == 0:
                     continue
                 rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
                 idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
-                writer.writerow(["PE"+str(idx), tmp_data, fm_data, summ]) 
+                writer.writerow(["PE"+str(idx), summ, "", tmp_data, fm_data]) 
 
         # ### time history
         # with open(self.path+'/Buffer_time_history.csv', 'w', newline='') as csvfile:
