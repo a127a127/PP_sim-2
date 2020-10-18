@@ -84,9 +84,14 @@ class Controller(object):
         self.t_trigger,  self.t_inter = 0, 0
         self.cycle_ctr = 0
         self.done_event = 0
-        self.transfer_cycles = 0
-        self.transfer_data   = 0
-        self.fetch_data      = 0
+
+        self.transfer_cycles = []
+        self.transfer_data = []
+        self.fetch_data = []
+        for nlayer in range(self.ordergenerator.model_info.layer_length):
+            self.transfer_cycles.append(0)
+            self.transfer_data.append(0)
+            self.fetch_data.append(0)
         self.busy_xb = 0
 
         self.event_fetch_ctr = dict()
@@ -269,7 +274,6 @@ class Controller(object):
             #if event.event_type == "edram_rd_ir":
             for data in edram_rd_data:
                 if not pe.edram_buffer.get(data):
-                    # fetch_data.append(data)
                     isfetch = True
                     pe.edram_buffer.miss += 1
 
@@ -601,7 +605,9 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 
-                self.transfer_data += num_data
+                nlayer = transfer_data[0][0]
+                self.transfer_data[nlayer] += num_data
+
                 for i in range(len(transfer_data)-1):
                     data = transfer_data[i]
                     packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
@@ -631,8 +637,9 @@ class Controller(object):
                 transfer_distance = data_transfer_des[0]
 
                 num_data = len(transfer_data)
-                self.transfer_data += num_data
-                self.fetch_data    += num_data
+                nlayer = event.nlayer
+                self.transfer_data[nlayer] += num_data
+                self.fetch_data[nlayer]    += num_data
 
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
@@ -640,6 +647,7 @@ class Controller(object):
 
                 # 直接放資料
                 # Trigger
+                self.transfer_cycles[nlayer] += (transfer_distance + 1) * num_data
                 finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
                 des_pe = self.PE_array[data_transfer_des]
                 if finish_cycle not in self.Trigger:
@@ -672,8 +680,9 @@ class Controller(object):
                 # Energy
                 des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
                 start_transfer_cycle = packet.start_transfer_cycle
-                end_transfer_cycle = self.cycle_ctr
-                self.transfer_cycles += end_transfer_cycle - start_transfer_cycle
+                end_transfer_cycle = self.cycle_ctr + 1
+                nlayer = data[0]
+                self.transfer_cycles[nlayer] += end_transfer_cycle - start_transfer_cycle
 
                 # Trigger
                 for proceeding_index in pro_event_list:
@@ -783,11 +792,20 @@ class Controller(object):
             writer.writerow(["intermediate data", inter_num])
 
             writer.writerow([])
-            writer.writerow(["transfer data", self.transfer_data])
-            writer.writerow(["transfer cycles", self.transfer_cycles])
-            writer.writerow(["Avg", self.transfer_cycles/self.transfer_data])
-            writer.writerow(["fetch data", self.fetch_data])
-
+            writer.writerow(["Communication:"])
+            writer.writerow(["layer", "transfer cycles", "transfer data", "Average", "", "fetch data"])
+            tc, td, fd, tavg = 0, 0, 0, 0
+            for nlayer in range(self.ordergenerator.model_info.layer_length):
+                tc += self.transfer_cycles[nlayer]
+                td += self.transfer_data[nlayer]
+                fd += self.fetch_data[nlayer]
+                if self.transfer_data[nlayer] != 0:
+                    avg = self.transfer_cycles[nlayer]/self.transfer_data[nlayer]
+                    tavg += avg
+                else:
+                    avg = 0
+                writer.writerow([nlayer, self.transfer_cycles[nlayer], self.transfer_data[nlayer], avg, "", self.fetch_data[nlayer]])
+            writer.writerow(["total", tc, td, tc/td, "", fd])
             writer.writerow([])
             writer.writerow(["", "Event"])
             writer.writerow(["Total", len(self.Computation_order)])
