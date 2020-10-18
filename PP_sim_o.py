@@ -71,7 +71,7 @@ def main():
     ### path ###
     path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
     if not os.path.exists(path):
-            os.makedirs(path)
+        os.makedirs(path)
     
     # mapping_information.mapping_layout(path)
 
@@ -85,8 +85,6 @@ def main():
     order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-    print("featrue map:", order_generator.transfer_feature_map_data_num)
-    print("intermediate:", order_generator.transfer_intermediate_data_num)
 
     ## Power and performance simulation ###
     start_simulation_time = time.time()

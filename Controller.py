@@ -94,6 +94,7 @@ class Controller(object):
         self.fetch_data      = 0
         self.busy_xb = 0
 
+        self.event_fetch_ctr = dict()
         self.run()
         self.print_statistics_result()
 
@@ -269,25 +270,23 @@ class Controller(object):
             
             edram_rd_data = event.inputs
                     
-            fetch_data = []
+            isfetch = False
             if event.event_type == "edram_rd_ir":
                 # data in buffer?
                 for data in edram_rd_data:
                     if not pe.edram_buffer.get(data):
-                        fetch_data.append(data)
+                        # fetch_data.append(data)
+                        isfetch = True
                         pe.edram_buffer.miss += 1
 
-            if fetch_data:
-                # fetch data
+            if isfetch:
                 if self.trace:
                     print("\tfetch edram_rd_ir event_idx:", self.Computation_order.index(event))
-                des_pe = pe
                 fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
                 if fetch_finished in self.fetch_dict:
-                    self.fetch_dict[fetch_finished].append(FetchEvent(event, des_pe, fetch_data))
+                    self.fetch_dict[fetch_finished].append(event)
                 else:
-                    self.fetch_dict[fetch_finished] = [FetchEvent(event, des_pe, fetch_data)]
-
+                    self.fetch_dict[fetch_finished] = [event]
             else: # do edram rd
                 if self.trace:
                     if event.event_type == "edram_rd_ir":
@@ -629,16 +628,14 @@ class Controller(object):
         tt = time.time()
         if self.cycle_ctr in self.fetch_dict:
             fetch_list = self.fetch_dict[self.cycle_ctr]
-            del self.fetch_dict[self.cycle_ctr]
-            for fe in fetch_list:
-                transfer_data = fe.data
-                des_pe = fe.des_pe
-                event = fe.event
+            #del self.fetch_dict[self.cycle_ctr]
+            for event in fetch_list:
                 event_id = self.Computation_order.index(event)
-                transfer_distance = des_pe.position[0]
-
-                data_transfer_des = des_pe.position
+                transfer_data = event.inputs
+                data_transfer_des = event.position_idx[:4]
                 data_transfer_src = (0, data_transfer_des[1], data_transfer_des[2], data_transfer_des[3])
+                transfer_distance = data_transfer_des[0]
+
                 num_data = len(transfer_data)
                 self.transfer_data += num_data
                 self.fetch_data    += num_data
