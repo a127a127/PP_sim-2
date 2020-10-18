@@ -1,7 +1,6 @@
 from PE import PE
 
 from EventMetaData import EventMetaData
-from FetchEvent import FetchEvent
 from Interconnect import Interconnect
 from Packet import Packet
 import csv
