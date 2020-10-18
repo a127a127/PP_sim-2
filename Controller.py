@@ -638,13 +638,24 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
                 self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * transfer_distance
 
-                for i in range(len(transfer_data)-1):
-                    data = transfer_data[i]
-                    packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
-                    self.interconnect.input_packet(packet)
-                data = transfer_data[-1]
-                packet = Packet(data_transfer_src, data_transfer_des, data, [event_id], self.cycle_ctr)
-                self.interconnect.input_packet(packet)
+                # 直接放資料
+                # Trigger
+                finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
+                des_pe = self.PE_array[data_transfer_des]
+                if finish_cycle not in self.Trigger:
+                    self.Trigger[finish_cycle] = [[des_pe, event]]
+                else:
+                    self.Trigger[finish_cycle].append([des_pe, event])
+                for data in transfer_data:
+                    des_pe.edram_buffer.put(data, data)
+
+                # for i in range(len(transfer_data)-1):
+                #     data = transfer_data[i]
+                #     packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
+                #     self.interconnect.input_packet(packet)
+                # data = transfer_data[-1]
+                # packet = Packet(data_transfer_src, data_transfer_des, data, [event_id], self.cycle_ctr)
+                # self.interconnect.input_packet(packet)
 
         self.t_fetch += time.time() - tt
 
