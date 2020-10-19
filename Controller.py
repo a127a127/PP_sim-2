@@ -86,11 +86,13 @@ class Controller(object):
         self.done_event = 0
 
         self.transfer_cycles = []
-        self.transfer_data = []
+        self.transfer_data_fm = []
+        self.transfer_data_inter = []
         self.fetch_data = []
         for nlayer in range(self.ordergenerator.model_info.layer_length):
             self.transfer_cycles.append(0)
-            self.transfer_data.append(0)
+            self.transfer_data_fm.append(0)
+            self.transfer_data_inter.append(0)
             self.fetch_data.append(0)
         self.busy_xb = 0
 
@@ -609,7 +611,10 @@ class Controller(object):
                 self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
                 
                 nlayer = transfer_data[0][0]
-                self.transfer_data[nlayer] += num_data
+                if len(transfer_data[0]) == 4:
+                    self.transfer_data_fm[nlayer] += num_data
+                else:
+                    self.transfer_data_inter[nlayer] += num_data
 
                 for i in range(len(transfer_data)-1):
                     data = transfer_data[i]
@@ -642,7 +647,10 @@ class Controller(object):
 
                 num_data = len(transfer_data)
                 nlayer = event.nlayer
-                self.transfer_data[nlayer] += num_data
+                if len(transfer_data[0]) == 4:
+                    self.transfer_data_fm[nlayer] += num_data
+                else:
+                    self.transfer_data_inter[nlayer] += num_data
                 self.fetch_data[nlayer]    += num_data
 
                 # Energy
@@ -797,19 +805,20 @@ class Controller(object):
 
             writer.writerow([])
             writer.writerow(["Communication:"])
-            writer.writerow(["layer", "transfer cycles", "transfer data", "Average", "", "fetch data"])
-            tc, td, fd, tavg = 0, 0, 0, 0
+            writer.writerow(["layer", "transfer cycles", "transfer data fm", "transfer data inter", "Average", "", "fetch data"])
+            tc, td_f, td_i, fd, tavg = 0, 0, 0, 0, 0
             for nlayer in range(self.ordergenerator.model_info.layer_length):
                 tc += self.transfer_cycles[nlayer]
-                td += self.transfer_data[nlayer]
+                td_f += self.transfer_data_fm[nlayer]
+                td_i += self.transfer_data_inter[nlayer]
                 fd += self.fetch_data[nlayer]
-                if self.transfer_data[nlayer] != 0:
-                    avg = self.transfer_cycles[nlayer]/self.transfer_data[nlayer]
+                if self.transfer_data_fm[nlayer] != 0 and self.transfer_data_inter[nlayer] != 0:
+                    avg = self.transfer_cycles[nlayer]/(self.transfer_data_fm[nlayer]+self.transfer_data_inter[nlayer])
                     tavg += avg
                 else:
                     avg = 0
-                writer.writerow([nlayer, self.transfer_cycles[nlayer], self.transfer_data[nlayer], avg, "", self.fetch_data[nlayer]])
-            writer.writerow(["total", tc, td, tc/td, "", fd])
+                writer.writerow([nlayer, self.transfer_cycles[nlayer], self.transfer_data_fm[nlayer], self.transfer_data_inter[nlayer], avg, "", self.fetch_data[nlayer]])
+            writer.writerow(["total", tc, td_f, td_i, tc/(td_f+td_i), "", fd])
             writer.writerow([])
             writer.writerow(["", "Event"])
             writer.writerow(["Total", len(self.Computation_order)])
