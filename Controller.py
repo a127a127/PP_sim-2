@@ -270,21 +270,24 @@ class Controller(object):
             
             edram_rd_data = event.inputs
                     
-            isfetch = False
-            #if event.event_type == "edram_rd_ir":
-            for data in edram_rd_data:
-                if not pe.edram_buffer.get(data):
-                    isfetch = True
-                    pe.edram_buffer.miss += 1
+            #isfetch = False
+            Fetch = list()
+            if event.event_type == "edram_rd_ir": # TODO: Fixed
+                for data in edram_rd_data:
+                    if not pe.edram_buffer.get(data):
+                        #isfetch = True
+                        Fetch.append(data)
+                        pe.edram_buffer.miss += 1
 
-            if isfetch:
+
+            if Fetch:
                 if self.trace:
                     print("\tfetch event_idx:", self.Computation_order.index(event))
                 fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
                 if fetch_finished in self.fetch_dict:
-                    self.fetch_dict[fetch_finished].append(event)
+                    self.fetch_dict[fetch_finished].append([event, Fetch])
                 else:
-                    self.fetch_dict[fetch_finished] = [event]
+                    self.fetch_dict[fetch_finished] = [[event, Fetch]]
             else: # do edram rd
                 if self.trace:
                     if event.event_type == "edram_rd_ir":
@@ -629,11 +632,12 @@ class Controller(object):
         if self.cycle_ctr in self.fetch_dict:
             fetch_list = self.fetch_dict[self.cycle_ctr]
             #del self.fetch_dict[self.cycle_ctr]
-            for event in fetch_list:
-                event_id = self.Computation_order.index(event)
-                transfer_data = event.inputs
+            for F in fetch_list:
+                event, transfer_data = F[0], F[1]
+                # event_id = self.Computation_order.index(event)
+                # transfer_data = event.inputs
                 data_transfer_des = event.position_idx[:4]
-                data_transfer_src = (0, data_transfer_des[1], data_transfer_des[2], data_transfer_des[3])
+                # data_transfer_src = (0, data_transfer_des[1], data_transfer_des[2], data_transfer_des[3])
                 transfer_distance = data_transfer_des[0]
 
                 num_data = len(transfer_data)
