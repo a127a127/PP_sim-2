@@ -7,6 +7,8 @@ from HardwareConfig import HardwareConfig
 from Visualizer import Visualizer
 
 import time, sys, os, pickle, math
+import jsons, jsbeautifier
+from tqdm import tqdm
 
 # 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
 # 2. Model.py: 多一個Model_type參數
@@ -105,8 +107,29 @@ def main():
         with open(filename, 'rb') as input:
             order_generator = pickle.load(input)
 
-    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}.png")
+    #print(f"Dumping JSON to {model}.json...")
+    #with open(f"{model}.json", "w") as outfile:
+    #    opts = jsbeautifier.default_options()
+    #    opts.indent_with_tabs = True
+    #    opts.indent_level = 1
+    #    model_config_json = jsons.dumps(model_config)
+    #    hw_config_json = jsons.dumps(hw_config)
 
+    #    #json = jsons.dumps({
+    #    #    "order_generator.Computation_order": order_generator.Computation_order,
+    #    #})
+
+    #    model_config_json = jsbeautifier.beautify(model_config_json, opts)
+    #    hw_config_json = jsbeautifier.beautify(hw_config_json, opts)
+    #    outfile.write(f'{{\n\t"model_config": {model_config_json},\n\t"hw_config": {hw_config_json},\n\t"order_generator.Computation_order": [\n')
+    #    for index, event in enumerate(tqdm(order_generator.Computation_order)):
+    #        outfile.write(f'\t\t// {index}:\n')
+    #        outfile.write(f'\t\t{jsons.dumps(event)},\n')
+    #    outfile.write(f'\t]\n}}\n')
+    #print(f"Done")
+
+    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}")
+    
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
