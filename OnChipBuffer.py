@@ -12,8 +12,11 @@ class OnChipBuffer(): # LRU
 
         if self.size == len(self.buffer):
             self.buffer.popitem(last=False)
-            
-        self.buffer.update({key: value})
+            self.buffer.update({key: value})
+            return True
+        else:
+            self.buffer.update({key: value})
+            return
 
     def get(self, key):
         value = self.buffer.get(key)

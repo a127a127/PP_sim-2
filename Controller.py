@@ -44,6 +44,7 @@ class Controller(object):
         self.fetch_dict = dict() # {cycle: list}
         
         self.Total_energy_interconnect = 0
+        self.Total_energy_fetch = 0
 
         # Event queue
         self.data_transfer_erp = []
@@ -501,7 +502,14 @@ class Controller(object):
 
             # Write data
             for data in edram_write_data:
-                pe.edram_buffer.put(data, data)
+                K = pe.edram_buffer.put(data, data)
+                if K: # kick data out of buffer
+                    # TODO: simulate data transfer
+                    pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                    transfer_distance = pe.position[0]
+                    self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                    self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                    self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
 
             #self.check_buffer_pe_set.add(pe)
 
@@ -589,7 +597,15 @@ class Controller(object):
                 # Trigger
                 finish_cycle = self.cycle_ctr + 1
                 for data in transfer_data:
-                    des_pe.edram_buffer.put(data, data)
+                    K = des_pe.edram_buffer.put(data, data)
+                    if K: # kick data out of buffer
+                        # TODO: simulate data transfer
+                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                        transfer_distance = data_transfer_des[0]
+                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
+
                 for pro_event_idx in event.proceeding_event:
                     pro_event = self.Computation_order[pro_event_idx]
                     pro_event.current_number_of_preceding_event += 1
@@ -608,7 +624,7 @@ class Controller(object):
 
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-                self.Total_energy_interconnect += self.hw_config.Energy_link * self.input_bit * num_data * transfer_distance
+                self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * (transfer_distance + 1)
                 
                 nlayer = transfer_data[0][0]
                 if len(transfer_data[0]) == 4:
@@ -655,7 +671,8 @@ class Controller(object):
 
                 # Energy
                 self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-                self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * transfer_distance
+                self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * (transfer_distance + 1)
+                self.Total_energy_fetch += self.hw_config.Energy_off_chip_Rd * self.input_bit * num_data
 
                 # 直接放資料
                 # Trigger
@@ -667,7 +684,14 @@ class Controller(object):
                 else:
                     self.Trigger[finish_cycle].append([des_pe, event])
                 for data in transfer_data:
-                    des_pe.edram_buffer.put(data, data)
+                    K = des_pe.edram_buffer.put(data, data)
+                    if K: # kick data out of buffer
+                        # TODO: simulate data transfer
+                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                        transfer_distance = data_transfer_des[0]
+                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
 
                 # for i in range(len(transfer_data)-1):
                 #     data = transfer_data[i]
@@ -688,7 +712,15 @@ class Controller(object):
                 des_pe = self.PE_array[des_pe_id]
                 data = packet.data
                 pro_event_list = packet.pro_event_list
-                des_pe.edram_buffer.put(data, data)
+                K = des_pe.edram_buffer.put(data, data)
+                if K: # kick data out of buffer
+                    # TODO: simulate data transfer
+                    des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                    transfer_distance = des_pe_id[0]
+                    self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                    self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                    self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
+
                 # Energy
                 des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
                 start_transfer_cycle = packet.start_transfer_cycle
@@ -756,7 +788,7 @@ class Controller(object):
                             self.Or_energy + self.Activation_energy + self.Pooling_energy + \
                             self.CU_shift_and_add_energy + self.CU_dac_energy + self.CU_adc_energy + \
                             self.CU_crossbar_energy + self.CU_IR_energy + self.CU_OR_energy + \
-                            self.Total_energy_interconnect
+                            self.Total_energy_interconnect + self.Total_energy_fetch
 
         self.output_result()
         self.buffer_analysis()
@@ -774,14 +806,16 @@ class Controller(object):
             writer = csv.writer(csvfile)
             writer.writerow(["Cycles", self.cycle_ctr])
             writer.writerow(["Energy(nJ)", self.Total_energy])
+
             writer.writerow([])
             writer.writerow(["", "Energy(nJ)"])
             writer.writerow(["Interconnect", self.Total_energy_interconnect])
+            writer.writerow(["Fetch", self.Total_energy_fetch])
 
             writer.writerow(["eDRAM Buffer", self.eDRAM_buffer_energy])
             writer.writerow(["Bus", self.Bus_energy])
             writer.writerow(["PE Shift and Add", self.PE_shift_and_add_energy])
-            writer.writerow(["OR", self.Or_energy])
+            writer.writerow(["PE's OR", self.Or_energy])
             writer.writerow(["Activation", self.Activation_energy])
             writer.writerow(["Pooling", self.Pooling_energy])
 
@@ -790,7 +824,7 @@ class Controller(object):
             writer.writerow(["ADC", self.CU_adc_energy])
             writer.writerow(["Crossbar Array", self.CU_crossbar_energy])
             writer.writerow(["IR", self.CU_IR_energy])
-            writer.writerow(["OR", self.CU_OR_energy])
+            writer.writerow(["CU's OR", self.CU_OR_energy])
 
             writer.writerow([])
             writer.writerow(["Busy XB", self.busy_xb])

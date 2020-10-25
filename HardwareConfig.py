@@ -82,7 +82,7 @@ class HardwareConfig(object):
         self.Power_router = 42 / 1000
         self.Power_link = 10.4
 
-        # Energy (nJ)
+        # Energy (nJ per bit)
         self.Energy_edram_buffer  = self.Power_eDRAM_buffer / self.PE_frequency / self.eDRAM_buffer_bus_width
         self.Energy_bus           = self.Power_bus / self.PE_frequency / self.bus_wires
         self.Energy_activation    = self.Power_activation / self.PE_frequency / self.activation_num
@@ -116,7 +116,10 @@ class HardwareConfig(object):
         # self.Leakage_router = 0
         # self.Leakage_link = 0
 
-        # Off chip fetch: no data
+        # Off-chip:
+        self.Rd_BW = 3.2 # GB/s
+        self.Energy_off_chip_Rd = 80.3 / 1000 / 8 # nJ per bit
+        self.Energy_off_chip_Wr = 82.719 / 1000 / 8 # nJ per bit
         self.Fetch_cycle  = 20
         self.Energy_fetch = 0
         
