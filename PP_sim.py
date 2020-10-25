@@ -8,6 +8,8 @@ from HardwareConfig import HardwareConfig
 from Visualizer import Visualizer
 
 import time, sys, os
+import jsons, jsbeautifier
+from tqdm import tqdm
 
 def main():
     start_time     = time.time()
@@ -101,7 +103,29 @@ def main():
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
 
-    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}.png")
+    #print(f"Dumping JSON to {model_name}.json...")
+    #with open(f"{model_name}.json", "w") as outfile:
+    #    opts = jsbeautifier.default_options()
+    #    opts.indent_with_tabs = True
+    #    opts.indent_level = 1
+    #    model_config_json = jsons.dumps(model_config)
+    #    hw_config_json = jsons.dumps(hw_config)
+
+    #    #json = jsons.dumps({
+    #    #    "order_generator.Computation_order": order_generator.Computation_order,
+    #    #})
+
+    #    model_config_json = jsbeautifier.beautify(model_config_json, opts)
+    #    hw_config_json = jsbeautifier.beautify(hw_config_json, opts)
+    #    outfile.write(f'{{\n\t"model_config": {model_config_json},\n\t"hw_config": {hw_config_json},\n\t"order_generator.Computation_order": [\n')
+    #    for index, event in enumerate(tqdm(order_generator.Computation_order)):
+    #        outfile.write(f'\t\t// {index}:\n')
+    #        outfile.write(f'\t\t{jsons.dumps(event)},\n')
+    #    outfile.write(f'\t]\n}}\n')
+    #print(f"Done")
+
+    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model_name}")
+    return
     
     ## Power and performance simulation ###
     start_simulation_time = time.time()
