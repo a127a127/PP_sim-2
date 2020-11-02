@@ -804,14 +804,19 @@ class Controller(object):
 
     def output_result(self):
         overlap_layer_ctr = 0
+        layers_per_cycle_ctr = 0
         for cycle in range(1, len(self.layer_state_for_plot)):
             if len(self.layer_state_for_plot[cycle]) > 1:
                 overlap_layer_ctr += 1
+            layers_per_cycle_ctr += len(self.layer_state_for_plot[cycle])
+
         
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(["overlap_layer_ctr", overlap_layer_ctr])
             writer.writerow(["overlap_layer_ctr/Cycles", overlap_layer_ctr/self.cycle_ctr])
+            writer.writerow(["layers_per_cycle_ctr", layers_per_cycle_ctr/self.cycle_ctr])
+        
             writer.writerow([])
             writer.writerow(["Cycles", self.cycle_ctr])
             writer.writerow(["Energy(nJ)", self.Total_energy])
