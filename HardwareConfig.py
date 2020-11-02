@@ -115,13 +115,15 @@ class HardwareConfig(object):
         # self.Leakage_OR_in_CU = 0
         # self.Leakage_router = 0
         # self.Leakage_link = 0
+        # self.Leakage_off_chip = 52.8mW
 
         # Off-chip:
-        self.Rd_BW = 3.2 # GB/s
-        self.Energy_off_chip_Rd = 80.3 / 1000 / 8 # nJ per bit
+        self.Fetch_Rd_BW = 3.2 # GB/s = B/ns = 8b/ns
+        self.Energy_off_chip_Rd = 80.3   / 1000 / 8 # nJ per bit
         self.Energy_off_chip_Wr = 82.719 / 1000 / 8 # nJ per bit
         self.Fetch_cycle  = 20
-        self.Energy_fetch = 0
+        # self.Leakage_off_chip = 52.8 / 1000 # W
+
         
     def __str__(self):
         return str(self.__dict__)

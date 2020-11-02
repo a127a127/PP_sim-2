@@ -11,7 +11,7 @@ class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path):
         self.congestion =  True
         self.record_PE = False
-        self.record_layer = False
+        self.record_layer = True
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
@@ -800,10 +800,19 @@ class Controller(object):
         if self.record_layer: # layer
             print("output layer utilization...")
             self.layer_utilization()
+        
 
     def output_result(self):
+        overlap_layer_ctr = 0
+        for cycle in range(1, len(self.layer_state_for_plot)):
+            if len(self.layer_state_for_plot[cycle]) > 1:
+                overlap_layer_ctr += 1
+        
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(["overlap_layer_ctr", overlap_layer_ctr])
+            writer.writerow(["overlap_layer_ctr/Cycles", overlap_layer_ctr/self.cycle_ctr])
+            writer.writerow([])
             writer.writerow(["Cycles", self.cycle_ctr])
             writer.writerow(["Energy(nJ)", self.Total_energy])
 
