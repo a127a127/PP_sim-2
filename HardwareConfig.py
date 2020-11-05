@@ -2,7 +2,7 @@
 from math import floor
 
 class HardwareConfig(object):
-    def __init__(self):
+    def __init__(self, buffer_size):
         # Architecture
         self.Router_num_y = 14
         self.Router_num_x = 13
@@ -21,7 +21,7 @@ class HardwareConfig(object):
         self.PE_frequency = 1.2 # GHz
         
         # on-chip eDRAM buffer
-        self.eDRAM_buffer_size  = 64 # KB
+        self.eDRAM_buffer_size  = buffer_size # KB
         self.eDRAM_buffer_banks_num = 2
         self.eDRAM_buffer_bus_width = 256 # bits
 

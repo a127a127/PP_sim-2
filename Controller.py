@@ -947,15 +947,16 @@ class Controller(object):
         with open(self.path+'/Miss_rate.csv', 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             for pe_pos in self.PE_array:
-                rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
-                idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
-                arr = ["PE"+str(idx)]
-
                 pe = self.PE_array[pe_pos]
-                miss = pe.edram_buffer.miss
-                
-                arr.append(miss)
-                writer.writerow(arr)
+                if len(pe.edram_buffer.buffer) != 0:
+                    rty, rtx, pey, pex = pe_pos[0], pe_pos[1], pe_pos[2], pe_pos[3]
+                    idx = pex + pey * self.hw_config.PE_num_x + rtx * self.hw_config.PE_num + rty * self.hw_config.PE_num * self.hw_config.Router_num_x
+                    arr = ["PE"+str(idx)]
+
+                    miss = pe.edram_buffer.miss
+                    
+                    arr.append(miss)
+                    writer.writerow(arr)
 
     def pe_utilization(self):
         with open(self.path+'/PE_utilization.csv', 'w', newline='') as csvfile:

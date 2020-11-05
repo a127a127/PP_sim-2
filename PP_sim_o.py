@@ -15,14 +15,17 @@ def main():
     partition_h = int(sys.argv[4])
     partition_w = int(sys.argv[5])
     mapping_str = mapping+sys.argv[4]+"_"+sys.argv[5]
+    buffer_size_str = sys.argv[6]
+    buffer_size = int(sys.argv[6])
 
     model_config = ModelConfig(model)
-    hw_config = HardwareConfig()
+    hw_config = HardwareConfig(buffer_size)
 
-    LoadOrder = False
+    LoadOrder = True
 
     ### path ###
-    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
+    #path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
+    path = './statistics/'+model_config.Model_type+'/'+buffer_size_str
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -54,6 +57,15 @@ def main():
             mapping_information = SRF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
 
         end_mapping_time = time.time()
+        # u = mapping_information.layer_used_xb_num
+        # print("layer_used_xb_num", u)
+        # t = 0
+        # for i in range(len(u)):
+        #     t += u[i]
+        # print("total", t)
+        # print("total used xb", len(mapping_information.totoal_used_xb))
+        # print("ctr", mapping_information.ctr)
+        # exit()
         print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
     
     ### Scheduling ###
