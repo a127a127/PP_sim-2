@@ -107,37 +107,42 @@ def main():
         with open(filename, 'rb') as input:
             order_generator = pickle.load(input)
 
-    #print(f"Dumping JSON to {model}.json...")
-    #with open(f"{model}.json", "w") as outfile:
-    #    opts = jsbeautifier.default_options()
-    #    opts.indent_with_tabs = True
-    #    opts.indent_level = 1
-    #    model_config_json = jsons.dumps(model_config)
-    #    hw_config_json = jsons.dumps(hw_config)
+    ### Dump JSON ###
+    if False:
+        print(f"Dumping JSON to {model}.json...")
+        with open(f"{model}.json", "w") as outfile:
+            opts = jsbeautifier.default_options()
+            opts.indent_with_tabs = True
+            opts.indent_level = 1
+            model_config_json = jsons.dumps(model_config)
+            hw_config_json = jsons.dumps(hw_config)
 
-    #    #json = jsons.dumps({
-    #    #    "order_generator.Computation_order": order_generator.Computation_order,
-    #    #})
+            #json = jsons.dumps({
+            #    "order_generator.Computation_order": order_generator.Computation_order,
+            #})
 
-    #    model_config_json = jsbeautifier.beautify(model_config_json, opts)
-    #    hw_config_json = jsbeautifier.beautify(hw_config_json, opts)
-    #    outfile.write(f'{{\n\t"model_config": {model_config_json},\n\t"hw_config": {hw_config_json},\n\t"order_generator.Computation_order": [\n')
-    #    for index, event in enumerate(tqdm(order_generator.Computation_order)):
-    #        outfile.write(f'\t\t// {index}:\n')
-    #        outfile.write(f'\t\t{jsons.dumps(event)},\n')
-    #    outfile.write(f'\t]\n}}\n')
-    #print(f"Done")
+            model_config_json = jsbeautifier.beautify(model_config_json, opts)
+            hw_config_json = jsbeautifier.beautify(hw_config_json, opts)
+            outfile.write(f'{{\n\t"model_config": {model_config_json},\n\t"hw_config": {hw_config_json},\n\t"order_generator.Computation_order": [\n')
+            for index, event in enumerate(tqdm(order_generator.Computation_order)):
+                outfile.write(f'\t\t// {index}:\n')
+                outfile.write(f'\t\t{jsons.dumps(event)},\n')
+            outfile.write(f'\t]\n}}\n')
+        print(f"Done")
 
-    Visualizer.weightMappingByCO(hw_config, order_generator.Computation_order, f"{model}")
+    Visualizer.weightMappingByCO(hw_config, model_config, order_generator.Computation_order, f"{model}")
     
+    log = {}
+
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
-    controller = Controller(model_config, hw_config, order_generator, isTrace_controller, mapping_str, scheduling, path)
+    controller = Controller(model_config, hw_config, order_generator, isTrace_controller, mapping_str, scheduling, path, log)
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
+    Visualizer.visualizeSimulation(hw_config, model_config, order_generator.Computation_order, log, f"{model}")
 
 if __name__ == '__main__':
     main()
