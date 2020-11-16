@@ -5,7 +5,7 @@ import csv
 import time
 
 class Controller(object):
-    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path):
+    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path, log):
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
@@ -16,6 +16,8 @@ class Controller(object):
 
         self.interconnect = Interconnect(self.hw_config)
         
+        self.log = log
+
         if self.scheduling_str == "Pipeline":
             self.isPipeLine = True
         elif self.scheduling_str == "Non-pipeline":
@@ -311,6 +313,8 @@ class Controller(object):
 
                     event.current_number_of_preceding_event -= 1
                     finish_cycle = self.cycle_ctr + 1
+                    # FIXME: a127a127
+                    self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
                     if finish_cycle in self.fetch_dict:
                         self.fetch_dict[finish_cycle].append([event, Fetch_data])
                     else:
@@ -451,6 +455,15 @@ class Controller(object):
             event.current_number_of_preceding_event += 1 # if current_number_of_preceding_event == 2: cu_op finish
             total_cycles = event.inputs[0]
             finish_cycle = self.cycle_ctr + total_cycles + 2 # +2: pipeline last two stage
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
+
+            if hasattr(event, 'window_id'):
+                if not 'window_event' in self.log:
+                    self.log['window_event'] = []
+                self.log['window_event'].append((self.cycle_ctr, finish_cycle, event))
+
             if finish_cycle not in self.Trigger:
                 self.Trigger[finish_cycle] = [[pe, event]]
             else:
@@ -483,6 +496,9 @@ class Controller(object):
             self.done_event += 1
             if not self.isPipeLine:
                 self.this_layer_event_ctr += 1
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             saa_amount = event.inputs
@@ -527,6 +543,9 @@ class Controller(object):
             self.done_event += 1
             if not self.isPipeLine:
                 self.this_layer_event_ctr += 1
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             act_amount = event.inputs
@@ -564,6 +583,9 @@ class Controller(object):
             event = pe.pooling_erp.popleft()
             if self.trace:
                 print("\tdo pooling event_idx:", self.Computation_order.index(event))
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             self.done_event += 1
             if not self.isPipeLine:
@@ -614,6 +636,10 @@ class Controller(object):
             if data_transfer_src == data_transfer_des:
                 # Trigger
                 finish_cycle = self.cycle_ctr + 1
+
+                # FIXME: a127a127
+                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+
                 for data in transfer_data:
                     K = des_pe.edram_buffer.put(data, data)
                     if K: # kick data out of buffer
@@ -657,6 +683,10 @@ class Controller(object):
                 data = transfer_data[-1]
                 packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
                 self.interconnect.input_packet(packet)
+
+                # FIXME: a127a127
+                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + transfer_distance]
+
         self.data_transfer_erp = []
 
         self.t_transfer += time.time() - tt

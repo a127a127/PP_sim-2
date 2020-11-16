@@ -154,6 +154,11 @@ class OrderGenerator(object):
 
                 for window in self.mp_info.window_order[nlayer]:
                     window_h, window_w = window[0], window[1]
+                    strides = self.model_info.strides[nlayer]
+                    pad = self.model_info.pad[nlayer]
+                    lh = window_h*strides - pad
+                    lw = window_w*strides - pad
+                    window_id = (nlayer, lh, lw, lh + self.model_info.filter_h[nlayer], lw + self.model_info.filter_h[nlayer])
                     
                     # 兩個用來記錄event index的字典 # for dependency
                     pe_saa_event_dict = dict()
@@ -265,6 +270,7 @@ class OrderGenerator(object):
                                 cu_op_outputs = 0
 
                                 event = EventMetaData("cu_operation", cu_op_position_idx, preceding_count, [cu_operation_event_idx+1], nlayer, cu_op_inputs, cu_op_outputs)
+                                event.window_id = window_id
                                 self.Computation_order.append(event)
                                 
                                 self.CU_dependency_idx[cu_id] = cu_operation_event_idx
