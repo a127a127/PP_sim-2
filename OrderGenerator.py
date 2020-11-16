@@ -202,6 +202,9 @@ class OrderGenerator(object):
                                     else:
                                         input_vector_data.append(0) # padding的值為0
                        #======================#
+                        lh = window_h*strides - pad
+                        lw = window_w*strides - pad
+                        window_id = (nlayer, lh, lw, lh + self.model_info.filter_h[nlayer], lw + self.model_info.filter_h[nlayer])
 
                        #===生一個window的events===#
                         for pe_pos in self.mp_info.layer_used_pe[nlayer]: # loop此layer會map到的PE # 一次把一個PE的event生完
@@ -291,6 +294,8 @@ class OrderGenerator(object):
                                     cu_op_outputs = 0
 
                                     event = EventMetaData("cu_operation", cu_op_position_idx, preceding_count, [cu_operation_event_idx+1], nlayer, cu_op_inputs, cu_op_outputs)
+                                    event.window_id = window_id
+                                    event.eri_inputs = eri_inputs
                                     self.Computation_order.append(event)
                                    #-------------------------#
 

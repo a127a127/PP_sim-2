@@ -8,7 +8,7 @@ import time
 #import gc
 
 class Controller(object):
-    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path):
+    def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path, log):
         self.congestion =  True
         self.record_PE = False
         self.record_layer = False
@@ -19,6 +19,7 @@ class Controller(object):
         self.mapping_str = mapping_str
         self.scheduling_str = scheduling_str
         self.interconnect = Interconnect(self.hw_config)
+        self.log = log
         if self.scheduling_str == "Pipeline":
             self.isPipeLine = True
         elif self.scheduling_str == "Non-pipeline":
@@ -287,6 +288,8 @@ class Controller(object):
                 if self.trace:
                     print("\tfetch event_idx:", self.Computation_order.index(event))
                 fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
+                # FIXME: a127a127
+                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, fetch_finished + 1]
                 if fetch_finished in self.fetch_dict:
                     self.fetch_dict[fetch_finished].append([event, Fetch])
                 else:
@@ -373,6 +376,14 @@ class Controller(object):
             pro_event = self.Computation_order[pro_event_idx]
             
             finish_cycle = self.cycle_ctr + event.inputs[0] + 2 # +2: pipeline last two stage
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
+
+            if hasattr(event, 'window_id'):
+                if not 'window_event' in self.log:
+                    self.log['window_event'] = []
+                self.log['window_event'].append((self.cycle_ctr, finish_cycle, event))
             
             if finish_cycle not in self.Trigger:
                 self.Trigger[finish_cycle] = [[pe, pro_event, cu_idx]]
@@ -409,6 +420,9 @@ class Controller(object):
             self.done_event += 1
             if not self.isPipeLine:
                 self.this_layer_event_ctr += 1
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             saa_amount = event.inputs
@@ -452,6 +466,9 @@ class Controller(object):
             self.done_event += 1
             if not self.isPipeLine:
                 self.this_layer_event_ctr += 1
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             act_amount = event.inputs
@@ -489,6 +506,9 @@ class Controller(object):
             event = pe.edram_wr_erp.popleft()
             if self.trace:
                 print("\tdo edram_wr event_idx:", self.Computation_order.index(event))
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             self.done_event += 1
             if not self.isPipeLine:
@@ -546,6 +566,9 @@ class Controller(object):
             event = pe.pooling_erp.popleft()
             if self.trace:
                 print("\tdo pooling event_idx:", self.Computation_order.index(event))
+
+            # FIXME: a127a127
+            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             self.done_event += 1
             if not self.isPipeLine:
@@ -596,6 +619,10 @@ class Controller(object):
             if data_transfer_src == data_transfer_des:
                 # Trigger
                 finish_cycle = self.cycle_ctr + 1
+
+                # FIXME: a127a127
+                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+
                 for data in transfer_data:
                     K = des_pe.edram_buffer.put(data, data)
                     if K: # kick data out of buffer
@@ -639,6 +666,9 @@ class Controller(object):
                 data = transfer_data[-1]
                 packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
                 self.interconnect.input_packet(packet)
+
+                # FIXME: a127a127
+                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + transfer_distance]
 
             # free mem
             # event_idx = self.Computation_order.index(event)

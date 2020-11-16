@@ -1,8 +1,8 @@
 class EventMetaData:
-    __slots__ = ["event_type", "preceding_event_count", "current_number_of_preceding_event",
-                 "proceeding_event", "nlayer", "inputs", "outputs", 
-                 "position_idx"
-                ]
+    #__slots__ = ["event_type", "preceding_event_count", "current_number_of_preceding_event",
+    #             "proceeding_event", "nlayer", "inputs", "outputs", 
+    #             "position_idx"
+    #            ]
     def __init__(self, event_type, position_idx, preceding_event_count, proceeding_event, nlayer, inputs, outputs):
         self.event_type = event_type
         self.preceding_event_count = preceding_event_count
