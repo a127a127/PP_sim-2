@@ -5,6 +5,9 @@ import numpy as np
 
 from tqdm import tqdm
 
+CARE_LAYERS = [2, 4]
+#CARE_LAYERS = [4, 5, 6]
+
 class MappingGraph:
     def __init__(self, hw_config, model_config):
         self.Router_num_x = hw_config.Router_num_x
@@ -151,7 +154,7 @@ class MappingGraph:
             for k, v in enumerate(self.weight_mapping):
                 self.cu_color_default[k] = self.get_layer_color(v)
 
-    def draw(self, text, filename, active_cu, active_router=None, active_router_edge=None, active_layers=[]):
+    def draw(self, text, filename, active_cu, active_router=None, active_router_edge=None, active_layers=[], window_id=None):
         #if np.count_nonzero(active_cu) == 0 and np.count_nonzero(active_router) == 0:
         #    return
         assert len(active_cu) == len(self.weight_mapping)
@@ -201,10 +204,31 @@ class MappingGraph:
         # Draw model graph
         plt.subplot2grid((1, 4), (0, 3))
 
+        from Model import Model
+        model = Model(self.model_config)
+
         show_layers = []
+        layer_height = []
+        layer_height_offset = []
+        layer_width = []
+        model_height = 0
+        model_width = 0
+        height_padding = 3
         for i in range(0, len(self.model_config.layer_list)):
+            if not i in CARE_LAYERS:
+                continue
             if self.model_config.layer_list[i].layer_type == 'convolution' or self.model_config.layer_list[i].layer_type == 'fully':
                 show_layers.append(i)
+                layer_height.append(model.input_h[i])
+                layer_width.append(model.input_w[i])
+                model_height += model.input_h[i]
+                model_width = max(model_width, model.input_w[i])
+                #layer_height.append(5)
+                #layer_width.append(3)
+                #model_height += 5
+                #model_width = max(model_width, 3)
+        total_width = model_width * 2 + 3 + 1
+        total_height = model_height + height_padding * (len(show_layers) + 1)
 
         nlayers = len(show_layers)
         model_color = [0] * nlayers
@@ -227,19 +251,62 @@ class MappingGraph:
 
         p = []
         labels = {}
+        height = total_height - 1
         for i in range(0, nlayers):
-            p.append([1, i + 1])
-            labels[(0, i)] = self.model_config.layer_list[show_layers[i]].layer_type
+            layer_height_offset.append(height - height_padding)
+            p.append([1+(model_width//2), height - height_padding - (layer_height[i]//2)])
+            labels[(0, i)] = f'{self.model_config.layer_list[show_layers[i]].layer_type}\nInput Tensor:'
+            height -= layer_height[i] + height_padding
 
         nodes = list(model_G.nodes)
         model_pos = {}
         for i in range(0, len(nodes)):
             model_pos[nodes[i]] = p[i]
 
-        nx.draw(model_G, model_pos, node_color = model_color, node_shape='o', node_size=int((self.W * 30 / nlayers) ** 2))
+        nx.draw(model_G, model_pos, node_color = model_color, node_shape='o', node_size=int((self.W * 10 * model_width / total_width) ** 2))
         nx.draw_networkx_labels(model_G, model_pos, labels)
-        nx.draw(self.empty_G, pos = self.empty_pos, node_color='none', node_shape='o', node_size=int((self.W * 30 / nlayers) ** 2))
-        nx.draw(self.empty_G, pos = {self.empty_node: [2, nlayers + 1]}, node_color='none', node_shape='o', node_size=int((self.W * 30 / nlayers) ** 2))
+
+        current_axis = plt.gca()
+        padding = 0.1
+        for k in range(0, nlayers):
+            model_G = nx.grid_2d_graph(layer_width[k], layer_height[k])
+            model_G.remove_edges_from(model_G.edges)
+
+            p = []
+            for i in range(0, layer_width[k]):
+                for j in range(0, layer_height[k]):
+                    p.append([1+model_width+1+i, layer_height_offset[k]-j])
+
+            nodes = list(model_G.nodes)
+            model_pos = {}
+            for i in range(0, len(nodes)):
+                model_pos[nodes[i]] = p[i]
+            nx.draw(model_G, model_pos, node_shape='s', node_color='gray', node_size=int((self.W * 12 / total_width) ** 2))
+
+            x = 1 + model_width + 1 - 0.5 - padding
+            y = layer_height_offset[k] - layer_height[k] + 0.5 - padding
+            current_axis.add_patch(
+                Rectangle((x, y),
+                    width = layer_width[k] + padding*2,
+                    height = layer_height[k] + padding*2,
+                    fill=False
+                )
+            )
+
+            if window_id != None and show_layers[k] == window_id[0]:
+                x = 1 + model_width + 1 - 0.5 + window_id[2]
+                y = layer_height_offset[k] - window_id[3] + 0.5
+                current_axis.add_patch(
+                    Rectangle((x, y),
+                        width = window_id[4]-window_id[2],
+                        height = window_id[3]-window_id[1],
+                        fill=False, color='red'
+                    )
+                )
+
+
+        nx.draw(self.empty_G, pos = self.empty_pos, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
+        nx.draw(self.empty_G, pos = {self.empty_node: [total_width-1, total_height-1]}, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
 
         plt.tight_layout()
 
@@ -448,3 +515,89 @@ class Visualizer:
                     temp_idx[0] += (position_idx_to[0] - temp_idx[0]) // abs(position_idx_to[0] - temp_idx[0])
                     print(temp_idx)
                     active_router[temp_idx[1]*graph.router_height + temp_idx[0]] += active
+
+    def visualizeSimulation2(hw_config, model_config, Computation_order, simulation_log, filename):
+        print(f'len(simulation_log) = {len(simulation_log)}')
+        print(f'len(Computation_order) = {len(Computation_order)}')
+        CU_num = hw_config.CU_num
+
+        graph = MappingGraph(hw_config, model_config)
+
+        print('Prepare weight mapping...')
+        for event in tqdm(Computation_order):
+            if event.event_type == 'cu_operation':
+                idx = graph.position_idx_to_idx(event.position_idx)
+                graph.set_mapping(idx, event.nlayer)
+
+        time_queue = []
+        for event_idx in simulation_log:
+            time_queue.append((simulation_log[event_idx][0], event_idx, 'start'))
+            time_queue.append((simulation_log[event_idx][1], event_idx, 'end'))
+        time_queue.sort()
+
+        window_events = {}
+        print('Preprocess window events...')
+        for (start_cycle, end_cycle, event) in tqdm(simulation_log['window_event']):
+            if not event.nlayer in CARE_LAYERS:
+                continue
+            window_id = event.window_id
+            if not window_id in window_events:
+                window_events[window_id] = {
+                    'min_cycle': 0,
+                    'max_cycle': 0,
+                    'events': []
+                }
+            window_events[window_id]['events'].append((cycle, event))
+        for window_id, window_event in window_events.items():
+            window_event['min_cycle'] = min(window_event['events'], key=lambda k: k[0])
+            window_event['max_cycle'] = max(window_event['events'], key=lambda k: k[0])
+
+        window_events = list(window_events.items())
+        window_events.sort(key=lambda k: k[1]['max_cycle'][0])
+
+        index = 0
+        for (window_id, window_event) in tqdm(window_events):
+            active_cu = graph.allocate_cu_active_array()
+            active_router = graph.allocate_router_active_array()
+            for (cycle, event) in window_event['events']:
+                idx = graph.position_idx_to_idx(event.position_idx)
+                active_cu[idx] = 1
+            min_cycle = window_event['min_cycle'][0]
+            max_cycle = window_event['max_cycle'][0]
+            graph.draw(f"Window {window_id}, Cycle [{min_cycle} ~ {max_cycle}]", f"{filename}-{index:003}", active_cu, active_router, active_layers=[window_id[0]], window_id=window_id)
+            index += 1
+
+    def visualizeGif(hw_config, model_config, Computation_order, filename):
+        print(f'len(Computation_order) = {len(Computation_order)}')
+
+        graph = MappingGraph(hw_config, model_config)
+
+        print('Prepare weight mapping...')
+        for event in tqdm(Computation_order):
+            if event.event_type == 'cu_operation':
+                idx = graph.position_idx_to_idx(event.position_idx)
+                graph.set_mapping(idx, event.nlayer)
+
+        active_cu = graph.allocate_cu_active_array()
+
+        index = 0
+        def draw_all(window_id):
+            nonlocal index
+            graph.draw(f"Active CU", f"{filename}-{index:03}", active_cu, active_layers=[window_id[0]], window_id=window_id)
+            index += 1
+
+        last_window_id = None
+        for event in tqdm(Computation_order):
+            if not event.nlayer in CARE_LAYERS:
+                continue
+
+            if hasattr(event, 'window_id'):
+                if event.window_id != last_window_id:
+                    # New window
+                    if last_window_id != None:
+                        draw_all(last_window_id)
+                        active_cu = graph.allocate_cu_active_array()
+                    last_window_id = event.window_id
+                idx = graph.position_idx_to_idx(event.position_idx)
+                active_cu[idx] = 1
+        draw_all(last_window_id)
