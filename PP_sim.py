@@ -130,7 +130,10 @@ def main():
             outfile.write(f'\t]\n}}\n')
         print(f"Done")
 
-    Visualizer.weightMappingByCO(hw_config, model_config, order_generator.Computation_order, f"{model}")
+    #Visualizer.weightMappingByCO(hw_config, model_config, order_generator.Computation_order, f"{model}")
+    #return
+    #Visualizer.visualizeGif(hw_config, model_config, order_generator.Computation_order, f"{model}")
+    #return
     
     log = {}
 
@@ -142,7 +145,8 @@ def main():
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
-    Visualizer.visualizeSimulation(hw_config, model_config, order_generator.Computation_order, log, f"{model}")
+
+    Visualizer.visualizeSimulation2(hw_config, model_config, order_generator.Computation_order, log, f"{model}")
 
 if __name__ == '__main__':
     main()
