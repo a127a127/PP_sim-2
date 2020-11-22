@@ -9,14 +9,16 @@ class OnChipBuffer(): # LRU
     def put(self, key, value):
         if key in self.buffer:
             self.buffer.pop(key)
-
-        if self.size == len(self.buffer):
-            self.buffer.popitem(last=False)
             self.buffer.update({key: value})
-            return True
+            return None
         else:
-            self.buffer.update({key: value})
-            return
+            if self.size == len(self.buffer): # full
+                self.buffer.popitem(last=False)
+                self.buffer.update({key: value})
+                return True
+            else:
+                self.buffer.update({key: value})
+                return
 
     def get(self, key):
         value = self.buffer.get(key)
