@@ -41,14 +41,6 @@ class PE(object):
         self.activation_erp   = collections.deque()
         self.edram_wr_erp     = collections.deque()
         self.pooling_erp      = collections.deque()
-        
-        ### Performance analysis
-        self.is_wait_resource = False
-        self.is_wait_transfer = False
-        self.pure_idle_time        = 0
-        self.wait_transfer_time    = 0
-        self.wait_resource_time    = 0
-        self.pure_computation_time = 0
 
         ### Energy
         self.eDRAM_buffer_energy     = 0.
@@ -69,13 +61,6 @@ class PE(object):
         self.cu_state = []
         for i in range(self.hw_config.CU_num):
             self.cu_state.append(False)
-        
-        ### CU performance breakdown
-        self.cu_performance_breakdown = []
-        self.cu_busy_end_time = []
-        for i in range(self.hw_config.CU_num):
-            self.cu_performance_breakdown.append([0,0,0,0,0,0]) # [pre-layer, compute, transfer, overlap, other, total]
-            self.cu_busy_end_time.append(1)
 
     def __str__(self):
         return str(self.__dict__)
