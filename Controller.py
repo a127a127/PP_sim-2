@@ -716,14 +716,16 @@ class Controller(object):
                 des_pe = self.PE_array[des_pe_id]
                 data = packet.data
                 pro_event_list = packet.pro_event_list
-                K = des_pe.edram_buffer.put(data, data)
-                if K: # kick data out of buffer
-                    # TODO: simulate data transfer
-                    des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
-                    transfer_distance = des_pe_id[0]
-                    self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
-                    self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
-                    self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
+
+                if len(data) != 5:
+                    K = des_pe.edram_buffer.put(data, data)
+                    if K: # kick data out of buffer
+                        # TODO: simulate data transfer
+                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                        transfer_distance = des_pe_id[0]
+                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
 
                 # Energy
                 des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
