@@ -315,7 +315,7 @@ class Controller(object):
                     # tmp用過就丟
                     if len(edram_rd_data[0]) == 5:
                         for data in edram_rd_data:
-                            if data in self.buffer:
+                            if data in pe.edram_buffer.buffer:
                                 pe.edram_buffer.buffer.pop(data)
                 
                 # Trigger
