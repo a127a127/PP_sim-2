@@ -808,10 +808,11 @@ class Controller(object):
     def output_result(self):
         overlap_layer_ctr = 0
         layers_per_cycle_ctr = 0
-        for cycle in range(1, len(self.layer_state_for_plot)):
-            if len(self.layer_state_for_plot[cycle]) > 1:
-                overlap_layer_ctr += 1
-            layers_per_cycle_ctr += len(self.layer_state_for_plot[cycle])
+        if self.record_layer: # layer
+            for cycle in range(1, len(self.layer_state_for_plot)):
+                if len(self.layer_state_for_plot[cycle]) > 1:
+                    overlap_layer_ctr += 1
+                layers_per_cycle_ctr += len(self.layer_state_for_plot[cycle])
 
         
         with open(self.path+'/Result.csv', 'w', newline='') as csvfile:
