@@ -11,7 +11,7 @@ class Controller(object):
     def __init__(self, model_config, hw_config, ordergenerator, trace, mapping_str, scheduling_str, path):
         self.congestion =  True
         self.record_PE = False
-        self.record_layer = True
+        self.record_layer = False
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
@@ -311,6 +311,11 @@ class Controller(object):
                 else: # edram_rd
                     pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # read
                     pe.Bus_energy += self.hw_config.Energy_bus * self.input_bit * num_data # bus
+                    
+                    # tmp用過就丟
+                    if len(edram_rd_data[0]) == 5:
+                        for data in edram_rd_data:
+                            pe.edram_buffer.buffer.pop(data)
                 
                 # Trigger
                 pro_event_idx = event.proceeding_event[0] # only one pro event
@@ -391,8 +396,6 @@ class Controller(object):
                     self.layer_state_for_plot.append(set())
                 for cycle in range(self.cycle_ctr, finish_cycle):
                     self.layer_state_for_plot[cycle].add(event.nlayer)
-
-            pe.cu_busy_end_time[cu_idx] = finish_cycle
             
         self.cu_operation_pe_idx = set()
 
