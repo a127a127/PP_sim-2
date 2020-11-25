@@ -63,6 +63,8 @@ def main():
             cant_use_pe = (10, 12, 0, 0)
         elif model == "VGG16":
             cant_use_pe = (13, 4, 0, 0)
+
+        cant_use_pe = (10000, 0, 1, 1, 3, 2)
         
         start_mapping_time = time.time()
         print("--- Mapping ---")
