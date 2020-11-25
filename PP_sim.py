@@ -2,6 +2,7 @@ from Mapping import LowInputReuseMapping
 from Mapping import HighInputReuseMapping
 
 from OrderGenerator import OrderGenerator
+from ISAACOrderGenerator import ISAACOrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
@@ -46,6 +47,19 @@ def main():
         CANT_USE_XB_INDEX = (10, 11, 1, 0, 4, 2)
     elif model_name == "VGG16":
         CANT_USE_XB_INDEX = (0, 7, 1, 1, 11, 0)
+
+    CANT_USE_XB_INDEX = (10000, 0, 1, 1, 3, 2)
+
+    from Model import Model
+    model = Model(model_config)
+    for nlayer in range(model.layer_length):
+        if model.layer_list[nlayer].layer_type == "convolution" or model.layer_list[nlayer].layer_type == "fully":
+            strides = model.strides[nlayer]
+            pad = model.pad[nlayer]
+            o_height = model.input_h[nlayer+1]
+            o_width = model.input_w[nlayer+1]
+
+            print(f'  - {nlayer} {model.layer_list[nlayer].layer_type}: [{model.input_c[nlayer]}, {model.input_h[nlayer]}, {model.input_w[nlayer]}] x [{model.filter_n[nlayer]}, {model.filter_c[nlayer]}, {model.filter_h[nlayer]}, {model.filter_w[nlayer]}] {strides}, {pad} -> [{model.input_c[nlayer+1]}, {o_height}, {o_width}]')
 
     if mapping == "LIR":
         print("Low Input data Reuse Mapping")
@@ -100,12 +114,14 @@ def main():
     start_order_time = time.time()
     print("--- Generate computation order ---")
     order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
+    #order_generator = ISAACOrderGenerator(model_config, hw_config, isTrace_order)
     end_order_time = time.time()
     print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
 
     if False:
-        print(f"Dumping JSON to {model_name}.json...")
-        with open(f"{model_name}.json", "w") as outfile:
+        json_name = f"{model_name}-{mapping}-{scheduling}-{partition_h}-{partition_w}"
+        print(f"Dumping JSON to {json_name}.json...")
+        with open(f"{json_name}.json", "w") as outfile:
             opts = jsbeautifier.default_options()
             opts.indent_with_tabs = True
             opts.indent_level = 1

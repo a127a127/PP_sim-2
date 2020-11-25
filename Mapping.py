@@ -19,6 +19,31 @@ class CaculateMappedCrossbarNum(object):
 
         for nlayer in range(self.model_info.layer_length):
             layer_type = self.model_info.layer_list[nlayer].layer_type
+            if xb_n != 0:
+                xb_n = 0
+                cu_n += 1
+                if cu_n >= self.hw_config.CU_num:
+                    cu_n = 0
+                    pe_w += 1
+                    if pe_w >= self.hw_config.PE_num_x:
+                        pe_w = 0
+                        pe_h += 1
+                        if pe_h >= self.hw_config.PE_num_y:
+                            pe_h = 0
+                            if rt_h % 2 == 0:
+                                rt_w += 1
+                                if rt_w >= self.hw_config.Router_num_x:
+                                    rt_w -= 1
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
+                            else:
+                                rt_w -= 1
+                                if rt_w < 0:
+                                    rt_w = 0
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
             if layer_type == "convolution" or layer_type == "fully":
                 print(layer_type, nlayer)
                 
@@ -131,6 +156,31 @@ class LowInputReuseMapping(object):
         
         for nlayer in range(self.model_info.layer_length):
             layer_type = self.model_info.layer_list[nlayer].layer_type
+            if xb_n != 0:
+                xb_n = 0
+                cu_n += 1
+                if cu_n >= self.hw_config.CU_num:
+                    cu_n = 0
+                    pe_w += 1
+                    if pe_w >= self.hw_config.PE_num_x:
+                        pe_w = 0
+                        pe_h += 1
+                        if pe_h >= self.hw_config.PE_num_y:
+                            pe_h = 0
+                            if rt_h % 2 == 0:
+                                rt_w += 1
+                                if rt_w >= self.hw_config.Router_num_x:
+                                    rt_w -= 1
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
+                            else:
+                                rt_w -= 1
+                                if rt_w < 0:
+                                    rt_w = 0
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
             if layer_type == "convolution" or layer_type == "fully":
                 print(layer_type, nlayer)
                 if layer_type == "convolution":
@@ -296,6 +346,31 @@ class HighInputReuseMapping(object):
         
         for nlayer in range(self.model_info.layer_length):
             layer_type = self.model_info.layer_list[nlayer].layer_type
+            if xb_n != 0:
+                xb_n = 0
+                cu_n += 1
+                if cu_n >= self.hw_config.CU_num:
+                    cu_n = 0
+                    pe_w += 1
+                    if pe_w >= self.hw_config.PE_num_x:
+                        pe_w = 0
+                        pe_h += 1
+                        if pe_h >= self.hw_config.PE_num_y:
+                            pe_h = 0
+                            if rt_h % 2 == 0:
+                                rt_w += 1
+                                if rt_w >= self.hw_config.Router_num_x:
+                                    rt_w -= 1
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
+                            else:
+                                rt_w -= 1
+                                if rt_w < 0:
+                                    rt_w = 0
+                                    rt_h += 1
+                                    if rt_h >= self.hw_config.Router_num_y:
+                                        rt_h, rt_w = 0, 0
             if layer_type == "convolution" or layer_type == "fully":
                 print(layer_type, nlayer)
                 if layer_type == "convolution":

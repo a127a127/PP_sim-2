@@ -68,13 +68,13 @@ class ModelConfig(object):
                 LayerMetaData("convolution", 384,  3,  3, 384, 1,  'SAME', 0, 0, 0,    0),
                 LayerMetaData("convolution", 256,  3,  3, 384, 1,  'SAME', 0, 0, 0,    0),
                 LayerMetaData("pooling",       0,  0,  0,   0, 0,       0, 3, 3, 2,    0),
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096), # 6x6x256
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096),
-                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 1000)
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096//4), # 6x6x256
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 4096//4),
+                LayerMetaData("fully",         0,  0,  0,   0, 0,       0, 0, 0, 0, 1000//4)
                 ]
             self.input_n = 1
-            self.input_h = 227
-            self.input_w = 227
+            self.input_h = 227//2
+            self.input_w = 227//2
             self.input_c = 3
             self.input_bit = 16
             self.filter_bit = 16
