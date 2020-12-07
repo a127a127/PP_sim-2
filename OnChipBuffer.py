@@ -18,7 +18,7 @@ class OnChipBuffer(): # LRU
                 return True
             else:
                 self.buffer.update({key: value})
-                return
+                return None
 
     def get(self, key):
         value = self.buffer.get(key)
