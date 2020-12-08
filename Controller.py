@@ -202,23 +202,26 @@ class Controller(object):
     def trigger_event(self):
         tt = time.time()
         if self.cycle_ctr in self.Trigger:
+            if self.trace:
+                print(f"\t transfer_distance: {transfer_distance}")
+                print(f"\t finish_cycle: {finish_cycle}")
             for trigger in self.Trigger[self.cycle_ctr]:
                 pe = trigger[0]
                 event = trigger[1]
                 
                 if event.event_type == "edram_rd_ir":
                     cu_idx = event.position_idx[4]
-                    pe.edram_rd_ir_erp[cu_idx].appendleft(event)
+                    pe.edram_rd_ir_erp[cu_idx].append(event)
                     if not pe.cu_state[cu_idx]: # state == False
                         self.edram_rd_pe_idx.add(pe)
                         if cu_idx not in pe.edram_rd_cu_idx:
-                            pe.edram_rd_cu_idx.appendleft(cu_idx)
+                            pe.edram_rd_cu_idx.append(cu_idx)
                     
                 elif event.event_type == "cu_operation":
                     cu_idx = event.position_idx[4]
-                    pe.cu_operation_erp[cu_idx].appendleft(event)
+                    pe.cu_operation_erp[cu_idx].append(event)
                     self.cu_operation_pe_idx.add(pe)
-                    pe.cu_operation_cu_idx.appendleft(cu_idx)
+                    pe.cu_operation_cu_idx.append(cu_idx)
                 
                 elif event.event_type == "pe_saa":
                     if len(trigger) == 3: # 讓此CU可以做其他event
@@ -243,7 +246,7 @@ class Controller(object):
                     self.data_transfer_erp.append(event)
                 
                 elif event.event_type == "edram_rd":
-                    pe.edram_rd_erp.appendleft(event)
+                    pe.edram_rd_erp.append(event)
                     self.edram_rd_pe_idx.add(pe)
                 
                 elif event.event_type == "pooling":
@@ -287,6 +290,9 @@ class Controller(object):
                 if self.trace:
                     print("\tfetch event_idx:", self.Computation_order.index(event))
                 fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle
+                if self.trace:
+                    print("\t\tevent: ", event)
+                    print("\t\tfetch_finished: ", fetch_finished)
                 if fetch_finished in self.fetch_dict:
                     self.fetch_dict[fetch_finished].append([event, Fetch])
                 else:
@@ -657,7 +663,10 @@ class Controller(object):
         if self.cycle_ctr in self.fetch_dict:
             fetch_list = self.fetch_dict[self.cycle_ctr]
             #del self.fetch_dict[self.cycle_ctr]
-            for F in fetch_list:
+            for F in fetch_list:    
+                if self.trace:
+                    print("\t in fetch_dict")
+                    print("\t fetch_list: ", fetch_list)
                 event, transfer_data = F[0], F[1]
                 # event_id = self.Computation_order.index(event)
                 # transfer_data = event.inputs
@@ -683,6 +692,9 @@ class Controller(object):
                 self.transfer_cycles[nlayer] += (transfer_distance + 1) * num_data
                 finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
                 des_pe = self.PE_array[data_transfer_des]
+                if self.trace:
+                    print(f"\t transfer_distance: {transfer_distance}")
+                    print(f"\t finish_cycle: {finish_cycle}")
                 if finish_cycle not in self.Trigger:
                     self.Trigger[finish_cycle] = [[des_pe, event]]
                 else:
