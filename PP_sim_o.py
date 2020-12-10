@@ -1,11 +1,16 @@
-from Mapping_o import SCF
-from Mapping_o import SRF
+from Model import Model
+from Mapping import LIDR, HIDR
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
 
 import time, sys, os, pickle
+
+# 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
+# 2. Model.py: 多一個Model_type參數
+# 3. Mapping 多紀錄CU index 加速
+
 
 def main():
     start_time = time.time()
@@ -17,21 +22,21 @@ def main():
     mapping_str = mapping+sys.argv[4]+"_"+sys.argv[5]
     buffer_size_str = sys.argv[6]
     buffer_size = int(sys.argv[6])
-
+    
     model_config = ModelConfig(model)
+    model_info = Model(model_config)
     hw_config = HardwareConfig(buffer_size)
 
     LoadOrder = True
 
     ### path ###
-    #path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
-    path = './statistics/'+model_config.Model_type+'/'+buffer_size_str
+    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling+'/'+buffer_size_str
     if not os.path.exists(path):
         os.makedirs(path)
 
     ### Mapping ##
     if not LoadOrder:
-        cant_use_pe = (13, 12, 1, 1)
+        cant_use_pe = (13, 12, 1, 1) # 讓不同的實驗設定下，使用相同數量的PE
         # Used PE: Lenet:6, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
         if model == "Lenet":
             cant_use_pe = (0, 1, 1, 0)
@@ -49,35 +54,16 @@ def main():
         start_mapping_time = time.time()
         print("--- Mapping ---")
         print("Mapping policy:  ", end="")
-        if mapping == "SCF":
-            print("Same Column First Mapping")
-            mapping_information = SCF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
-        elif mapping == "SRF":
-            print("Same Row First Mapping")
-            mapping_information = SRF(model_config, hw_config, partition_h, partition_w, cant_use_pe)
+        if mapping == "LIDR":
+            print("Low input data reuse mapping")
+            mapping_information = LIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
+            exit()
+        elif mapping == "HIDR":
+            print("High input data reuse mapping")
+            mapping_information = HIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
 
         end_mapping_time = time.time()
-        # u = mapping_information.layer_used_xb_num
-        # print("layer_used_xb_num", u)
-        # t = 0
-        # for i in range(len(u)):
-        #     t += u[i]
-        # print("total", t)
-        # print("total used xb", len(mapping_information.totoal_used_xb))
-        # print("ctr", mapping_information.ctr)
-        # exit()
         print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-    
-    ### Scheduling ###
-    # print("Scheduling policy: ", end="")
-    # if scheduling == "Non-pipeline":
-    #     print("Non-pipeline")
-    # elif scheduling == "Pipeline":
-    #     print("Pipeline")
-    # else:
-    #     print("Wrong scheduling type")
-    #     exit()
-    # print()
 
     ### Buffer Replacement ###
     # print("Buffer replacement policy: ", end="")
@@ -95,7 +81,7 @@ def main():
     if not LoadOrder:
         start_order_time = time.time()
         print("--- Generate computation order ---")
-        order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
+        order_generator = OrderGenerator(model_info, hw_config, mapping_information, isTrace_order)
         end_order_time = time.time()
         print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
         
