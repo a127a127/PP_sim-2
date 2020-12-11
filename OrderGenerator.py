@@ -240,7 +240,7 @@ class OrderGenerator(object):
                                     inp_vector = xbar_mapping_info.inputs
                                     num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
                                     num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
-                                    num_ou = num_ou_h * num_ou_w
+                                    num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
                                     num_ou_in_xb[xb_idx] = num_ou
                                     max_ou = max(num_ou, max_ou)
 
@@ -639,7 +639,7 @@ class OrderGenerator(object):
                                 inp_vector = xbar_mapping_info.inputs
                                 num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
                                 num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
-                                num_ou = num_ou_h * num_ou_w
+                                num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
                                 num_ou_in_xb[xb_idx] = num_ou
                                 max_ou = max(num_ou, max_ou)
 
@@ -992,10 +992,6 @@ class OrderGenerator(object):
                             self.transfer_feature_map_data_num += len(transfer_outputs)
                            #--------------------------#
         
-        i = 0
-        for e in self.Computation_order:
-            print(i, e)
-            i += 1
         print('Order generated!')
 
     def print_order(self):
