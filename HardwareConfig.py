@@ -48,7 +48,7 @@ class HardwareConfig(object):
 
         # CU
         self.DAC_num = 1024 # 8x128
-        self.DAC_resolution = 1 
+        self.DAC_resolution = 1  # cannot change
         self.crossbar_num = 8
         self.cell_bit_width = 2
         self.ADC_num = 8
@@ -90,6 +90,7 @@ class HardwareConfig(object):
         self.Energy_shift_and_add_in_CU = self.Power_shift_and_add_in_CU / self.PE_frequency / self.shift_and_add_num_in_CU # per data
         self.Energy_pooling       = self.Power_pooling / self.PE_frequency / self.pooling_num
         self.Energy_or            = self.Power_OR_in_PE / self.PE_frequency / self.OR_bus_width
+        
         # per operation unit (ou)
         self.Energy_ou_dac        = self.Power_DAC / self.PE_frequency / self.DAC_num * self.OU_h
         self.Energy_ou_crossbar   = self.Power_crossbar / self.PE_frequency / self.crossbar_num * ((self.OU_h * self.OU_w) / (self.Xbar_h * self.Xbar_w))
@@ -121,7 +122,7 @@ class HardwareConfig(object):
         self.Fetch_Rd_BW = 3.2 # GB/s = B/ns = 8b/ns
         self.Energy_off_chip_Rd = 80.3   / 1000 / 8 # nJ per bit
         self.Energy_off_chip_Wr = 82.719 / 1000 / 8 # nJ per bit
-        self.Fetch_cycle  = 20
+        self.Fetch_cycle  = 20 # TODO
         # self.Leakage_off_chip = 52.8 / 1000 # W
 
         

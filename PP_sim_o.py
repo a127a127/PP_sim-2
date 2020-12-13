@@ -9,7 +9,8 @@ import time, sys, os, pickle
 
 # 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
 # 2. Model.py: 多一個Model_type參數
-# 3. Mapping 多紀錄CU index 加速
+# 3. Mapping 多紀錄CU index
+# 4. Controller: 支援前面Ordergenerator的修改
 
 
 def main():
@@ -28,8 +29,15 @@ def main():
     hw_config = HardwareConfig(buffer_size)
 
     LoadOrder = True
+    filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'/'+buffer_size_str+'.pkl'
+    try:
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
+    except FileNotFoundError:
+        print("Order file not found.")
+        LoadOrder = False
 
-    ### path ###
+    ### output path ###
     path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling+'/'+buffer_size_str
     if not os.path.exists(path):
         os.makedirs(path)
@@ -57,7 +65,6 @@ def main():
         if mapping == "LIDR":
             print("Low input data reuse mapping")
             mapping_information = LIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
-            exit()
         elif mapping == "HIDR":
             print("High input data reuse mapping")
             mapping_information = HIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
@@ -75,7 +82,7 @@ def main():
 
     ### Trace ###
     isTrace_order      = False
-    isTrace_controller = False   
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
     if not LoadOrder:
@@ -93,13 +100,8 @@ def main():
             pickle.dump(order_generator, output, pickle.HIGHEST_PROTOCOL)
     
     else:
-        filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'.pkl'
-        try:
-            with open(filename, 'rb') as input:
-                order_generator = pickle.load(input)
-        except FileNotFoundError:
-            print("Error: Order file not found error. Please generate order first.")
-            exit()
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
 
     ## Power and performance simulation ###
     start_simulation_time = time.time()

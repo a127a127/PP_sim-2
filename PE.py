@@ -26,17 +26,9 @@ class PE(object):
         self.edram_buffer = OnChipBuffer(size)
         # self.buffer_size_util = [[], []] # [cycle, size]
 
-        ### # Event queue's CU index
-        self.edram_rd_cu_idx     = collections.deque() # set()
-        self.cu_operation_cu_idx = collections.deque()
-
         ### event queue
-        self.edram_rd_erp     = collections.deque()
-        self.edram_rd_ir_erp  = [] # 一個CU一個edram_rd     event queue
-        self.cu_operation_erp = [] # 一個CU一個cu_operation event queue
-        for i in range(self.hw_config.CU_num):
-            self.edram_rd_ir_erp.append(collections.deque())
-            self.cu_operation_erp.append(collections.deque())
+        self.edram_erp        = collections.deque()
+        self.cu_op_erp        = 0
         self.pe_saa_erp       = collections.deque()
         self.activation_erp   = collections.deque()
         self.edram_wr_erp     = collections.deque()
