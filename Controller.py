@@ -709,45 +709,46 @@ class Controller(object):
 
     def interconnect_fn(self):
         tt = time.time()
-        for s in range(self.hw_config.interconnect_step_num):
-            arrived = self.interconnect.step()
-            for packet in arrived:
-                des_pe_id = packet.destination
-                des_pe = self.PE_array[des_pe_id]
-                data = packet.data
-                pro_event_list = packet.pro_event_list
+        if self.interconnect.busy_router:
+            for s in range(self.hw_config.interconnect_step_num):
+                arrived = self.interconnect.step()
+                for packet in arrived:
+                    des_pe_id = packet.destination
+                    des_pe = self.PE_array[des_pe_id]
+                    data = packet.data
+                    pro_event_list = packet.pro_event_list
 
-                if len(data) != 5:
-                    K = des_pe.edram_buffer.put(data, data)
-                    if K: # kick data out of buffer
-                        # TODO: simulate data transfer
-                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
-                        transfer_distance = des_pe_id[0]
-                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
-                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
-                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
+                    if len(data) != 5:
+                        K = des_pe.edram_buffer.put(data, data)
+                        if K: # kick data out of buffer
+                            # TODO: simulate data transfer
+                            des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                            transfer_distance = des_pe_id[0]
+                            self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                            self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                            self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
 
-                # Energy
-                des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
-                start_transfer_cycle = packet.start_transfer_cycle
-                end_transfer_cycle = self.cycle_ctr + 1
-                nlayer = data[0]
-                self.transfer_cycles[nlayer] += end_transfer_cycle - start_transfer_cycle
+                    # Energy
+                    des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
+                    start_transfer_cycle = packet.start_transfer_cycle
+                    end_transfer_cycle = self.cycle_ctr + 1
+                    nlayer = data[0]
+                    self.transfer_cycles[nlayer] += end_transfer_cycle - start_transfer_cycle
 
-                # Trigger
-                for proceeding_index in pro_event_list:
-                    pro_event = self.Computation_order[proceeding_index]
-                    pro_event.current_number_of_preceding_event += 1
-                    if pro_event.preceding_event_count <= pro_event.current_number_of_preceding_event:
-                        if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
-                            self.Non_pipeline_trigger.append([des_pe, pro_event, []])
-                        else:
-                            finish_cycle = self.cycle_ctr + 1
-                            if finish_cycle not in self.Trigger:
-                                self.Trigger[finish_cycle] = [[des_pe, pro_event]]
+                    # Trigger
+                    for proceeding_index in pro_event_list:
+                        pro_event = self.Computation_order[proceeding_index]
+                        pro_event.current_number_of_preceding_event += 1
+                        if pro_event.preceding_event_count <= pro_event.current_number_of_preceding_event:
+                            if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                                self.Non_pipeline_trigger.append([des_pe, pro_event, []])
                             else:
-                                self.Trigger[finish_cycle].append([des_pe, pro_event])
-        
+                                finish_cycle = self.cycle_ctr + 1
+                                if finish_cycle not in self.Trigger:
+                                    self.Trigger[finish_cycle] = [[des_pe, pro_event]]
+                                else:
+                                    self.Trigger[finish_cycle].append([des_pe, pro_event])
+
         self.t_inter += time.time() - tt
 
     def record_buffer_util(self):
