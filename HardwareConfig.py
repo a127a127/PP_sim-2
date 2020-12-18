@@ -62,7 +62,7 @@ class HardwareConfig(object):
         self.links_bw = 6.4 # GB/s
 
         self.cycle_time = 7.68 # 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from W. H. Chen's paper
-        self.interconnect_step_num = 24 #int(self.cycle_time // self.router_frequency) # router frequency = PE frequency
+        self.interconnect_step_num = int(self.cycle_time // self.router_frequency) # router frequency = PE frequency
         self.eDRAM_buffer_read_bits  = floor(256 * self.PE_frequency * self.cycle_time) # bits / per cycle
         # self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
 
