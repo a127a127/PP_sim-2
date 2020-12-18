@@ -99,7 +99,7 @@ class Controller(object):
         self.event_fetch_ctr = dict()
 
         self.run()
-        #self.print_statistics_result()
+        self.print_statistics_result()
 
     def run(self):
         print("estimation start")
@@ -181,7 +181,7 @@ class Controller(object):
             for trigger in self.Trigger[self.cycle_ctr]:
                 pe, event = trigger[0], trigger[1]
                 
-                if event.event_type == "edram_rd_ir" or event.event_type == "edram_rd":
+                if event.event_type == "edram_rd_ir" or event.event_type == "edram_rd" or event.event_type == "edram_wr":
                     pe.edram_erp.append(event)
                     self.edram_pe_idx.add(pe)
                     
@@ -219,10 +219,6 @@ class Controller(object):
                     pe.pe_saa_erp.append(event)
                     self.pe_saa_pe_idx.add(pe)
                 
-                elif event.event_type == "edram_wr":
-                    pe.edram_erp.append(event)
-                    self.edram_pe_idx.add(pe)
-                    
                 else:
                     print("error event type:", event.event_type)
                     exit()
@@ -239,6 +235,9 @@ class Controller(object):
             if event.event_type == "edram_wr":
                 if self.trace:
                     print("\tdo edram_wr event_idx:", self.Computation_order.index(event))
+                
+                ### log
+                pe.edram_event_order.append(self.Computation_order.index(event))
 
                 self.done_event += 1
                 if not self.isPipeLine:
@@ -303,6 +302,9 @@ class Controller(object):
                     if self.trace:
                         print("\tdo edram_rd_ir event_idx:", self.Computation_order.index(event),", layer", event.nlayer)
                     
+                    ### log
+                    pe.edram_event_order.append(self.Computation_order.index(event))
+                    
                     self.done_event += 1
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
@@ -357,6 +359,9 @@ class Controller(object):
                     if self.trace:
                         print("\tdo edram_rd event_idx:", self.Computation_order.index(event),", layer", event.nlayer)
                     
+                    ### log
+                    pe.edram_event_order.append(self.Computation_order.index(event))
+
                     self.done_event += 1
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
@@ -872,6 +877,22 @@ class Controller(object):
             writer.writerow(["edram_rd", self.ordergenerator.edram_rd_ctr])
             writer.writerow(["pooling", self.ordergenerator.pooling_ctr])
             writer.writerow(["data_transfer", self.ordergenerator.data_transfer_ctr])
+
+        ### log
+        with open(self.path+'/event_order_log.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["PE"])
+            for pe_pos in self.PE_array:
+                pe = self.PE_array[pe_pos]
+                A = ""
+                if pe.edram_event_order:
+                    idx1 = -1
+                    for idx in pe.edram_event_order:
+                        if idx <= idx1:
+                            A = "Order error"
+                            break
+                        idx1 = idx
+                    writer.writerow([pe.plot_idx, A, str(pe.edram_event_order)])
 
     def PE_energy_breakdown(self):
         # PE breakdown
