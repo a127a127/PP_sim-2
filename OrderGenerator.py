@@ -49,7 +49,6 @@ class OrderGenerator(object):
                                 for data in inp_vector:
                                     data_pos = data[1]
                                     self.fm_data_used_pe_idx[nlayer][data_pos].add(pe_pos)
-
             elif layer_type == "pooling":
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
                     rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
@@ -84,6 +83,15 @@ class OrderGenerator(object):
                     for cu_idx in range(self.hw_config.CU_num):
                         self.CU_dependency_idx.append(-1)
        #-------------------------------------------------------# 
+       #--用來紀錄每個PE內eDRAM的event index-----#
+        self.PE_EDRAM_DEPENDENCY = True
+        if self.PE_EDRAM_DEPENDENCY:
+            self.PE_dependency_idx = []
+            for rty_idx in range(self.hw_config.Router_num_y):
+                for rtx_idx in range(self.hw_config.Router_num_x):
+                    for pe_idx in range(self.hw_config.PE_num):
+                        self.PE_dependency_idx.append(-1)
+       #-------------------------------------#
 
         self.Computation_order = []
         self.generate_order()
@@ -213,6 +221,16 @@ class OrderGenerator(object):
                                 eri_preceding_count += 1
                                 self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
                             
+                            # dependency: eDRAM read event dependency in same PE
+                            if self.PE_EDRAM_DEPENDENCY:
+                                pe_id =  pex_idx + pey_idx * self.hw_config.PE_num_x + \
+                                    rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
+                                pre_edram_id = self.PE_dependency_idx[pe_id]
+                                if pre_edram_id != -1:
+                                    eri_preceding_count += 1
+                                    self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                                self.PE_dependency_idx[pe_id] = eri_event_idx
+
                             eri_inputs  = edram_read_data
                             eri_outputs = 0
                             event = EventMetaData("edram_rd_ir", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
@@ -618,6 +636,16 @@ class OrderGenerator(object):
                         if pre_cu_op_id > -1:
                             eri_preceding_count += 1
                             self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
+                        
+                        # dependency: eDRAM read event dependency in same PE
+                        if self.PE_EDRAM_DEPENDENCY:
+                            pe_id =  pex_idx + pey_idx * self.hw_config.PE_num_x + \
+                                rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
+                            pre_edram_id = self.PE_dependency_idx[pe_id]
+                            if pre_edram_id != -1:
+                                eri_preceding_count += 1
+                                self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                            self.PE_dependency_idx[pe_id] = eri_event_idx
                                 
                         eri_inputs  = edram_read_data
                         eri_outputs = 0
@@ -925,7 +953,19 @@ class OrderGenerator(object):
                                 pre_event.add(transfer_event_idx)
                                 if eri_event_idx not in self.Computation_order[transfer_event_idx].proceeding_event:
                                     self.Computation_order[transfer_event_idx].proceeding_event.append(eri_event_idx)
+                        
                         eri_preceding_count = len(pre_event)
+
+                        # dependency: eDRAM read event dependency in same PE
+                        if self.PE_EDRAM_DEPENDENCY:
+                            pe_id =  pex_idx + pey_idx * self.hw_config.PE_num_x + \
+                                rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
+                            pre_edram_id = self.PE_dependency_idx[pe_id]
+                            if pre_edram_id != -1:
+                                eri_preceding_count += 1
+                                self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                            self.PE_dependency_idx[pe_id] = eri_event_idx
+
                         eri_inputs  = edram_read_data
                         eri_outputs = 0
                         event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)

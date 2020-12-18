@@ -1,6 +1,4 @@
 from PE import PE
-
-from EventMetaData import EventMetaData
 from Interconnect import Interconnect
 from Packet import Packet
 import csv
@@ -270,17 +268,20 @@ class Controller(object):
                     pe.Bus_energy          += self.hw_config.Energy_bus          * self.input_bit * num_data # bus
                     pe.CU_IR_energy        += self.hw_config.Energy_ir_in_cu     * self.input_bit * num_data # IR write
                     
-                    # Trigger CU operation
-                    pro_event_idx = event.proceeding_event[0]
-                    pro_event = self.Computation_order[pro_event_idx]
-                    pro_event.current_number_of_preceding_event += 1
-
+                    # Trigger: CU operation and edram
                     finish_cycle = self.cycle_ctr + 1
-                    
-                    if finish_cycle not in self.Trigger:
-                        self.Trigger[finish_cycle] = [[pe, pro_event]]
-                    else:
-                        self.Trigger[finish_cycle].append([pe, pro_event])
+                    for proceeding_index in event.proceeding_event:
+                        pro_event = self.Computation_order[proceeding_index]
+                        pro_event.current_number_of_preceding_event += 1
+
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                            if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                                self.Non_pipeline_trigger.append([pe, pro_event])
+                            else:
+                                if finish_cycle not in self.Trigger:
+                                    self.Trigger[finish_cycle] = [[pe, pro_event]]
+                                else:
+                                    self.Trigger[finish_cycle].append([pe, pro_event])
                     
                     # PE util
                     if self.record_PE:
@@ -301,6 +302,7 @@ class Controller(object):
                 if Fetch:
                     if self.trace:
                         print("\tfetch event_idx:", self.Computation_order.index(event))
+
                     fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle # TODO
                     if fetch_finished in self.fetch_dict: # TODO
                         self.fetch_dict[fetch_finished].append([event, Fetch]) # TODO
@@ -314,24 +316,26 @@ class Controller(object):
                     if not self.isPipeLine:
                         self.this_layer_event_ctr += 1
                     
-                    
                     # Energy
                     num_data = len(edram_rd_data)
                     pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit * num_data # eDRAM read
                     pe.Bus_energy          += self.hw_config.Energy_bus          * self.input_bit * num_data # bus
                     
-                    # Trigger
-                    pro_event_idx = event.proceeding_event[0]
-                    pro_event = self.Computation_order[pro_event_idx]
-                    pro_event.current_number_of_preceding_event += 1
-
+                    # Trigger: pooling and edram
                     finish_cycle = self.cycle_ctr + 1
-                    
-                    if finish_cycle not in self.Trigger:
-                        self.Trigger[finish_cycle] = [[pe, pro_event]]
-                    else:
-                        self.Trigger[finish_cycle].append([pe, pro_event])
-                    
+                    for proceeding_index in event.proceeding_event:
+                        pro_event = self.Computation_order[proceeding_index]
+                        pro_event.current_number_of_preceding_event += 1
+
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
+                            if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
+                                self.Non_pipeline_trigger.append([pe, pro_event])
+                            else:
+                                if finish_cycle not in self.Trigger:
+                                    self.Trigger[finish_cycle] = [[pe, pro_event]]
+                                else:
+                                    self.Trigger[finish_cycle].append([pe, pro_event])     
+                        
                     # PE util
                     if self.record_PE:
                         self.pe_state_for_plot[self.cycle_ctr].add(pe)
