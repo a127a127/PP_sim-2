@@ -1,109 +1,112 @@
-from Mapping import LowInputReuseMapping
-from Mapping import HighInputReuseMapping
-
+from Model import Model
+from Mapping import LIDR, HIDR
 from OrderGenerator import OrderGenerator
 from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
 
-import time, sys, os
+import time, sys, os, pickle
+
+# 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
+# 2. Model.py: 多一個Model_type參數
+# 3. Mapping 多紀錄CU index
+# 4. Controller: 支援前面Ordergenerator的修改
+
 
 def main():
-    start_time     = time.time()
-
-    model_name     = sys.argv[1]
-    mapping        = sys.argv[2]
-    scheduling     = sys.argv[3]
+    start_time = time.time()
+    model      = sys.argv[1]
+    mapping    = sys.argv[2]
+    scheduling = sys.argv[3]
     partition_h = int(sys.argv[4])
     partition_w = int(sys.argv[5])
+    mapping_str = mapping+sys.argv[4]+"_"+sys.argv[5]
+    buffer_size_str = sys.argv[6]
+    buffer_size = int(sys.argv[6])
+    
+    model_config = ModelConfig(model)
+    model_info = Model(model_config)
+    hw_config = HardwareConfig(buffer_size)
 
-    model_config = ModelConfig(model_name)
-    hw_config    = HardwareConfig()
+    LoadOrder = True
+    filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'/'+buffer_size_str+'.pkl'
+    try:
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
+    except FileNotFoundError:
+        print("Order file not found.")
+        LoadOrder = False
+
+    ### output path ###
+    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling+'/'+buffer_size_str
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     ### Mapping ##
-    start_mapping_time = time.time()
-    print("--- Mapping ---")
-    print("Mapping policy:  ", end="")
+    if not LoadOrder:
+        cant_use_pe = (13, 12, 1, 1) # 讓不同的實驗設定下，使用相同數量的PE
+        # Used PE: Lenet:6, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
+        if model == "Lenet":
+            cant_use_pe = (0, 1, 1, 0)
+        elif model == "Cifar10":
+            cant_use_pe = (0, 1, 0, 1)
+        elif model == "DeepID":
+            cant_use_pe = (0, 1, 1, 0)
+        elif model == "Caffenet":
+            cant_use_pe = (6, 2, 0, 1)
+        elif model == "Overfeat":
+            cant_use_pe = (10, 12, 0, 0)
+        elif model == "VGG16":
+            cant_use_pe = (13, 4, 0, 0)
+        
+        start_mapping_time = time.time()
+        print("--- Mapping ---")
+        print("Mapping policy:  ", end="")
+        if mapping == "LIDR":
+            print("Low input data reuse mapping")
+            mapping_information = LIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
+        elif mapping == "HIDR":
+            print("High input data reuse mapping")
+            mapping_information = HIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
 
-    # Lenet:    (0, 0, 1, 1, 3, 2)
-    # Cifar10:  (0, 0, 0, 0, 6, 5)
-    # DeepID:   (0, 0, 0, 0, 8, 0)
-    # Caffenet: (6, 1, 0, 1, 5, 2)
-    # Overfeat: (10, 11, 1, 0, 4, 2)
-    # VGG16:    (0, 7, 1, 1, 11, 0)
-    if model_name == "Lenet":
-        CANT_USE_XB_INDEX = (0, 0, 1, 1, 3, 2)
-    elif model_name == "Cifar10":
-        CANT_USE_XB_INDEX = (0, 0, 0, 0, 6, 5)
-    elif model_name == "DeepID":
-        CANT_USE_XB_INDEX = (0, 0, 0, 0, 8, 0)
-    elif model_name == "Caffenet":
-        CANT_USE_XB_INDEX = (6, 1, 0, 1, 5, 2)
-    elif model_name == "Overfeat":
-        CANT_USE_XB_INDEX = (10, 11, 1, 0, 4, 2)
-    elif model_name == "VGG16":
-        CANT_USE_XB_INDEX = (0, 7, 1, 1, 11, 0)
-
-    if mapping == "LIR":
-        print("Low Input data Reuse Mapping")
-        mapping_information = LowInputReuseMapping(model_config, hw_config, partition_h, partition_w, CANT_USE_XB_INDEX)
-        mapping_str = "Low_Input_data_Reuse_Mapping_"+sys.argv[4]+"_"+sys.argv[5]
-    elif mapping == "HIR":
-        print("High Input data Reuse Mapping")
-        mapping_information = HighInputReuseMapping(model_config, hw_config, partition_h, partition_w, CANT_USE_XB_INDEX)
-        mapping_str = "High_Input_data_Reuse_Mapping_"+sys.argv[4]+"_"+sys.argv[5]
-    elif mapping == "Count":
-        from Mapping import CaculateMappedCrossbarNum
-        mapping_information = CaculateMappedCrossbarNum(model_config, hw_config, 1, 1)
-        exit()
-    else:
-        print("Wrong mapping parameter")
-        exit()
-    
-    end_mapping_time = time.time()
-    print("--- Mapping: finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-    
-    ### Scheduling ###
-    print("Scheduling policy: ", end="")
-    if scheduling == "Non-pipeline":
-        print("Non-pipeline")
-    elif scheduling == "Pipeline":
-        print("Pipeline")
-    else:
-        print("Wrong scheduling parameter")
-        exit()
-    print()
+        end_mapping_time = time.time()
+        print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
     ### Buffer Replacement ###
-    print("Buffer replacement policy: ", end="")
-    replacement = "LRU"
-    if replacement == "Ideal":
-        print("Ideal")
-    elif replacement == "LRU":
-        print("LRU")
-
-    ### path ###
-    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
-    if not os.path.exists(path):
-            os.makedirs(path)
-    
-    mapping_information.mapping_layout(path)
+    # print("Buffer replacement policy: ", end="")
+    # replacement = "LRU"
+    # if replacement == "Ideal":
+    #     print("Ideal")
+    # elif replacement == "LRU":
+    #     print("LRU")
 
     ### Trace ###
     isTrace_order      = False
-    isTrace_controller = False   
+    isTrace_controller = False
 
     ### Generate computation order graph ### 
-    start_order_time = time.time()
-    print("--- Generate computation order ---")
-    order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
-    end_order_time = time.time()
-    print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+    if not LoadOrder:
+        start_order_time = time.time()
+        print("--- Generate computation order ---")
+        order_generator = OrderGenerator(model_info, hw_config, mapping_information, isTrace_order)
+        end_order_time = time.time()
+        print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+        
+        # Save Order
+        if not os.path.exists('./order_file/'):
+            os.makedirs('./order_file/')
+        filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'.pkl'
+        with open(filename, 'wb') as output:
+            pickle.dump(order_generator, output, pickle.HIGHEST_PROTOCOL)
     
+    else:
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
+
     ## Power and performance simulation ###
     start_simulation_time = time.time()
     print("--- Power and performance simulation---")
-    controller = Controller(model_config, hw_config, order_generator, isTrace_controller, mapping_str, scheduling, replacement, path)
+    controller = Controller(model_config, hw_config, order_generator, isTrace_controller, mapping_str, scheduling, path)
     end_simulation_time = time.time()
     print("--- Simulate in %s seconds ---\n" % (end_simulation_time - start_simulation_time))
     end_time = time.time()
