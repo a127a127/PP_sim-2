@@ -749,8 +749,8 @@ class OrderGenerator(object):
                         else: # 不是最後一層要生data transfer event傳到下一層所在PE
                             des_pe_dict = dict() # {PE1: [data1, data2], PE2: [data1, data3]}
                             for f in pe_filter_processing[pe_pos]["act"]:
-                                pos = f
                                 data = (nlayer+1, f, 0, 0)
+                                pos = f
                                 des_pe_set = self.fm_data_used_pe_idx[nlayer+1][pos]
                                 for des_pe in des_pe_set:
                                     if des_pe in des_pe_dict:
