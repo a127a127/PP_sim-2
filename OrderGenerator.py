@@ -29,13 +29,14 @@ class OrderGenerator(object):
                             for window_h in range(self.model_info.input_h[nlayer+1]):
                                 for window_w in range(self.model_info.input_w[nlayer+1]):
                                     if (window_h,window_w) in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                        xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
-                                        inp_vector = xbar_mapping_info.inputs
-                                        for data in inp_vector:
-                                            if data != 0:
-                                                h,w,c = data[1], data[2], data[3]
-                                                data_pos = w + h * self.model_info.input_w[nlayer] + c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]
-                                                self.fm_data_used_pe_idx[nlayer][data_pos].add(pe_pos)
+                                        xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
+                                        for xbar_mapping_info in xbar_mapping_info_list:
+                                            inp_vector = xbar_mapping_info.inputs
+                                            for data in inp_vector:
+                                                if data != 0:
+                                                    h,w,c = data[1], data[2], data[3]
+                                                    data_pos = w + h * self.model_info.input_w[nlayer] + c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]
+                                                    self.fm_data_used_pe_idx[nlayer][data_pos].add(pe_pos)
             elif layer_type == "fully":
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
                     rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
@@ -44,11 +45,12 @@ class OrderGenerator(object):
                     for cu_idx in cu_idx_set:
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if 0 in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
-                                inp_vector = xbar_mapping_info.inputs
-                                for data in inp_vector:
-                                    data_pos = data[1]
-                                    self.fm_data_used_pe_idx[nlayer][data_pos].add(pe_pos)
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    inp_vector = xbar_mapping_info.inputs
+                                    for data in inp_vector:
+                                        data_pos = data[1]
+                                        self.fm_data_used_pe_idx[nlayer][data_pos].add(pe_pos)
             elif layer_type == "pooling":
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
                     rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
@@ -116,14 +118,12 @@ class OrderGenerator(object):
                     for cu_idx in cu_idx_set:
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if (0, 0) in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(0,0)] # 以第一個window為主
-                                filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
-                                for f in filter_list:
-                                    operate_filter.add(f)
-                        if pe_pos in pe_operate_filter:
-                            pe_operate_filter[pe_pos].update(operate_filter)
-                        else:
-                            pe_operate_filter[pe_pos] = operate_filter
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(0,0)] # 以第一個window為主
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
+                                    for f in filter_list:
+                                        operate_filter.add(f)
+                    pe_operate_filter[pe_pos] = operate_filter
 
                 # 每個filter的aggregator pe, 和non aggregator pe
                 filter_aggregator = [] # {"aggregator": PE1, "other": [PE2, PE3]}
@@ -178,11 +178,12 @@ class OrderGenerator(object):
                             edram_read_data = set()
                             for xb_idx in range(self.hw_config.Xbar_num):
                                 if (window_h,window_w) in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                    xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
-                                    inp_vector = xbar_mapping_info.inputs
-                                    for data in inp_vector:
-                                        if data != 0:
-                                            edram_read_data.add(data)
+                                    xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
+                                    for xbar_mapping_info in xbar_mapping_info_list:
+                                        inp_vector = xbar_mapping_info.inputs
+                                        for data in inp_vector:
+                                            if data != 0:
+                                                edram_read_data.add(data)
                             edram_read_data = list(edram_read_data)
                             
                             if not edram_read_data:
@@ -254,13 +255,14 @@ class OrderGenerator(object):
                             max_ou = 0
                             for xb_idx in range(self.hw_config.Xbar_num):
                                 if (window_h,window_w) in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                    xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
-                                    inp_vector = xbar_mapping_info.inputs
-                                    num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
-                                    num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
-                                    num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
-                                    num_ou_in_xb[xb_idx] = num_ou
-                                    max_ou = max(num_ou, max_ou)
+                                    xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
+                                    for xbar_mapping_info in xbar_mapping_info_list:
+                                        inp_vector = xbar_mapping_info.inputs
+                                        num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
+                                        num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
+                                        num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
+                                        num_ou_in_xb[xb_idx] = num_ou
+                                        max_ou = max(num_ou, max_ou)
 
                             cu_op_inputs  = [max_ou, num_ou_in_xb]
                             cu_op_outputs = 0
@@ -280,10 +282,11 @@ class OrderGenerator(object):
                             cu_operate_filter = set()
                             for xb_idx in range(self.hw_config.Xbar_num):
                                 if (window_h,window_w) in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                    xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
-                                    filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
-                                    for f in filter_list:
-                                        cu_operate_filter.add(f)
+                                    xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][(window_h,window_w)]
+                                    for xbar_mapping_info in xbar_mapping_info_list:
+                                        filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
+                                        for f in filter_list:
+                                            cu_operate_filter.add(f)
                             saa_amount = len(cu_operate_filter)
                             pe_saa_inputs  = saa_amount
 
@@ -294,6 +297,8 @@ class OrderGenerator(object):
                            #-------------------#
                         
                     for pe_pos in self.mp_info.layer_used_component[nlayer]:
+                        rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
+                        pey_idx, pex_idx = pe_pos[2], pe_pos[3]
                        # 1. 在此PE做activation, edram_write, transfer
                         if pe_filter_processing[pe_pos]["act"]:
                            #---Event: activation---#
@@ -416,6 +421,8 @@ class OrderGenerator(object):
                            #---------------------#
                     
                     for pe_pos in self.mp_info.layer_used_component[nlayer]:
+                        rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
+                        pey_idx, pex_idx = pe_pos[2], pe_pos[3]
                        # 4. 剩下需要跨PE做 S+A, activation, edram write 的event
                         if pe_filter_processing[pe_pos]["aggregate"]:
                            #---Event: edram_rd---#
@@ -539,7 +546,7 @@ class OrderGenerator(object):
             elif layer_type == "fully":
                #----決定每個filter的aggregator PE----# # 和conv一樣
                 pe_filter_processing = dict() # {PE1:{"act":[f1, f2], "transfer": {des_pe1:[f3, f4], des_pe2:[f5,f6]}, "aggregate":[f7]}, PE2: ...}
-                
+
                 # 每個filter在哪一些PEs算
                 pe_operate_filter    = dict() # {PE1: {filter1, filter2, ...}, PE2: {filter2, filter3, ...}
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
@@ -550,17 +557,15 @@ class OrderGenerator(object):
                     for cu_idx in cu_idx_set:
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if 0 in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
-                                filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
-                                for f in filter_list:
-                                    operate_filter.add(f)
-                        if pe_pos in pe_operate_filter:
-                            pe_operate_filter[pe_pos].update(operate_filter)
-                        else:
-                            pe_operate_filter[pe_pos] = operate_filter
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
+                                    for f in filter_list:
+                                        operate_filter.add(f)
+                    pe_operate_filter[pe_pos] = operate_filter
                 
                 # 每個filter的aggregator pe, 和non aggregator pe
-                filter_aggregator = [] # {"aggregator": PE1, "other": [PE2, PE3]}
+                filter_aggregator = [] # {"aggregator": PE1, "non": [PE2, PE3]}
                 for f in range(self.model_info.filter_n[nlayer]):
                     aggregator_dict = {"aggregator": 0, "non": []}
                     for pe_pos in pe_operate_filter:
@@ -570,7 +575,6 @@ class OrderGenerator(object):
                             else:
                                 aggregator_dict["non"].append(pe_pos)
                     filter_aggregator.append(aggregator_dict)
-                
                 # 完成pe_filter_processing
                 for pe_pos in pe_operate_filter:
                     pe_filter_processing[pe_pos] = {"act": [], "transfer": dict(), "aggregate": []}
@@ -586,7 +590,7 @@ class OrderGenerator(object):
                                 pe_filter_processing[pe_pos]["transfer"][des_pe] = [f]
                             else:
                                 pe_filter_processing[pe_pos]["transfer"][des_pe].append(f)
-               #--------------------------------#
+               #-----------------------------------#
                 
                # 兩個用來記錄event index的字典 # for dependency
                 pe_saa_event_dict = dict()
@@ -609,11 +613,12 @@ class OrderGenerator(object):
                         edram_read_data = set()
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if 0 in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
-                                inp_vector = xbar_mapping_info.inputs
-                                for data in inp_vector:
-                                    if data != 0:
-                                        edram_read_data.add(data)
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    inp_vector = xbar_mapping_info.inputs
+                                    for data in inp_vector:
+                                        if data != 0:
+                                            edram_read_data.add(data)
                         edram_read_data = list(edram_read_data)
 
                         if not edram_read_data:
@@ -673,13 +678,14 @@ class OrderGenerator(object):
                         max_ou = 0
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if 0 in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
-                                inp_vector = xbar_mapping_info.inputs
-                                num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
-                                num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
-                                num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
-                                num_ou_in_xb[xb_idx] = num_ou
-                                max_ou = max(num_ou, max_ou)
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    inp_vector = xbar_mapping_info.inputs
+                                    num_ou_h = ceil(len(inp_vector)/ self.hw_config.OU_h)
+                                    num_ou_w = ceil(xbar_mapping_info.Cols / self.hw_config.OU_w)
+                                    num_ou = num_ou_h * num_ou_w * self.model_info.input_bit
+                                    num_ou_in_xb[xb_idx] = num_ou
+                                    max_ou = max(num_ou, max_ou)
 
                         cu_op_inputs  = [max_ou, num_ou_in_xb]
                         cu_op_outputs = 0
@@ -699,11 +705,12 @@ class OrderGenerator(object):
                         cu_operate_filter = set()
                         for xb_idx in range(self.hw_config.Xbar_num):
                             if 0 in self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer]:
-                                xbar_mapping_info = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
-                                if xbar_mapping_info:
-                                    filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
-                                    for f in filter_list:
-                                        cu_operate_filter.add(f)
+                                xbar_mapping_info_list = self.mp_info.mapping_to_xbar[rty_idx][rtx_idx][pey_idx][pex_idx][cu_idx][xb_idx][nlayer][0]
+                                for xbar_mapping_info in xbar_mapping_info_list:
+                                    if xbar_mapping_info:
+                                        filter_list = xbar_mapping_info.Filters # 此xbar 會計算到的 filter
+                                        for f in filter_list:
+                                            cu_operate_filter.add(f)
                         saa_amount = len(cu_operate_filter)
                         pe_saa_inputs  = saa_amount
 
@@ -714,6 +721,8 @@ class OrderGenerator(object):
                        #-------------------#
 
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
+                    rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
+                    pey_idx, pex_idx = pe_pos[2], pe_pos[3]
                    # 1. 在此PE做activation, edram_write, transfer
                     if pe_filter_processing[pe_pos]["act"]:
                        #---Event: activation---#
@@ -826,6 +835,8 @@ class OrderGenerator(object):
                        #---------------------#
 
                 for pe_pos in self.mp_info.layer_used_component[nlayer]:
+                    rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
+                    pey_idx, pex_idx = pe_pos[2], pe_pos[3]
                    # 4. 剩下需要跨PE做 S+A, activation, edram write 的event
                     if pe_filter_processing[pe_pos]["aggregate"]:
                        #---Event: edram_rd---#

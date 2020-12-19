@@ -128,7 +128,10 @@ class LIDR(object):
                             window_h, window_w = window[0], window[1]
                             input_vector_data = Input_vectors[window_h][window_w]
                             Inp = input_vector_data[start_pos:end_pos]
-                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)] = MappingMetaData(Inp, Cols, Filters)
+                            if (window_h, window_w) in self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer]:
+                                self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)].append(MappingMetaData(Inp, Cols, Filters))
+                            else:
+                                self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)] = [MappingMetaData(Inp, Cols, Filters)]
 
                         # next crossbar position
                         xb_n += 1
@@ -220,8 +223,11 @@ class LIDR(object):
                             end_pos = matrix_height
 
                         Inp = input_vetor[start_pos:end_pos]
-                        self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0] = MappingMetaData(Inp, Cols, Filters)
-                        
+                        if 0 in self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer]:
+                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0].append(MappingMetaData(Inp, Cols, Filters))
+                        else:
+                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0] = [MappingMetaData(Inp, Cols, Filters)]
+
                         # next crossbar position
                         xb_n += 1
                         if xb_n >= self.hw_config.Xbar_num:
@@ -251,7 +257,6 @@ class LIDR(object):
                                                     rt_h, rt_w = 0, 0
                                 if rt_h == self.RTY and rt_w == self.RTX and pe_h == self.PEY and pe_w == self.PEX:
                                     rt_h, rt_w, pe_h, pe_w = 0, 0, 0, 0
-                
                 # next layer next PE
                 if cu_n != 0 or xb_n != 0:
                     cu_n, xb_n = 0, 0
@@ -436,7 +441,10 @@ class HIDR(object):
                             window_h, window_w = window[0], window[1]
                             input_vector_data = Input_vectors[window_h][window_w]
                             Inp = input_vector_data[start_pos:end_pos]
-                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)] = MappingMetaData(Inp, Cols, Filters)
+                            if (window_h, window_w) in self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer]:
+                                self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)].append(MappingMetaData(Inp, Cols, Filters))
+                            else:
+                                self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][(window_h, window_w)] = [MappingMetaData(Inp, Cols, Filters)]
 
                         # next crossbar position
                         xb_n += 1
@@ -529,8 +537,11 @@ class HIDR(object):
                         Cols = len(Filters) * self.cells_per_weight
                         
                         Inp = input_vetor[start_pos:end_pos]
-                        self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0] = MappingMetaData(Inp, Cols, Filters)
-                        
+                        if 0 in self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer]:
+                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0].append(MappingMetaData(Inp, Cols, Filters))
+                        else:
+                            self.mapping_to_xbar[rt_h][rt_w][pe_h][pe_w][cu_n][xb_n][nlayer][0] = [MappingMetaData(Inp, Cols, Filters)]
+
                         # next crossbar position
                         xb_n += 1
                         if xb_n >= self.hw_config.Xbar_num:
