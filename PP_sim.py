@@ -95,7 +95,7 @@ def main():
         # Save Order
         if not os.path.exists('./order_file/'):
             os.makedirs('./order_file/')
-        filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'.pkl'
+            
         with open(filename, 'wb') as output:
             pickle.dump(order_generator, output, pickle.HIGHEST_PROTOCOL)
     
