@@ -29,7 +29,7 @@ def main():
     hw_config = HardwareConfig(buffer_size)
 
     LoadOrder = True
-    filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'/'+buffer_size_str+'.pkl'
+    filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'_'+buffer_size_str+'.pkl'
     try:
         with open(filename, 'rb') as input:
             order_generator = pickle.load(input)
@@ -95,7 +95,6 @@ def main():
         # Save Order
         if not os.path.exists('./order_file/'):
             os.makedirs('./order_file/')
-            
         with open(filename, 'wb') as output:
             pickle.dump(order_generator, output, pickle.HIGHEST_PROTOCOL)
     
