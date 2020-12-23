@@ -112,6 +112,9 @@ class Controller(object):
                 pe_idx = pos[:-1]
                 pe = self.PE_array[pe_idx]
                 pe.edram_erp.append(event)
+                if len(pe.edram_erp) > 1:
+                    print("error: edram_erp len > 1")
+                    exit()
                 self.edram_pe_idx.add(pe)
         
         while True:
@@ -153,6 +156,9 @@ class Controller(object):
                         pe = trigger[0]
                         event = trigger[1]
                         pe.edram_erp.append(event)
+                        if len(pe.edram_erp) > 1:
+                            print("error: edram_erp len > 1")
+                            exit()
                         self.edram_pe_idx.add(pe)
                     
                     self.Non_pipeline_trigger = []
@@ -183,6 +189,9 @@ class Controller(object):
                 
                 if event.event_type == "edram_rd_ir" or event.event_type == "edram_rd" or event.event_type == "edram_wr":
                     pe.edram_erp.append(event)
+                    if len(pe.edram_erp) > 1:
+                        print("error: edram_erp len > 1")
+                        exit()
                     self.edram_pe_idx.add(pe)
                     
                 elif event.event_type == "cu_operation":
@@ -202,6 +211,9 @@ class Controller(object):
                                     self.pe_saa_pe_idx.add(pe)
                                 elif pro_event.event_type == "edram_rd_ir":
                                         pe.edram_erp.append(pro_event)
+                                        if len(pe.edram_erp) > 1:
+                                            print("error: edram_erp len > 1")
+                                            exit()
                                         self.edram_pe_idx.add(pe)
                     
                 elif event.event_type == "activation":
