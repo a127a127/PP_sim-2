@@ -31,7 +31,6 @@ class PE(object):
         self.cu_op_erp        = 0
         self.pe_saa_erp       = collections.deque()
         self.activation_erp   = collections.deque()
-        self.edram_wr_erp     = collections.deque()
         self.pooling_erp      = collections.deque()
 
         ### Energy
