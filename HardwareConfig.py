@@ -22,8 +22,10 @@ class HardwareConfig(object):
         
         # on-chip eDRAM buffer
         self.eDRAM_buffer_size  = buffer_size # KB
-        self.eDRAM_buffer_banks_num = 2
+        self.eDRAM_buffer_bandwidth = 10.24 # GB/s
         self.eDRAM_buffer_bus_width = 256 # bits
+        self.eDRAM_buffer_rd_wr_data_per_cycle = None
+        self.eDRAM_buffer_read_to_IR_cycles = None
 
         # bus
         self.bus_wires = 384

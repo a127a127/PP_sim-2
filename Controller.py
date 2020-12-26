@@ -331,7 +331,7 @@ class Controller(object):
                     pe.CU_IR_energy        += self.hw_config.Energy_ir_in_cu     * self.input_bit * num_data # IR write
                     
                     # Trigger: CU operation and edram
-                    finish_cycle = self.cycle_ctr + 1
+                    finish_cycle = self.cycle_ctr + self.hw_config.eDRAM_buffer_read_to_IR_cycles
                     for proceeding_index in event.proceeding_event:
                         pro_event = self.Computation_order[proceeding_index]
                         pro_event.current_number_of_preceding_event += 1
@@ -667,13 +667,9 @@ class Controller(object):
         tt = time.time()
         if self.cycle_ctr in self.fetch_dict:
             fetch_list = self.fetch_dict[self.cycle_ctr]
-            #del self.fetch_dict[self.cycle_ctr]
             for F in fetch_list:
                 event, transfer_data = F[0], F[1]
-                # event_id = self.Computation_order.index(event)
-                # transfer_data = event.inputs
                 data_transfer_des = event.position_idx[:4]
-                # data_transfer_src = (0, data_transfer_des[1], data_transfer_des[2], data_transfer_des[3])
                 transfer_distance = data_transfer_des[0]
 
                 num_data = len(transfer_data)

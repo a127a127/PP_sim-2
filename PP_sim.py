@@ -5,7 +5,7 @@ from Controller import Controller
 from ModelConfig import ModelConfig
 from HardwareConfig import HardwareConfig
 
-import time, sys, os, pickle
+import time, sys, os, pickle, math
 
 # 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
 # 2. Model.py: 多一個Model_type參數
@@ -27,6 +27,8 @@ def main():
     model_config = ModelConfig(model)
     model_info = Model(model_config)
     hw_config = HardwareConfig(buffer_size)
+    hw_config.eDRAM_buffer_rd_wr_data_per_cycle = hw_config.eDRAM_buffer_bandwidth * 8 // model_info.input_bit * hw_config.cycle_time
+    hw_config.eDRAM_buffer_read_to_IR_cycles = math.ceil(hw_config.Xbar_h * hw_config.Xbar_num / hw_config.eDRAM_buffer_rd_wr_data_per_cycle)
 
     LoadOrder = True
     filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'_'+buffer_size_str+'.pkl'
