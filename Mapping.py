@@ -69,8 +69,8 @@ class LIDR(object):
                 ## Window's Order: 決定此layer window 的先後順序
                 o_height = self.model_info.input_h[nlayer+1]
                 o_width = self.model_info.input_w[nlayer+1]
-                for window_h in range(o_height):
-                    for window_w in range(o_width):
+                for window_w in range(o_width):
+                    for window_h in range(o_height):
                         self.window_order[nlayer].append((window_h, window_w))
                 
                 ## Input vectors: 準備input data
@@ -382,8 +382,8 @@ class HIDR(object):
                 ## Window's Order: 決定此layer window 的先後順序
                 o_height = self.model_info.input_h[nlayer+1]
                 o_width = self.model_info.input_w[nlayer+1]
-                for window_h in range(o_height):
-                    for window_w in range(o_width):
+                for window_w in range(o_width):
+                    for window_h in range(o_height):
                         self.window_order[nlayer].append((window_h, window_w))
                 
                 ## Input vectors: 準備input data
@@ -634,3 +634,4 @@ class HIDR(object):
 
     def __str__(self):
         return str(self.__dict__)
+

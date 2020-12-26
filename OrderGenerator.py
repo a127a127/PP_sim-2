@@ -64,7 +64,7 @@ class OrderGenerator(object):
                             c = data[3]
                             n = w + h * self.model_info.input_w[nlayer] + c * self.model_info.input_w[nlayer] * self.model_info.input_h[nlayer]           
                             self.fm_data_used_pe_idx[nlayer][n].add(pe_pos)
-       #------------------------------------------#
+       #-----------------------------------------------------------------#
        
        #---後面用來紀錄feature map data transfer event的index---#
         self.fm_data_transfer_event_idx = []
@@ -85,6 +85,7 @@ class OrderGenerator(object):
                     for cu_idx in range(self.hw_config.CU_num):
                         self.CU_dependency_idx.append(-1)
        #-------------------------------------------------------# 
+       
        #--用來紀錄每個PE內eDRAM的event index-----#
         self.PE_EDRAM_DEPENDENCY = True
         if self.PE_EDRAM_DEPENDENCY:
@@ -93,11 +94,10 @@ class OrderGenerator(object):
                 for rtx_idx in range(self.hw_config.Router_num_x):
                     for pe_idx in range(self.hw_config.PE_num):
                         self.PE_dependency_idx.append(-1)
-       #-------------------------------------#
+       #--------------------------------------#
 
         self.Computation_order = []
         self.generate_order()
-        
         self.print_order()
        
     def generate_order(self):
@@ -164,7 +164,7 @@ class OrderGenerator(object):
                         pe_saa_event_dict[pe_pos] = []
                         wr_and_transfer_event_dict[pe_pos] = []
 
-                   #---generate events--#
+                   #---generate events---#
                     for pe_pos in self.mp_info.layer_used_component[nlayer]:
                         rty_idx, rtx_idx = pe_pos[0], pe_pos[1]
                         pey_idx, pex_idx = pe_pos[2], pe_pos[3]
@@ -213,14 +213,14 @@ class OrderGenerator(object):
                             else:
                                 eri_preceding_count = len(pre_event)
                             
-
                             # dependency: different windows dependency
                             cu_id = cu_idx + pex_idx * self.hw_config.CU_num + pey_idx * self.hw_config.PE_num_x * self.hw_config.CU_num + \
                                     rtx_idx * self.hw_config.PE_num * self.hw_config.CU_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num * self.hw_config.CU_num
                             pre_cu_op_id = self.CU_dependency_idx[cu_id]
                             if pre_cu_op_id > -1:
                                 eri_preceding_count += 1
-                                self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
+                                if eri_event_idx not in self.Computation_order[pre_cu_op_id].proceeding_event:
+                                    self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
                             
                             # dependency: eDRAM event dependency in same PE
                             if self.PE_EDRAM_DEPENDENCY:
@@ -448,7 +448,7 @@ class OrderGenerator(object):
                            #---Event: edram_rd---#
                             eri_event_idx = len(self.Computation_order)
                             eri_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                            eri_preceding_count = len(wr_and_transfer_event_dict[pe_pos])
+                            eri_preceding_count = 0 #len(wr_and_transfer_event_dict[pe_pos])
                                 
                             # 準備edram read一次讀多少data
                             edram_read_data = []
@@ -463,17 +463,23 @@ class OrderGenerator(object):
                                     rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
                                 pre_edram_id = self.PE_dependency_idx[pe_id]
                                 if pre_edram_id != -1:
-                                    eri_preceding_count += 1
-                                    self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                                    if eri_event_idx not in self.Computation_order[pre_edram_id].proceeding_event:
+                                        eri_preceding_count += 1
+                                        self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
                                 self.PE_dependency_idx[pe_id] = eri_event_idx
+                            
+                            # dependency
+                            for event_idx in wr_and_transfer_event_dict[pe_pos]:
+                                if eri_event_idx not in self.Computation_order[event_idx].proceeding_event:
+                                    eri_preceding_count += 1
+                                    self.Computation_order[event_idx].proceeding_event.append(eri_event_idx)
 
                             eri_inputs  = edram_read_data
                             eri_outputs = 0
                             event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
                             self.Computation_order.append(event)
 
-                            for event_idx in wr_and_transfer_event_dict[pe_pos]:
-                                self.Computation_order[event_idx].proceeding_event.append(eri_event_idx)
+                            
                             ### input requirement
                             #
                            #---------------------#
@@ -680,7 +686,8 @@ class OrderGenerator(object):
                         pre_cu_op_id = self.CU_dependency_idx[cu_id]
                         if pre_cu_op_id > -1:
                             eri_preceding_count += 1
-                            self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
+                            if eri_event_idx not in self.Computation_order[pre_cu_op_id].proceeding_event:
+                                self.Computation_order[pre_cu_op_id].proceeding_event.append(eri_event_idx)
                         
                         # dependency: eDRAM event dependency in same PE
                         if self.PE_EDRAM_DEPENDENCY:
@@ -892,7 +899,7 @@ class OrderGenerator(object):
                        #---Event: edram_rd---#
                         eri_event_idx = len(self.Computation_order)
                         eri_position_idx = (rty_idx, rtx_idx, pey_idx, pex_idx)
-                        eri_preceding_count = len(wr_and_transfer_event_dict[pe_pos])
+                        eri_preceding_count = 0 #len(wr_and_transfer_event_dict[pe_pos])
                             
                         # 準備edram read一次讀多少data
                         edram_read_data = []
@@ -907,17 +914,22 @@ class OrderGenerator(object):
                                 rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
                             pre_edram_id = self.PE_dependency_idx[pe_id]
                             if pre_edram_id != -1:
-                                eri_preceding_count += 1
-                                self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                                if eri_event_idx not in self.Computation_order[pre_edram_id].proceeding_event:
+                                    eri_preceding_count += 1
+                                    self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
                             self.PE_dependency_idx[pe_id] = eri_event_idx
+                        
+                        # dependency
+                        for event_idx in wr_and_transfer_event_dict[pe_pos]:
+                            if eri_event_idx not in self.Computation_order[event_idx].proceeding_event:
+                                eri_preceding_count += 1
+                                self.Computation_order[event_idx].proceeding_event.append(eri_event_idx)
                         
                         eri_inputs  = edram_read_data
                         eri_outputs = 0
                         event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
                         self.Computation_order.append(event)
 
-                        for event_idx in wr_and_transfer_event_dict[pe_pos]:
-                            self.Computation_order[event_idx].proceeding_event.append(eri_event_idx)
                         ### input requirement
                         #
                        #---------------------#
@@ -1031,6 +1043,7 @@ class OrderGenerator(object):
                             for data in pool_inp[1]:
                                 edram_read_data.add(data)
                         edram_read_data = list(edram_read_data)
+
                         # dependency: transfer -> edram_rd
                         pre_event = set()
                         if nlayer != 0:
@@ -1053,16 +1066,15 @@ class OrderGenerator(object):
                                 rtx_idx * self.hw_config.PE_num + rty_idx * self.hw_config.Router_num_x * self.hw_config.PE_num
                             pre_edram_id = self.PE_dependency_idx[pe_id]
                             if pre_edram_id != -1:
-                                eri_preceding_count += 1
-                                self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
+                                if eri_event_idx not in self.Computation_order[pre_edram_id].proceeding_event:
+                                    eri_preceding_count += 1
+                                    self.Computation_order[pre_edram_id].proceeding_event.append(eri_event_idx)
                             self.PE_dependency_idx[pe_id] = eri_event_idx
 
                         eri_inputs  = edram_read_data
                         eri_outputs = 0
                         event = EventMetaData("edram_rd", eri_position_idx, eri_preceding_count, [eri_event_idx+1], nlayer, eri_inputs, eri_outputs)
                         self.Computation_order.append(event)
-                        ### input requirement
-                        #
                        #---------------------#
                        
                        #---Event: pooling---#
@@ -1173,7 +1185,10 @@ class OrderGenerator(object):
                     layer += 1
                     print()
                     print("layer:", e.nlayer)
-                print(self.Computation_order.index(e), e)
+                
+                print(self.Computation_order.index(e), e.event_type, e.proceeding_event)
+                if e.event_type == "edram_rd_ir" or "edram_rd":
+                    print(e.inputs)
 
     def __str__(self):
         return str(self.__dict__)
