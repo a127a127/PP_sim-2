@@ -22,7 +22,7 @@ class HardwareConfig(object):
         
         # on-chip eDRAM buffer
         self.eDRAM_buffer_size  = buffer_size # KB
-        self.eDRAM_buffer_bandwidth = 10.24 # GB/s
+        self.eDRAM_buffer_bandwidth = 20.48 # GB/s
         self.eDRAM_buffer_bus_width = 256 # bits
         self.eDRAM_buffer_rd_wr_data_per_cycle = None
         self.eDRAM_buffer_read_to_IR_cycles = None
@@ -64,9 +64,7 @@ class HardwareConfig(object):
         self.links_bw = 6.4 # GB/s
 
         self.cycle_time = 7.68 # 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from W. H. Chen's paper
-        self.interconnect_step_num = int(self.cycle_time // self.router_frequency) # router frequency = PE frequency
-        self.eDRAM_buffer_read_bits  = floor(256 * self.PE_frequency * self.cycle_time) # bits / per cycle
-        # self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
+        self.interconnect_step_num = int(self.cycle_time * self.router_frequency) # router frequency = PE frequency
 
         # Power (W)
         self.Power_eDRAM_buffer = 20.7 / 1000
@@ -121,12 +119,10 @@ class HardwareConfig(object):
         # self.Leakage_off_chip = 52.8mW
 
         # Off-chip:
-        self.Fetch_Rd_BW = 3.2 # GB/s = B/ns = 8b/ns
+        self.off_chip_Rd_bw = 3.2 # GB/s
+        self.off_chip_Wr_bw = 3.2 # GB/s
         self.Energy_off_chip_Rd = 80.3   / 1000 / 8 # nJ per bit
         self.Energy_off_chip_Wr = 82.719 / 1000 / 8 # nJ per bit
-        self.Fetch_cycle  = 20 # TODO
-        # self.Leakage_off_chip = 52.8 / 1000 # W
-
         
     def __str__(self):
         return str(self.__dict__)

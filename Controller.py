@@ -145,7 +145,7 @@ class Controller(object):
             ## Pipeline stage control ###
             if not self.isPipeLine: # Non_pipeline
                 self.this_layer_cycle_ctr += 1
-                if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage]:
+                if self.this_layer_event_ctr == self.events_each_layer[self.pipeline_layer_stage] and not self.interconnect.busy_router:
                     self.pipeline_layer_stage += 1
                     print("\n------Layer", self.pipeline_layer_stage)
                     self.cycles_each_layer.append(self.this_layer_cycle_ctr)
@@ -300,19 +300,21 @@ class Controller(object):
             elif event.event_type == "edram_rd_ir":
                 edram_rd_data = event.inputs
                 # check data
-                Fetch = []
+                Fetch_data = []
                 for data in edram_rd_data:
                     if not pe.edram_buffer.get(data):
-                        Fetch.append(data)
+                        Fetch_data.append(data)
                         pe.edram_buffer.miss += 1
-                if Fetch:
+                if Fetch_data:
                     if self.trace:
                         print("\tfetch event_idx:", self.Computation_order.index(event))
-                    fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle # TODO
-                    if fetch_finished in self.fetch_dict: # TODO
-                        self.fetch_dict[fetch_finished].append([event, Fetch]) # TODO
-                    else: # TODO 
-                        self.fetch_dict[fetch_finished] = [[event, Fetch]] # TODO
+
+                    event.current_number_of_preceding_event -= 1
+                    finish_cycle = self.cycle_ctr + 1
+                    if finish_cycle in self.fetch_dict:
+                        self.fetch_dict[finish_cycle].append([event, Fetch_data])
+                    else:
+                        self.fetch_dict[finish_cycle] = [[event, Fetch_data]]
                 else:
                     if self.trace:
                         print("\tdo edram_rd_ir event_idx:", self.Computation_order.index(event),", layer", event.nlayer)
@@ -359,20 +361,21 @@ class Controller(object):
             elif event.event_type == "edram_rd":
                 edram_rd_data = event.inputs
                 # check data
-                Fetch = []
+                Fetch_data = []
                 for data in edram_rd_data:
                     if not pe.edram_buffer.get(data):
-                        Fetch.append(data)
+                        Fetch_data.append(data)
                         pe.edram_buffer.miss += 1
-                if Fetch:
+                if Fetch_data:
                     if self.trace:
                         print("\tfetch event_idx:", self.Computation_order.index(event))
-
-                    fetch_finished = self.cycle_ctr + self.hw_config.Fetch_cycle # TODO
-                    if fetch_finished in self.fetch_dict: # TODO
-                        self.fetch_dict[fetch_finished].append([event, Fetch]) # TODO
+                    
+                    event.current_number_of_preceding_event -= 1
+                    finish_cycle = self.cycle_ctr + 1
+                    if finish_cycle in self.fetch_dict:
+                        self.fetch_dict[finish_cycle].append([event, Fetch_data])
                     else: # TODO 
-                        self.fetch_dict[fetch_finished] = [[event, Fetch]] # TODO
+                        self.fetch_dict[finish_cycle] = [[event, Fetch_data]]
                 else:
                     if self.trace:
                         print("\tdo edram_rd event_idx:", self.Computation_order.index(event),", layer", event.nlayer)
@@ -654,11 +657,6 @@ class Controller(object):
                 data = transfer_data[-1]
                 packet = Packet(data_transfer_src, data_transfer_des, data, event.proceeding_event, self.cycle_ctr)
                 self.interconnect.input_packet(packet)
-
-            # free mem
-            # event_idx = self.Computation_order.index(event)
-            # self.Computation_order[event_idx] = 0
-
         self.data_transfer_erp = []
 
         self.t_transfer += time.time() - tt
@@ -669,48 +667,31 @@ class Controller(object):
             fetch_list = self.fetch_dict[self.cycle_ctr]
             for F in fetch_list:
                 event, transfer_data = F[0], F[1]
-                data_transfer_des = event.position_idx[:4]
-                transfer_distance = data_transfer_des[0]
-
+                event_idx = self.Computation_order.index(event)
                 num_data = len(transfer_data)
+                rty, rtx = event.position_idx[0], event.position_idx[1]
+                pey, pex = event.position_idx[2], event.position_idx[3]
+                data_transfer_src = (0, rtx)
+                data_transfer_des = (rty, rtx, pey, pex)
+
+                # Energy
+                self.Total_energy_fetch += self.hw_config.Energy_off_chip_Rd * self.input_bit * num_data
+
+                for i in range(len(transfer_data)-1):
+                    data = transfer_data[i]
+                    packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
+                    self.interconnect.input_packet(packet)
+                data = transfer_data[-1]
+                packet = Packet(data_transfer_src, data_transfer_des, data, [event_idx], self.cycle_ctr)
+                self.interconnect.input_packet(packet)
+
+                # Statistic
                 nlayer = event.nlayer
                 if len(transfer_data[0]) == 4:
                     self.transfer_data_fm[nlayer] += num_data
                 else:
                     self.transfer_data_inter[nlayer] += num_data
                 self.fetch_data[nlayer] += num_data
-
-                # Energy
-                self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * num_data * (transfer_distance + 1)
-                self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * num_data * (transfer_distance + 1)
-                self.Total_energy_fetch += self.hw_config.Energy_off_chip_Rd * self.input_bit * num_data
-
-                # 直接放資料
-                # Trigger
-                self.transfer_cycles[nlayer] += (transfer_distance + 1) * num_data
-                finish_cycle = self.cycle_ctr + 1 + transfer_distance + 1
-                des_pe = self.PE_array[data_transfer_des]
-                if finish_cycle not in self.Trigger:
-                    self.Trigger[finish_cycle] = [[des_pe, event]]
-                else:
-                    self.Trigger[finish_cycle].append([des_pe, event])
-                for data in transfer_data:
-                    K = des_pe.edram_buffer.put(data, data)
-                    if K: # kick data out of buffer
-                        # TODO: simulate data transfer
-                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
-                        transfer_distance = data_transfer_des[0]
-                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
-                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
-                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
-
-                # for i in range(len(transfer_data)-1):
-                #     data = transfer_data[i]
-                #     packet = Packet(data_transfer_src, data_transfer_des, data, [], self.cycle_ctr)
-                #     self.interconnect.input_packet(packet)
-                # data = transfer_data[-1]
-                # packet = Packet(data_transfer_src, data_transfer_des, data, [event_id], self.cycle_ctr)
-                # self.interconnect.input_packet(packet)
 
         self.t_fetch += time.time() - tt
 
@@ -746,7 +727,7 @@ class Controller(object):
                     for proceeding_index in pro_event_list:
                         pro_event = self.Computation_order[proceeding_index]
                         pro_event.current_number_of_preceding_event += 1
-                        if pro_event.preceding_event_count <= pro_event.current_number_of_preceding_event:
+                        if pro_event.preceding_event_count == pro_event.current_number_of_preceding_event:
                             if not self.isPipeLine and pro_event.nlayer != self.pipeline_layer_stage: # Non_pipeline
                                 self.Non_pipeline_trigger.append([des_pe, pro_event, []])
                             else:

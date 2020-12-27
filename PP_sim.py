@@ -27,7 +27,7 @@ def main():
     model_config = ModelConfig(model)
     model_info = Model(model_config)
     hw_config = HardwareConfig(buffer_size)
-    hw_config.eDRAM_buffer_rd_wr_data_per_cycle = hw_config.eDRAM_buffer_bandwidth * 8 // model_info.input_bit * hw_config.cycle_time
+    hw_config.eDRAM_buffer_rd_wr_data_per_cycle = int(hw_config.eDRAM_buffer_bandwidth * 8 // model_info.input_bit * hw_config.cycle_time)
     hw_config.eDRAM_buffer_read_to_IR_cycles = math.ceil(hw_config.Xbar_h * hw_config.Xbar_num / hw_config.eDRAM_buffer_rd_wr_data_per_cycle)
 
     LoadOrder = True
