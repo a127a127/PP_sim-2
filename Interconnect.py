@@ -23,6 +23,7 @@ class Interconnect(object):
     def step(self):
         arrived_packet = []
         br = set()
+        data_transfers = []
         for router in self.busy_router:
             packet, direction = router.step()
             h = router.pos[0]
@@ -33,6 +34,8 @@ class Interconnect(object):
             if direction == "arrived":
                 arrived_packet.append(packet)
             else:
+                ori_h = h
+                ori_w = w
                 if direction == "north":
                     h -= 1
                 elif direction == "south":
@@ -44,10 +47,11 @@ class Interconnect(object):
                 else:
                     print("interconnect error")
                     exit()
+                data_transfers.append(([ori_h, ori_w], [h, w], packet))
                 self.router_array[h][w].input_queue.append(packet)
                 br.add(self.router_array[h][w])
         self.busy_router = br
-        return arrived_packet
+        return arrived_packet, data_transfers
 
     def __str__(self):
         return str(self.__dict__)

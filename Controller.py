@@ -15,7 +15,7 @@ class Controller(object):
         self.model_config = model_config
         self.hw_config = hw_config
         self.ordergenerator = ordergenerator
-        self.trace = True
+        self.trace = False
         self.mapping_str = mapping_str
         self.scheduling_str = scheduling_str
         self.interconnect = Interconnect(self.hw_config)
@@ -325,7 +325,7 @@ class Controller(object):
 
                 finish_cycle = self.cycle_ctr + 1
                 # FIXME: a127a127
-                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
+                #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
                 
                 if finish_cycle not in self.Trigger:
                     self.Trigger[finish_cycle] = [[pe, pro_event]]
@@ -383,7 +383,7 @@ class Controller(object):
             finish_cycle = self.cycle_ctr + event.inputs[0] + 2 # +2: pipeline last two stage
 
             # FIXME: a127a127
-            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
+            #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
 
             if hasattr(event, 'window_id'):
                 if not 'window_event' in self.log:
@@ -427,7 +427,7 @@ class Controller(object):
                 self.this_layer_event_ctr += 1
 
             # FIXME: a127a127
-            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+            #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             saa_amount = event.inputs
@@ -473,7 +473,7 @@ class Controller(object):
                 self.this_layer_event_ctr += 1
 
             # FIXME: a127a127
-            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+            #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             # Energy
             act_amount = event.inputs
@@ -513,7 +513,7 @@ class Controller(object):
                 print("\tdo edram_wr event_idx:", self.Computation_order.index(event))
 
             # FIXME: a127a127
-            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+            #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
             
             self.done_event += 1
             if not self.isPipeLine:
@@ -573,7 +573,10 @@ class Controller(object):
                 print("\tdo pooling event_idx:", self.Computation_order.index(event))
 
             # FIXME: a127a127
-            self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+            #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+            if not 'pooling' in self.log:
+                self.log['pooling'] = []
+            self.log['pooling'].append((self.cycle_ctr, event))
             
             self.done_event += 1
             if not self.isPipeLine:
@@ -621,12 +624,17 @@ class Controller(object):
             data_transfer_des = event.position_idx[1]
             des_pe = self.PE_array[data_transfer_des]
 
+            # FIXME: a127a127
+            if not 'data_transfer' in self.log:
+                self.log['data_transfer'] = []
+
             if data_transfer_src == data_transfer_des:
                 # Trigger
                 finish_cycle = self.cycle_ctr + 1
 
                 # FIXME: a127a127
-                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+                #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + 1]
+                self.log['data_transfer'].append((self.cycle_ctr, transfer_data, data_transfer_src[0:2], data_transfer_des[0:2]))
 
                 for data in transfer_data:
                     K = des_pe.edram_buffer.put(data, data)
@@ -673,7 +681,7 @@ class Controller(object):
                 self.interconnect.input_packet(packet)
 
                 # FIXME: a127a127
-                self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + transfer_distance]
+                #self.log[self.Computation_order.index(event)] = [self.cycle_ctr, self.cycle_ctr + transfer_distance]
 
             # free mem
             # event_idx = self.Computation_order.index(event)
@@ -747,7 +755,9 @@ class Controller(object):
     def interconnect_fn(self):
         tt = time.time()
         for s in range(self.hw_config.interconnect_step_num):
-            arrived = self.interconnect.step()
+            arrived, data_transfers = self.interconnect.step()
+            for data_transfer in data_transfers:
+                self.log['data_transfer'].append((self.cycle_ctr, [data_transfer[2].data], data_transfer[0], data_transfer[1]))
             for packet in arrived:
                 des_pe_id = packet.destination
                 des_pe = self.PE_array[des_pe_id]
