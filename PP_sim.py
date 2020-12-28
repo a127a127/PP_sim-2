@@ -1,6 +1,5 @@
-from Mapping import LowInputReuseMapping
-from Mapping import HighInputReuseMapping
-
+from Model import Model
+from Mapping import LIDR, HIDR
 from OrderGenerator import OrderGenerator
 from ISAACOrderGenerator import ISAACOrderGenerator
 from Controller import Controller
@@ -11,115 +10,119 @@ from Visualizer import Visualizer
 import time, sys, os
 import jsons, jsbeautifier
 from tqdm import tqdm
+import pickle, math
+
+# 1. 本來mappy.py, Ordergenerator 吃 model_config, 現在吃model_info model_info = Model(model_config)
+# 2. Model.py: 多一個Model_type參數
+# 3. Mapping 多紀錄CU index
+# 4. Controller: 支援前面Ordergenerator的修改
+
 
 def main():
-    start_time     = time.time()
-
-    model_name     = sys.argv[1]
-    mapping        = sys.argv[2]
-    scheduling     = sys.argv[3]
+    start_time = time.time()
+    model      = sys.argv[1]
+    mapping    = sys.argv[2]
+    scheduling = sys.argv[3]
     partition_h = int(sys.argv[4])
     partition_w = int(sys.argv[5])
+    mapping_str = mapping+sys.argv[4]+"_"+sys.argv[5]
+    buffer_size_str = sys.argv[6]
+    buffer_size = int(sys.argv[6])
+    
+    model_config = ModelConfig(model)
+    model_info = Model(model_config)
+    hw_config = HardwareConfig(buffer_size)
+    hw_config.eDRAM_buffer_rd_wr_data_per_cycle = int(hw_config.eDRAM_buffer_bandwidth * 8 // model_info.input_bit * hw_config.cycle_time)
+    hw_config.eDRAM_buffer_read_to_IR_cycles = math.ceil(hw_config.Xbar_h * hw_config.Xbar_num / hw_config.eDRAM_buffer_rd_wr_data_per_cycle)
 
-    model_config = ModelConfig(model_name)
-    hw_config    = HardwareConfig()
+    LoadOrder = True
+    filename = './order_file/'+model_config.Model_type+'_'+mapping_str+'_'+scheduling+'_'+buffer_size_str+'.pkl'
+    try:
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
+    except FileNotFoundError:
+        print("Order file not found.")
+        LoadOrder = False
+
+    ### output path ###
+    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling+'/'+buffer_size_str
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     ### Mapping ##
-    start_mapping_time = time.time()
-    print("--- Mapping ---")
-    print("Mapping policy:  ", end="")
+    if not LoadOrder:
+        cant_use_pe = (13, 12, 1, 1) # 讓不同的實驗設定下，使用相同數量的PE
+        # Used PE: Lenet:6, Cifar10: 5, DeepID: 6, Caffenet: 321, Overfeat: 568, VGG16: 708
+        if model == "Lenet":
+            cant_use_pe = (0, 1, 1, 0)
+        elif model == "Cifar10":
+            cant_use_pe = (0, 1, 0, 1)
+        elif model == "DeepID":
+            cant_use_pe = (0, 1, 1, 0)
+        elif model == "Caffenet":
+            cant_use_pe = (6, 2, 0, 1)
+        elif model == "Overfeat":
+            cant_use_pe = (10, 12, 0, 0)
+        elif model == "VGG16":
+            cant_use_pe = (13, 4, 0, 0)
 
-    # Lenet:    (0, 0, 1, 1, 3, 2)
-    # Cifar10:  (0, 0, 0, 0, 6, 5)
-    # DeepID:   (0, 0, 0, 0, 8, 0)
-    # Caffenet: (6, 1, 0, 1, 5, 2)
-    # Overfeat: (10, 11, 1, 0, 4, 2)
-    # VGG16:    (0, 7, 1, 1, 11, 0)
-    if model_name == "Lenet":
-        CANT_USE_XB_INDEX = (0, 0, 1, 1, 3, 2)
-    elif model_name == "Cifar10":
-        CANT_USE_XB_INDEX = (0, 0, 0, 0, 6, 5)
-    elif model_name == "DeepID":
-        CANT_USE_XB_INDEX = (0, 0, 0, 0, 8, 0)
-    elif model_name == "Caffenet":
-        CANT_USE_XB_INDEX = (6, 1, 0, 1, 5, 2)
-    elif model_name == "Overfeat":
-        CANT_USE_XB_INDEX = (10, 11, 1, 0, 4, 2)
-    elif model_name == "VGG16":
-        CANT_USE_XB_INDEX = (0, 7, 1, 1, 11, 0)
+        cant_use_pe = (10000, 0, 1, 1, 3, 2)
+        
+        start_mapping_time = time.time()
+        print("--- Mapping ---")
+        print("Mapping policy:  ", end="")
+        if mapping == "LIDR":
+            print("Low input data reuse mapping")
+            mapping_information = LIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
+        elif mapping == "HIDR":
+            print("High input data reuse mapping")
+            mapping_information = HIDR(model_info, hw_config, partition_h, partition_w, cant_use_pe)
 
-    CANT_USE_XB_INDEX = (10000, 0, 1, 1, 3, 2)
+        end_mapping_time = time.time()
+        print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
-    from Model import Model
-    model = Model(model_config)
-    for nlayer in range(model.layer_length):
-        if model.layer_list[nlayer].layer_type == "convolution" or model.layer_list[nlayer].layer_type == "fully":
-            strides = model.strides[nlayer]
-            pad = model.pad[nlayer]
-            o_height = model.input_h[nlayer+1]
-            o_width = model.input_w[nlayer+1]
+    for nlayer in range(model_info.layer_length):
+        if model_info.layer_list[nlayer].layer_type == "convolution" or model_info.layer_list[nlayer].layer_type == "fully":
+            strides = model_info.strides[nlayer]
+            pad = model_info.pad[nlayer]
+            o_height = model_info.input_h[nlayer+1]
+            o_width = model_info.input_w[nlayer+1]
 
-            print(f'  - {nlayer} {model.layer_list[nlayer].layer_type}: [{model.input_c[nlayer]}, {model.input_h[nlayer]}, {model.input_w[nlayer]}] x [{model.filter_n[nlayer]}, {model.filter_c[nlayer]}, {model.filter_h[nlayer]}, {model.filter_w[nlayer]}] {strides}, {pad} -> [{model.input_c[nlayer+1]}, {o_height}, {o_width}]')
+            print(f'  - {nlayer} {model_info.layer_list[nlayer].layer_type}: [{model_info.input_c[nlayer]}, {model_info.input_h[nlayer]}, {model_info.input_w[nlayer]}] x [{model_info.filter_n[nlayer]}, {model_info.filter_c[nlayer]}, {model_info.filter_h[nlayer]}, {model_info.filter_w[nlayer]}] {strides}, {pad} -> [{model_info.input_c[nlayer+1]}, {o_height}, {o_width}]')
 
-    if mapping == "LIR":
-        print("Low Input data Reuse Mapping")
-        mapping_information = LowInputReuseMapping(model_config, hw_config, partition_h, partition_w, CANT_USE_XB_INDEX)
-        mapping_str = "Low_Input_data_Reuse_Mapping_"+sys.argv[4]+"_"+sys.argv[5]
-    elif mapping == "HIR":
-        print("High Input data Reuse Mapping")
-        mapping_information = HighInputReuseMapping(model_config, hw_config, partition_h, partition_w, CANT_USE_XB_INDEX)
-        mapping_str = "High_Input_data_Reuse_Mapping_"+sys.argv[4]+"_"+sys.argv[5]
-    elif mapping == "Count":
-        from Mapping import CaculateMappedCrossbarNum
-        mapping_information = CaculateMappedCrossbarNum(model_config, hw_config, 1, 1)
-        exit()
-    else:
-        print("Wrong mapping parameter")
-        exit()
-    
-    end_mapping_time = time.time()
-    print("--- Mapping: finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
-    
-    ### Scheduling ###
-    print("Scheduling policy: ", end="")
-    if scheduling == "Non-pipeline":
-        print("Non-pipeline")
-    elif scheduling == "Pipeline":
-        print("Pipeline")
-    else:
-        print("Wrong scheduling parameter")
-        exit()
-    print()
 
     ### Buffer Replacement ###
-    print("Buffer replacement policy: ", end="")
-    replacement = "LRU"
-    if replacement == "Ideal":
-        print("Ideal")
-    elif replacement == "LRU":
-        print("LRU")
-
-    ### path ###
-    path = './statistics/'+model_config.Model_type+'/'+mapping_str+'/'+scheduling
-    if not os.path.exists(path):
-            os.makedirs(path)
-    
-    mapping_information.mapping_layout(path)
+    # print("Buffer replacement policy: ", end="")
+    # replacement = "LRU"
+    # if replacement == "Ideal":
+    #     print("Ideal")
+    # elif replacement == "LRU":
+    #     print("LRU")
 
     ### Trace ###
     isTrace_order      = False
-    isTrace_controller = False   
+    isTrace_controller = False
+    
+    if not LoadOrder:
+        start_order_time = time.time()
+        print("--- Generate computation order ---")
+        order_generator = OrderGenerator(model_info, hw_config, mapping_information, isTrace_order)
+        end_order_time = time.time()
+        print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
+        
+        # Save Order
+        if not os.path.exists('./order_file/'):
+            os.makedirs('./order_file/')
+        with open(filename, 'wb') as output:
+            pickle.dump(order_generator, output, pickle.HIGHEST_PROTOCOL)
+    
+    else:
+        with open(filename, 'rb') as input:
+            order_generator = pickle.load(input)
 
     ### Generate computation order graph ### 
-    start_order_time = time.time()
-    print("--- Generate computation order ---")
-    order_generator = OrderGenerator(model_config, hw_config, mapping_information, isTrace_order)
-    #order_generator = ISAACOrderGenerator(model_config, hw_config, isTrace_order)
-    end_order_time = time.time()
-    print("--- Computation order graph is generated in %s seconds ---\n" % (end_order_time - start_order_time))
-
     if False:
-        json_name = f"{model_name}-{mapping}-{scheduling}-{partition_h}-{partition_w}"
+        json_name = f"{model}-{mapping}-{scheduling}-{partition_h}-{partition_w}"
         print(f"Dumping JSON to {json_name}.json...")
         with open(f"{json_name}.json", "w") as outfile:
             opts = jsbeautifier.default_options()
@@ -141,11 +144,11 @@ def main():
             outfile.write(f'\t]\n}}\n')
         print(f"Done")
 
-    #Visualizer.weightMappingByCO(hw_config, model_config, order_generator.Computation_order, f"{model_name}")
+    #Visualizer.weightMappingByCO(hw_config, model_config, order_generator.Computation_order, f"{model}")
     #return
-    #Visualizer.visualizeGif(hw_config, model_config, order_generator.Computation_order, f"{model_name}")
+    #Visualizer.visualizeGif(hw_config, model_config, order_generator.Computation_order, f"{model}")
     #return
-    
+
     log = {}
 
     ## Power and performance simulation ###
@@ -157,7 +160,7 @@ def main():
     end_time = time.time()
     print("--- Run in %s seconds ---\n" % (end_time - start_time))
 
-    Visualizer.visualizeSimulation2(hw_config, model_config, order_generator.Computation_order, log, f"{model_name}")
+    Visualizer.visualizeSimulation2(hw_config, model_config, order_generator.Computation_order, log, f"{model}")
 
 if __name__ == '__main__':
     main()

@@ -134,7 +134,7 @@ class ModelConfig(object):
         elif self.Model_type == "Test":
             self.layer_list = [
                 LayerMetaData("convolution",      1, 2, 2 , 1, 1, 'VALID', 0, 0, 0,   0),
-                LayerMetaData("convolution",      1, 2, 2 , 1, 1, 'VALID', 0, 0, 0,   0),
+                #LayerMetaData("convolution",      1, 2, 2 , 1, 1, 'VALID', 0, 0, 0,   0),
                 #LayerMetaData("pooling",         0, 0, 0,  0, 0,       0, 2, 2, 1,   0),
                 #LayerMetaData("fully",           0, 0, 0,  0, 0,       0, 0, 0, 0,   2)
                 #LayerMetaData("convolution",     1, 2, 2,  4, 1, 'VALID', 0, 0, 0,   0),
@@ -145,11 +145,11 @@ class ModelConfig(object):
                 #LayerMetaData("fully",           0,  0,  0,   0, 0,       0, 0, 0, 0,   1)
                 ]
             self.input_n = 1
-            self.input_h = 3
-            self.input_w = 3
+            self.input_h = 2
+            self.input_w = 2
             self.input_c = 1
-            self.input_bit = 16
-            self.filter_bit = 4
+            self.input_bit = 1
+            self.filter_bit = 16
         
         else:
             print("Wrong model type")

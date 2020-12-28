@@ -1,5 +1,6 @@
 class Model(object):
     def __init__(self, model_config):
+        self.Model_type = model_config.Model_type
         self.layer_list = model_config.layer_list 
         self.layer_length = len(self.layer_list)
         self.filter_n = [] 

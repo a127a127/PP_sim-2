@@ -26,29 +26,12 @@ class PE(object):
         self.edram_buffer = OnChipBuffer(size)
         # self.buffer_size_util = [[], []] # [cycle, size]
 
-        ### # Event queue's CU index
-        self.edram_rd_cu_idx     = collections.deque() # set()
-        self.cu_operation_cu_idx = collections.deque()
-
         ### event queue
-        self.edram_rd_erp     = collections.deque()
-        self.edram_rd_ir_erp  = [] # 一個CU一個edram_rd     event queue
-        self.cu_operation_erp = [] # 一個CU一個cu_operation event queue
-        for i in range(self.hw_config.CU_num):
-            self.edram_rd_ir_erp.append(collections.deque())
-            self.cu_operation_erp.append(collections.deque())
+        self.edram_erp        = collections.deque()
+        self.cu_op_erp        = 0
         self.pe_saa_erp       = collections.deque()
         self.activation_erp   = collections.deque()
-        self.edram_wr_erp     = collections.deque()
         self.pooling_erp      = collections.deque()
-        
-        ### Performance analysis
-        self.is_wait_resource = False
-        self.is_wait_transfer = False
-        self.pure_idle_time        = 0
-        self.wait_transfer_time    = 0
-        self.wait_resource_time    = 0
-        self.pure_computation_time = 0
 
         ### Energy
         self.eDRAM_buffer_energy     = 0.
@@ -70,12 +53,8 @@ class PE(object):
         for i in range(self.hw_config.CU_num):
             self.cu_state.append(False)
         
-        ### CU performance breakdown
-        self.cu_performance_breakdown = []
-        self.cu_busy_end_time = []
-        for i in range(self.hw_config.CU_num):
-            self.cu_performance_breakdown.append([0,0,0,0,0,0]) # [pre-layer, compute, transfer, overlap, other, total]
-            self.cu_busy_end_time.append(1)
+        ### Log
+        self.edram_event_order = []
 
     def __str__(self):
         return str(self.__dict__)

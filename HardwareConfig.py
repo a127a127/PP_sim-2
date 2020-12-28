@@ -2,7 +2,7 @@
 from math import floor
 
 class HardwareConfig(object):
-    def __init__(self):
+    def __init__(self, buffer_size):
         # Architecture
         self.Router_num_y = 14
         self.Router_num_x = 13
@@ -21,9 +21,11 @@ class HardwareConfig(object):
         self.PE_frequency = 1.2 # GHz
         
         # on-chip eDRAM buffer
-        self.eDRAM_buffer_size  = 64 # KB
-        self.eDRAM_buffer_banks_num = 2
+        self.eDRAM_buffer_size  = buffer_size # KB
+        self.eDRAM_buffer_bandwidth = 20.48 # GB/s
         self.eDRAM_buffer_bus_width = 256 # bits
+        self.eDRAM_buffer_rd_wr_data_per_cycle = None
+        self.eDRAM_buffer_read_to_IR_cycles = None
 
         # bus
         self.bus_wires = 384
@@ -48,7 +50,7 @@ class HardwareConfig(object):
 
         # CU
         self.DAC_num = 1024 # 8x128
-        self.DAC_resolution = 1 
+        self.DAC_resolution = 1  # cannot change
         self.crossbar_num = 8
         self.cell_bit_width = 2
         self.ADC_num = 8
@@ -62,9 +64,7 @@ class HardwareConfig(object):
         self.links_bw = 6.4 # GB/s
 
         self.cycle_time = 7.68 # 15.6 * (self.ADC_resolution/3) * (32/65) # scaling from W. H. Chen's paper
-        self.interconnect_step_num = int(self.cycle_time // self.router_frequency) # router frequency = PE frequency
-        self.eDRAM_buffer_read_bits  = floor(256 * self.PE_frequency * self.cycle_time) # bits / per cycle
-        # self.eDRAM_write_bits = floor(128 * 1.2 * self.cycle_time) # bits / per cycle
+        self.interconnect_step_num = int(self.cycle_time * self.router_frequency) # router frequency = PE frequency
 
         # Power (W)
         self.Power_eDRAM_buffer = 20.7 / 1000
@@ -90,6 +90,7 @@ class HardwareConfig(object):
         self.Energy_shift_and_add_in_CU = self.Power_shift_and_add_in_CU / self.PE_frequency / self.shift_and_add_num_in_CU # per data
         self.Energy_pooling       = self.Power_pooling / self.PE_frequency / self.pooling_num
         self.Energy_or            = self.Power_OR_in_PE / self.PE_frequency / self.OR_bus_width
+        
         # per operation unit (ou)
         self.Energy_ou_dac        = self.Power_DAC / self.PE_frequency / self.DAC_num * self.OU_h
         self.Energy_ou_crossbar   = self.Power_crossbar / self.PE_frequency / self.crossbar_num * ((self.OU_h * self.OU_w) / (self.Xbar_h * self.Xbar_w))
@@ -115,13 +116,13 @@ class HardwareConfig(object):
         # self.Leakage_OR_in_CU = 0
         # self.Leakage_router = 0
         # self.Leakage_link = 0
+        # self.Leakage_off_chip = 52.8mW
 
         # Off-chip:
-        self.Rd_BW = 3.2 # GB/s
-        self.Energy_off_chip_Rd = 80.3 / 1000 / 8 # nJ per bit
+        self.off_chip_Rd_bw = 3.2 # GB/s
+        self.off_chip_Wr_bw = 3.2 # GB/s
+        self.Energy_off_chip_Rd = 80.3   / 1000 / 8 # nJ per bit
         self.Energy_off_chip_Wr = 82.719 / 1000 / 8 # nJ per bit
-        self.Fetch_cycle  = 20
-        self.Energy_fetch = 0
         
     def __str__(self):
         return str(self.__dict__)

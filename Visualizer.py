@@ -12,9 +12,9 @@ class MappingGraph:
     def __init__(self, hw_config, model_config):
         global CARE_LAYERS, STEP_CYCLES
         if model_config.Model_type == 'Lenet':
-            #CARE_LAYERS = [0, 2, 4]
-            CARE_LAYERS = [2, 4]
-            STEP_CYCLES = 200
+            CARE_LAYERS = [0, 2, 4]
+            #CARE_LAYERS = [2, 4]
+            STEP_CYCLES = 500
         elif model_config.Model_type == "Caffenet":
             CARE_LAYERS = [2, 4, 5, 6]
             #CARE_LAYERS = [4, 5, 6]
@@ -579,6 +579,7 @@ class Visualizer:
         active_cu = graph.allocate_cu_active_array()
         deactive_cu = graph.allocate_cu_active_array()
         active_router = graph.allocate_router_active_array()
+        active_pe = None
 
         window_id_count = {}
         window_id_deactive_count = {}
@@ -597,8 +598,9 @@ class Visualizer:
 
             if status == 'data_transfer':
                 active_router[graph.position_idx_to_router_idx(event)] = 1
-            if status == 'pooling':
-                active_router[graph.position_idx_to_router_idx(event)] = 1
+            elif status == 'pooling':
+                #active_router[graph.position_idx_to_router_idx(event)] = 1
+                pass
             else: # cu_operation
                 window_id = event.window_id
 
@@ -615,7 +617,7 @@ class Visualizer:
                         window_id_deactive_count[window_id] = 0
                     window_id_deactive_count[window_id] += 1
 
-        draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_PE, active_router, window_id_count)
+        draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_pe, active_router, window_id_count)
 
 
     def visualizeGif(hw_config, model_config, Computation_order, filename):
