@@ -172,8 +172,8 @@ class Controller(object):
             self.event_act()
             self.event_pooling()
             self.event_transfer()
-            self.fetch()
             self.interconnect_fn()
+            self.fetch()
 
             # self.record_buffer_util()
             
@@ -369,12 +369,12 @@ class Controller(object):
                 if Fetch_data:
                     if self.trace:
                         print("\tfetch event_idx:", self.Computation_order.index(event))
-                    
+
                     event.current_number_of_preceding_event -= 1
                     finish_cycle = self.cycle_ctr + 1
                     if finish_cycle in self.fetch_dict:
                         self.fetch_dict[finish_cycle].append([event, Fetch_data])
-                    else: # TODO 
+                    else: 
                         self.fetch_dict[finish_cycle] = [[event, Fetch_data]]
                 else:
                     if self.trace:
@@ -706,15 +706,14 @@ class Controller(object):
                     data = packet.data
                     pro_event_list = packet.pro_event_list
 
-                    if len(data) != 5:
-                        K = des_pe.edram_buffer.put(data, data)
-                        if K: # kick data out of buffer
-                            # TODO: simulate data transfer
-                            des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
-                            transfer_distance = des_pe_id[0]
-                            self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
-                            self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
-                            self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
+                    K = des_pe.edram_buffer.put(data, data)
+                    if K: # kick data out of buffer
+                        # TODO: simulate data transfer
+                        des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # read
+                        transfer_distance = des_pe_id[0]
+                        self.Total_energy_interconnect += self.hw_config.Energy_router * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_interconnect += self.hw_config.Energy_link   * self.input_bit * (transfer_distance + 1)
+                        self.Total_energy_fetch += self.hw_config.Energy_off_chip_Wr * self.input_bit
 
                     # Energy
                     des_pe.eDRAM_buffer_energy += self.hw_config.Energy_edram_buffer * self.input_bit # write
