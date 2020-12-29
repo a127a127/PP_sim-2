@@ -5,11 +5,23 @@ import numpy as np
 
 from tqdm import tqdm
 
-CARE_LAYERS = [2, 4]
-#CARE_LAYERS = [4, 5, 6]
+CARE_LAYERS = []
+STEP_CYCLES = 1000
 
 class MappingGraph:
     def __init__(self, hw_config, model_config):
+        global CARE_LAYERS, STEP_CYCLES
+        if model_config.Model_type == 'Lenet':
+            CARE_LAYERS = [0, 2, 4]
+            #CARE_LAYERS = [2, 4]
+            STEP_CYCLES = 200
+        elif model_config.Model_type == "Caffenet":
+            CARE_LAYERS = [2, 4, 5, 6]
+            #CARE_LAYERS = [4, 5, 6]
+            STEP_CYCLES = 2000
+        elif model_config.Model_type == "Test":
+            CARE_LAYERS = [0, 1]
+            STEP_CYCLES = 20
         self.Router_num_x = hw_config.Router_num_x
         self.Router_num_y = hw_config.Router_num_y
         self.router_width = self.Router_num_x
@@ -138,7 +150,7 @@ class MappingGraph:
             if v == 0:
                 return (1, 0.3, 0.3, 0.1)
             elif v == 1:
-                return (1, 1, 0.3, 0.1)
+                return (1, 0.3, 1, 0.1)
             elif v == 2:
                 return (0.3, 1, 0.3, 0.1)
             elif v == 3:
@@ -146,7 +158,7 @@ class MappingGraph:
             elif v == 4:
                 return (0.3, 0.3, 1, 0.1)
             elif v == 5:
-                return (1, 0.3, 1, 0.1)
+                return (1, 1, 0.3, 0.1)
 
     def ensure_cu_color_default(self):
         if self.cu_color_default == None:
@@ -154,7 +166,7 @@ class MappingGraph:
             for k, v in enumerate(self.weight_mapping):
                 self.cu_color_default[k] = self.get_layer_color(v)
 
-    def draw(self, text, filename, active_cu, active_router=None, active_router_edge=None, active_layers=[], window_id=None):
+    def draw(self, text, filename, active_cu, active_router=None, active_router_edge=None, active_layers=[], active_windows=None):
         #if np.count_nonzero(active_cu) == 0 and np.count_nonzero(active_router) == 0:
         #    return
         assert len(active_cu) == len(self.weight_mapping)
@@ -293,16 +305,18 @@ class MappingGraph:
                 )
             )
 
-            if window_id != None and show_layers[k] == window_id[0]:
-                x = 1 + model_width + 1 - 0.5 + window_id[2]
-                y = layer_height_offset[k] - window_id[3] + 0.5
-                current_axis.add_patch(
-                    Rectangle((x, y),
-                        width = window_id[4]-window_id[2],
-                        height = window_id[3]-window_id[1],
-                        fill=False, color='red'
-                    )
-                )
+            if active_windows != None:
+                for window_id in active_windows:
+                    if show_layers[k] == window_id[0]:
+                        x = 1 + model_width + 1 - 0.5 + window_id[2]
+                        y = layer_height_offset[k] - window_id[3] + 0.5
+                        current_axis.add_patch(
+                            Rectangle((x, y),
+                                width = window_id[4]-window_id[2],
+                                height = window_id[3]-window_id[1],
+                                fill=False, color='red'
+                            )
+                        )
 
 
         nx.draw(self.empty_G, pos = self.empty_pos, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
@@ -530,42 +544,65 @@ class Visualizer:
                 graph.set_mapping(idx, event.nlayer)
 
         time_queue = []
-        for event_idx in simulation_log:
-            time_queue.append((simulation_log[event_idx][0], event_idx, 'start'))
-            time_queue.append((simulation_log[event_idx][1], event_idx, 'end'))
-        time_queue.sort()
-
-        window_events = {}
         print('Preprocess window events...')
         for (start_cycle, end_cycle, event) in tqdm(simulation_log['window_event']):
             if not event.nlayer in CARE_LAYERS:
                 continue
-            window_id = event.window_id
-            if not window_id in window_events:
-                window_events[window_id] = {
-                    'min_cycle': 0,
-                    'max_cycle': 0,
-                    'events': []
-                }
-            window_events[window_id]['events'].append((cycle, event))
-        for window_id, window_event in window_events.items():
-            window_event['min_cycle'] = min(window_event['events'], key=lambda k: k[0])
-            window_event['max_cycle'] = max(window_event['events'], key=lambda k: k[0])
-
-        window_events = list(window_events.items())
-        window_events.sort(key=lambda k: k[1]['max_cycle'][0])
+            time_queue.append((start_cycle, event, 'start'))
+            time_queue.append((end_cycle-1, event, 'end'))
+        time_queue.sort(key=lambda k: k[0])
 
         index = 0
-        for (window_id, window_event) in tqdm(window_events):
-            active_cu = graph.allocate_cu_active_array()
-            active_router = graph.allocate_router_active_array()
-            for (cycle, event) in window_event['events']:
-                idx = graph.position_idx_to_idx(event.position_idx)
-                active_cu[idx] = 1
-            min_cycle = window_event['min_cycle'][0]
-            max_cycle = window_event['max_cycle'][0]
-            graph.draw(f"Window {window_id}, Cycle [{min_cycle} ~ {max_cycle}]", f"{filename}-{index:003}", active_cu, active_router, active_layers=[window_id[0]], window_id=window_id)
+        def draw(start_cycle, end_cycle, active_cu, active_router, window_ids=None):
+            nonlocal index
+            # TODO: active_layers
+            active_layers = set()
+            # TODO: active_windows
+            active_windows = set()
+            for window_id, count in window_ids.items():
+                if count > 0:
+                    active_layers.add(window_id[0])
+                    active_windows.add(window_id)
+            print(start_cycle, end_cycle, active_layers, active_windows)
+            graph.draw(f"Cycle [{start_cycle} ~ {end_cycle})", f"{filename}-{index:003}", active_cu, active_router, active_layers=active_layers, active_windows=active_windows)
             index += 1
+
+        last_cycle = (time_queue[0][0] // STEP_CYCLES) * STEP_CYCLES
+        active_cu = graph.allocate_cu_active_array()
+        deactive_cu = graph.allocate_cu_active_array()
+        active_router = graph.allocate_router_active_array()
+
+        window_id_count = {}
+        window_id_deactive_count = {}
+        for (cycle, event, status) in tqdm(time_queue):
+            while cycle - last_cycle >= STEP_CYCLES:
+                draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_router, window_id_count)
+                # Clean up this range events
+                for k, v in enumerate(active_cu):
+                    active_cu[k] -= deactive_cu[k]
+                for window_id in window_id_deactive_count:
+                    window_id_count[window_id] -= window_id_deactive_count[window_id]
+                deactive_cu = graph.allocate_cu_active_array()
+                window_id_deactive_count = {}
+                last_cycle += STEP_CYCLES
+
+            window_id = event.window_id
+
+            idx = graph.position_idx_to_idx(event.position_idx)
+
+            if status == 'start':
+                active_cu[idx] += 1
+                if not window_id in window_id_count:
+                    window_id_count[window_id] = 0
+                window_id_count[window_id] += 1
+            else: # status == 'end'
+                deactive_cu[idx] += 1
+                if not window_id in window_id_deactive_count:
+                    window_id_deactive_count[window_id] = 0
+                window_id_deactive_count[window_id] += 1
+
+        draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_router, window_id_count)
+
 
     def visualizeGif(hw_config, model_config, Computation_order, filename):
         print(f'len(Computation_order) = {len(Computation_order)}')
