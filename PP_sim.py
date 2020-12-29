@@ -77,6 +77,18 @@ def main():
         end_mapping_time = time.time()
         print("--- Mapping is finished in %s seconds ---\n" % (end_mapping_time - start_mapping_time))
 
+    ### Print layer info ###
+    if False:
+        for nlayer in range(model_info.layer_length):
+            if model_info.layer_list[nlayer].layer_type == "convolution" or model_info.layer_list[nlayer].layer_type == "fully":
+                strides = model_info.strides[nlayer]
+                pad = model_info.pad[nlayer]
+                o_height = model_info.input_h[nlayer+1]
+                o_width = model_info.input_w[nlayer+1]
+
+                print(f'  - {nlayer} {model_info.layer_list[nlayer].layer_type}: [{model_info.input_c[nlayer]}, {model_info.input_h[nlayer]}, {model_info.input_w[nlayer]}] x [{model_info.filter_n[nlayer]}, {model_info.filter_c[nlayer]}, {model_info.filter_h[nlayer]}, {model_info.filter_w[nlayer]}] {strides}, {pad} -> [{model_info.input_c[nlayer+1]}, {o_height}, {o_width}]')
+
+
     ### Buffer Replacement ###
     # print("Buffer replacement policy: ", end="")
     # replacement = "LRU"
@@ -109,8 +121,9 @@ def main():
 
     ### Dump JSON ###
     if False:
-        print(f"Dumping JSON to {model}.json...")
-        with open(f"{model}.json", "w") as outfile:
+        json_name = f"{model}-{mapping}-{scheduling}-{partition_h}-{partition_w}-{buffer_size}"
+        print(f"Dumping JSON to {json_name}.json...")
+        with open(f"{json_name}.json", "w") as outfile:
             opts = jsbeautifier.default_options()
             opts.indent_with_tabs = True
             opts.indent_level = 1

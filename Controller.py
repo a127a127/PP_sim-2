@@ -188,6 +188,8 @@ class Controller(object):
         if self.cycle_ctr in self.Trigger:
             for trigger in self.Trigger[self.cycle_ctr]:
                 pe, event = trigger[0], trigger[1]
+                if self.trace:
+                    print(f"\t Trigger[{self.cycle_ctr}]: {trigger}")
                 
                 if event.event_type == "edram_rd_ir" or event.event_type == "edram_rd" or event.event_type == "edram_wr":
                     pe.edram_erp.append(event)
@@ -313,6 +315,9 @@ class Controller(object):
 
                     event.current_number_of_preceding_event -= 1
                     finish_cycle = self.cycle_ctr + 1
+                    if self.trace:
+                        print("\t\tevent: ", event)
+                        print("\t\t finish_cycle: ", finish_cycle)
                     # FIXME: a127a127
                     self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
                     if finish_cycle in self.fetch_dict:
@@ -380,6 +385,9 @@ class Controller(object):
                         self.fetch_dict[finish_cycle].append([event, Fetch_data])
                     else: 
                         self.fetch_dict[finish_cycle] = [[event, Fetch_data]]
+
+                    # FIXME: a127a127
+                    self.log[self.Computation_order.index(event)] = [self.cycle_ctr, finish_cycle + 1]
                 else:
                     if self.trace:
                         print("\tdo edram_rd event_idx:", self.Computation_order.index(event),", layer", event.nlayer)
@@ -695,6 +703,9 @@ class Controller(object):
         tt = time.time()
         if self.cycle_ctr in self.fetch_dict:
             fetch_list = self.fetch_dict[self.cycle_ctr]
+            if self.trace:
+                print("\t in fetch_dict")
+                print("\t fetch_list: ", fetch_list)
             for F in fetch_list:
                 event, transfer_data = F[0], F[1]
                 event_idx = self.Computation_order.index(event)
