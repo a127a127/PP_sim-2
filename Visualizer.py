@@ -14,7 +14,7 @@ class MappingGraph:
         if model_config.Model_type == 'Lenet':
             CARE_LAYERS = [0, 2, 4]
             #CARE_LAYERS = [2, 4]
-            STEP_CYCLES = 200
+            STEP_CYCLES = 1000
         elif model_config.Model_type == "Caffenet":
             CARE_LAYERS = [2, 4, 5, 6]
             #CARE_LAYERS = [4, 5, 6]
@@ -166,12 +166,12 @@ class MappingGraph:
             for k, v in enumerate(self.weight_mapping):
                 self.cu_color_default[k] = self.get_layer_color(v)
 
-    def draw(self, text, filename, active_cu, active_router=None, active_router_edge=None, active_layers=[], active_windows=None):
+    def draw(self, text, filename, active_cu, active_pe=None, active_router=None, active_router_edge=None, active_layers=[], active_windows=None):
         #if np.count_nonzero(active_cu) == 0 and np.count_nonzero(active_router) == 0:
         #    return
         assert len(active_cu) == len(self.weight_mapping)
 
-        # Draw cu graph
+        # Draw cu mapping
         self.ensure_cu_color_default()
 
         cu_color = self.cu_color_default.copy()
@@ -235,10 +235,6 @@ class MappingGraph:
                 layer_width.append(model.input_w[i])
                 model_height += model.input_h[i]
                 model_width = max(model_width, model.input_w[i])
-                #layer_height.append(5)
-                #layer_width.append(3)
-                #model_height += 5
-                #model_width = max(model_width, 3)
         total_width = model_width * 2 + 3 + 1
         total_height = model_height + height_padding * (len(show_layers) + 1)
 
@@ -293,7 +289,7 @@ class MappingGraph:
             model_pos = {}
             for i in range(0, len(nodes)):
                 model_pos[nodes[i]] = p[i]
-            nx.draw(model_G, model_pos, node_shape='s', node_color='gray', node_size=int((self.W * 12 / total_width) ** 2))
+            nx.draw(model_G, model_pos, node_shape='s', node_color='gray', node_size=int((self.W * 10 / total_width) ** 2))
 
             x = 1 + model_width + 1 - 0.5 - padding
             y = layer_height_offset[k] - layer_height[k] + 0.5 - padding
@@ -319,8 +315,9 @@ class MappingGraph:
                         )
 
 
+        # Draw bottom-left and up-right invisible node (for border)
         nx.draw(self.empty_G, pos = self.empty_pos, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
-        nx.draw(self.empty_G, pos = {self.empty_node: [total_width-1, total_height-1]}, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
+        nx.draw(self.empty_G, pos = {self.empty_node: [total_width, total_height]}, node_color='none', node_shape='o', node_size=int((self.H * 15 / nlayers) ** 2))
 
         plt.tight_layout()
 
@@ -550,58 +547,73 @@ class Visualizer:
                 continue
             time_queue.append((start_cycle, event, 'start'))
             time_queue.append((end_cycle-1, event, 'end'))
+        for (start_cycle, transfer_data, src, des) in tqdm(simulation_log['data_transfer']):
+            #if not transfer_data[0][0] in CARE_LAYERS:
+            #    continue
+            time_queue.append((start_cycle, src, 'data_transfer'))
+            time_queue.append((start_cycle, des, 'data_transfer'))
+        for (start_cycle, event) in tqdm(simulation_log['pooling']):
+            #if not transfer_data[0][0] in CARE_LAYERS:
+            #    continue
+            time_queue.append((start_cycle, event, 'pooling'))
         time_queue.sort(key=lambda k: k[0])
 
         index = 0
-        def draw(start_cycle, end_cycle, active_cu, active_router, window_ids=None):
+        def draw(start_cycle, end_cycle, active_cu, active_pe, active_router, window_ids=None):
             nonlocal index
-            # TODO: active_layers
             active_layers = set()
-            # TODO: active_windows
             active_windows = set()
             for window_id, count in window_ids.items():
                 if count > 0:
                     active_layers.add(window_id[0])
                     active_windows.add(window_id)
-            print(start_cycle, end_cycle, active_layers, active_windows)
-            graph.draw(f"Cycle [{start_cycle} ~ {end_cycle})", f"{filename}-{index:003}", active_cu, active_router, active_layers=active_layers, active_windows=active_windows)
+            print(start_cycle, end_cycle, active_layers, active_windows, active_router)
+            graph.draw(f"Cycle [{start_cycle} ~ {end_cycle})", f"{filename}-{index:003}", active_cu, active_pe, active_router, active_layers=active_layers, active_windows=active_windows)
             index += 1
 
         last_cycle = (time_queue[0][0] // STEP_CYCLES) * STEP_CYCLES
         active_cu = graph.allocate_cu_active_array()
         deactive_cu = graph.allocate_cu_active_array()
         active_router = graph.allocate_router_active_array()
+        active_pe = None
 
         window_id_count = {}
         window_id_deactive_count = {}
         for (cycle, event, status) in tqdm(time_queue):
             while cycle - last_cycle >= STEP_CYCLES:
-                draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_router, window_id_count)
+                draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_pe, active_router, window_id_count)
                 # Clean up this range events
                 for k, v in enumerate(active_cu):
                     active_cu[k] -= deactive_cu[k]
                 for window_id in window_id_deactive_count:
                     window_id_count[window_id] -= window_id_deactive_count[window_id]
                 deactive_cu = graph.allocate_cu_active_array()
+                active_router = graph.allocate_router_active_array()
                 window_id_deactive_count = {}
                 last_cycle += STEP_CYCLES
 
-            window_id = event.window_id
+            if status == 'data_transfer':
+                active_router[graph.position_idx_to_router_idx(event)] = 1
+            elif status == 'pooling':
+                #active_router[graph.position_idx_to_router_idx(event)] = 1
+                pass
+            else: # cu_operation
+                window_id = event.window_id
 
-            idx = graph.position_idx_to_idx(event.position_idx)
+                idx = graph.position_idx_to_idx(event.position_idx)
 
-            if status == 'start':
-                active_cu[idx] += 1
-                if not window_id in window_id_count:
-                    window_id_count[window_id] = 0
-                window_id_count[window_id] += 1
-            else: # status == 'end'
-                deactive_cu[idx] += 1
-                if not window_id in window_id_deactive_count:
-                    window_id_deactive_count[window_id] = 0
-                window_id_deactive_count[window_id] += 1
+                if status == 'start':
+                    active_cu[idx] += 1
+                    if not window_id in window_id_count:
+                        window_id_count[window_id] = 0
+                    window_id_count[window_id] += 1
+                else: # status == 'end'
+                    deactive_cu[idx] += 1
+                    if not window_id in window_id_deactive_count:
+                        window_id_deactive_count[window_id] = 0
+                    window_id_deactive_count[window_id] += 1
 
-        draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_router, window_id_count)
+        draw(last_cycle, last_cycle+STEP_CYCLES, active_cu, active_pe, active_router, window_id_count)
 
 
     def visualizeGif(hw_config, model_config, Computation_order, filename):
